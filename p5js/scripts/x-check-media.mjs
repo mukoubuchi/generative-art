@@ -48,7 +48,17 @@ try {
   console.log("The upload endpoint accepted these credentials.");
   console.log(`Media id ${mediaId}: never appended to, never finalized, no post created.`);
 } catch (error) {
-  console.error("The upload endpoint refused these credentials.");
+  // Two different answers wear the same coat if they are not told apart. A 401 or 403 is
+  // the question this script exists to ask, answered no; anything else is this script
+  // asking it badly, and reporting that as "refused" sends the reader off to the developer
+  // portal to fix credentials that were never the problem.
+  if (error.status === 401 || error.status === 403) {
+    console.error("These credentials may not upload media.");
+  } else if (error.status) {
+    console.error(`The request was not accepted (HTTP ${error.status}). This is the request's shape, not the credentials.`);
+  } else {
+    console.error("The upload endpoint could not be reached.");
+  }
   console.error(error.message);
   process.exitCode = 1;
 } finally {

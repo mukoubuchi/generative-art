@@ -17,9 +17,13 @@ async function parseResponse(response) {
     responseBody = responseText;
   }
   if (!response.ok) {
-    throw new Error(
+    const failure = new Error(
       `X API request failed with ${response.status}: ${JSON.stringify(responseBody)}`
     );
+    // Carried separately so a caller can tell "these credentials may not" from "this
+    // request was malformed" without reading the sentence back.
+    failure.status = response.status;
+    throw failure;
   }
   return responseBody;
 }
@@ -59,17 +63,31 @@ export function createXClient({
     }));
   }
 
+  /*
+   * The chunked upload has three endpoints of its own. It is worth saying why, because the
+   * quickstart guide still describes the older shape — one path, `POST /2/media/upload`,
+   * with a `command` field naming the step — and following it gets a 400 reading "Missing
+   * media field in JSON". That path is now the *simple* upload, which takes the whole file
+   * in one request under a `media` field, so a form saying `command=INIT` looks to it like
+   * an upload with no file in it. The reference pages for initialize, append and finalize
+   * are the ones that match what the service does.
+   */
   async function initializeUpload(filePath, mediaType, mediaCategory) {
     const fileStats = await stat(filePath);
-    const form = new FormData();
-    form.set("command", "INIT");
-    form.set("media_type", mediaType);
-    form.set("total_bytes", String(fileStats.size));
-    form.set("media_category", mediaCategory);
-    const response = await request("/2/media/upload", { method: "POST", body: form });
-    const mediaId = response?.data?.id ?? response?.media_id_string;
+    const response = await request("/2/media/upload/initialize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        media_type: mediaType,
+        total_bytes: fileStats.size,
+        media_category: mediaCategory
+      })
+    });
+    // `data.id` rather than `data.media_key`: it is the numeric id the append and finalize
+    // paths are built from, and the one a post's `media_ids` takes.
+    const mediaId = response?.data?.id;
     if (!mediaId) {
-      throw new Error("X media INIT response did not include a media id.");
+      throw new Error("X media initialize response did not include a media id.");
     }
     return { mediaId: String(mediaId), size: fileStats.size };
   }
@@ -87,15 +105,13 @@ export function createXClient({
           throw new Error(`Unexpected end of media file at byte ${offset}.`);
         }
         const form = new FormData();
-        form.set("command", "APPEND");
-        form.set("media_id", mediaId);
         form.set("segment_index", String(segmentIndex));
         form.set(
           "media",
           new Blob([buffer.subarray(0, bytesRead)], { type: mediaType }),
           "media"
         );
-        await request("/2/media/upload", { method: "POST", body: form });
+        await request(`/2/media/upload/${mediaId}/append`, { method: "POST", body: form });
         offset += bytesRead;
         segmentIndex += 1;
       }
@@ -128,11 +144,9 @@ export function createXClient({
     }
   }
 
+  // No body: the id is the whole request, and it is in the path.
   async function finalizeUpload(mediaId) {
-    const form = new FormData();
-    form.set("command", "FINALIZE");
-    form.set("media_id", mediaId);
-    const response = await request("/2/media/upload", { method: "POST", body: form });
+    const response = await request(`/2/media/upload/${mediaId}/finalize`, { method: "POST" });
     const processingInfo = response?.data?.processing_info ?? response?.processing_info;
     await waitForProcessing(mediaId, processingInfo);
   }

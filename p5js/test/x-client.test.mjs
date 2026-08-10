@@ -24,7 +24,7 @@ test("the X client refuses to initialize without a token", () => {
   assert.throws(() => createXClient({ token: "" }), /user access token/);
 });
 
-test("media publishing uses INIT, APPEND, FINALIZE, then creates a post", async () => {
+test("media publishing walks the three upload endpoints, then creates a post", async () => {
   const testDirectory = await mkdtemp(join(tmpdir(), "generative-art-x-client-test-"));
   const mediaPath = join(testDirectory, "image.png");
   await writeFile(mediaPath, "image");
@@ -38,7 +38,7 @@ test("media publishing uses INIT, APPEND, FINALIZE, then creates a post", async 
   const fetchImplementation = async (url, options) => {
     requests.push({
       url,
-      command: options.body instanceof FormData ? options.body.get("command") : undefined,
+      body: options.body,
       authorization: new Headers(options.headers).get("Authorization")
     });
     return responses.shift();
@@ -51,20 +51,44 @@ test("media publishing uses INIT, APPEND, FINALIZE, then creates a post", async 
 
     assert.equal(mediaId, "123");
     assert.equal(post.data.id, "456");
-    assert.deepEqual(requests.map((request) => request.command), [
-      "INIT",
-      "APPEND",
-      "FINALIZE",
-      undefined
-    ]);
+    // The paths, spelled out, because the older shape — one path with a `command` field —
+    // is still what the quickstart guide describes and is answered with a 400 that blames
+    // a missing `media` field. Pinning them here is what stops a well-meant simplification
+    // from putting that request back.
     assert.deepEqual(requests.map((request) => request.url), [
-      "https://api.x.com/2/media/upload",
-      "https://api.x.com/2/media/upload",
-      "https://api.x.com/2/media/upload",
+      "https://api.x.com/2/media/upload/initialize",
+      "https://api.x.com/2/media/upload/123/append",
+      "https://api.x.com/2/media/upload/123/finalize",
       "https://api.x.com/2/tweets"
     ]);
+
+    const [initialize, append, finalize] = requests;
+    assert.deepEqual(JSON.parse(initialize.body), {
+      media_type: "image/png",
+      total_bytes: 5,
+      media_category: "tweet_image"
+    });
+    assert.ok(append.body instanceof FormData);
+    assert.equal(append.body.get("segment_index"), "0");
+    assert.ok(append.body.get("media"));
+    assert.equal(finalize.body, undefined);
     assert.ok(requests.every((request) => request.authorization === "Bearer token"));
   } finally {
     await rm(testDirectory, { recursive: true });
   }
+});
+
+test("a failed request carries its status so the caller can tell why", async () => {
+  const fetchImplementation = async () => new Response(
+    JSON.stringify({ title: "Unauthorized" }),
+    { status: 401 }
+  );
+  const client = createXClient({ token: "token", fetchImplementation });
+  await assert.rejects(
+    () => client.createPost("body", "123"),
+    (error) => {
+      assert.equal(error.status, 401);
+      return true;
+    }
+  );
 });

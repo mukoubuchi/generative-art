@@ -287,7 +287,20 @@ Holmes revised the line between its two 1858 printings. [*The Atlantic Monthly*,
 
 ## Optional X publishing
 
-The uploader follows X's current v2 chunked media workflow: INIT, APPEND, FINALIZE, optional STATUS polling, then `POST /2/tweets` with the returned media ID. See the official [chunked media upload guide](https://docs.x.com/x-api/media/quickstart/media-upload-chunked) and [Create Post reference](https://docs.x.com/x-api/posts/create-or-edit-post).
+The uploader walks the v2 chunked media endpoints —
+[`POST /2/media/upload/initialize`](https://docs.x.com/x-api/media/media-upload-initialize),
+[`POST /2/media/upload/{id}/append`](https://docs.x.com/x-api/media/media-upload-append),
+[`POST /2/media/upload/{id}/finalize`](https://docs.x.com/x-api/media/media-upload-finalize),
+optional STATUS polling — and then [`POST /2/tweets`](https://docs.x.com/x-api/posts/create-or-edit-post)
+with the returned media ID.
+
+Not the shape the [chunked upload quickstart](https://docs.x.com/x-api/media/quickstart/media-upload-chunked)
+describes, which is one path with a `command` field naming the step. That guide is behind
+the service: `POST /2/media/upload` is now the *simple* upload, which takes a whole file
+under a `media` field, so a form saying `command=INIT` is answered with
+`400 Missing media field in JSON`. The reference pages linked above are what the service
+actually does, and the client's test pins those paths so the tidier-looking older shape
+cannot come back.
 
 ### Why OAuth 2.0, and what it costs
 

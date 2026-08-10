@@ -15,3 +15,7 @@ p5js/vendor/
 
 # The Pages site, built from the manifest at deploy time
 site/
+
+# Credentials written by the X authorization scripts; never committed
+p5js/x-access-token
+p5js/x-refresh-token
