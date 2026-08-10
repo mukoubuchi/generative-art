@@ -21,8 +21,9 @@ on:
         required: true
         default: false
         type: boolean
-  # schedule:
-  #   - cron: "0 15 * * *"
+  # 15:00 UTC is midnight in Tokyo, which is the zone the schedule file keeps its dates in.
+  schedule:
+    - cron: "0 15 * * *"
 
 permissions:
   contents: read
