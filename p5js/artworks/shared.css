@@ -25,11 +25,7 @@ canvas {
 .page-nav {
   position: fixed;
   inset-block-start: 0.7rem;
-  inset-inline-start: 0.7rem;
   z-index: 1;
-  display: flex;
-  gap: 0.45rem;
-  align-items: baseline;
   padding: 0.28rem 0.62rem;
   border-radius: 0.55rem;
   background: rgb(255 255 255 / 84%);
@@ -37,13 +33,34 @@ canvas {
   font: 0.78rem/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
 }
 
+/*
+ * The two destinations are two things, so they are two plates rather than one line with a
+ * separator in it. Back on the leading edge, where a way back belongs; the source on the
+ * trailing one, which keeps the corner the artworks' legends use free and leaves neither
+ * plate wide enough to meet the other on a narrow screen.
+ */
+.page-nav--back {
+  inset-inline-start: 0.7rem;
+}
+
+.page-nav--source {
+  inset-inline-end: 0.7rem;
+}
+
 .page-nav__link {
+  display: inline-flex;
+  gap: 0.42rem;
+  align-items: center;
   color: rgb(17 24 34 / 88%);
   text-decoration: none;
 }
 
-.page-nav__dot {
-  color: rgb(17 24 34 / 40%);
+/* Sized by height so each glyph keeps its own proportions: the two boxes are not the same. */
+.page-nav__icon {
+  width: auto;
+  height: 0.8em;
+  flex: none;
+  opacity: 0.72;
 }
 
 /* Underlined on approach only, so the plate reads as one quiet line until it is wanted. */
