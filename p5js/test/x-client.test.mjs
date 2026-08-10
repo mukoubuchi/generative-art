@@ -9,12 +9,12 @@ test("publishing requires both the enable flag and a user token", () => {
   assert.throws(() => assertPublishingEnabled({}), /Publishing is disabled/);
   assert.throws(
     () => assertPublishingEnabled({ X_POSTING_ENABLED: "true" }),
-    /X_USER_ACCESS_TOKEN/
+    /X_OAUTH2_ACCESS_TOKEN/
   );
   assert.equal(
     assertPublishingEnabled({
       X_POSTING_ENABLED: "true",
-      X_USER_ACCESS_TOKEN: "token"
+      X_OAUTH2_ACCESS_TOKEN: "token"
     }),
     "token"
   );

@@ -176,18 +176,54 @@ The renderer uses the Chromium build that `npx playwright install chromium` down
 
 The renderer serves the pinned npm copy of p5.js to a headless Chromium page. Canvas dimensions and export scale are artwork-level manifest properties rather than global defaults. Static canvases are captured directly. Animated canvases expose deterministic frame control to Playwright; the captured PNG sequence is encoded with ffmpeg and checked with ffprobe. Video duration is capped at 140 seconds by the manifest validator. The `--all` path reuses one browser process across the batch instead of repeatedly launching Chromium.
 
+## Posting schedule
+
+`schedule.json` says which artwork goes out on which day, in the time zone it names. The
+pipeline reads the day's entry and does what it says; there is no rule that turns a date
+into an artwork, and nothing is written back after a post.
+
+That is a deliberate trade. A rule — the date modulo the number of artworks, say — needs no
+file, but its answer changes under you the moment an artwork is added, so the same date
+names a different work before and after, and no one can read next week's posts off the page.
+A queue is refilled by appending to the list; a run is paused by removing the days.
+
+```json
+{ "date": "2026-08-12", "artwork": "strange-attractor" }
+```
+
+An entry may add `"quote"` to choose among an artwork's candidates. The first run covers all
+twenty-five artworks, one a day. Their order is not the manifest's: each family of work —
+the spirals, the tilings, the illusions, the fields, the recursions, the moving toys — is
+spread evenly across the run rather than posted in a block, still and moving alternate as
+far as the counts allow, and no two consecutive days quote the same language. The day it
+opens on is Strange Attractor, whose Nietzsche is about chaos giving birth to a dancing star.
+
+Nothing scheduled for today is not an error: the pipeline says so and stops. That is what
+the end of a run looks like from the inside, and it is what the cron finds every night until
+the list is refilled.
+
 ## Dry run
 
-The pipeline selects an eligible artwork and quote from the UTC date when no IDs are supplied:
+The pipeline prepares today's scheduled post:
 
 ```bash
 npm run pipeline
 ```
 
-Pin the selection when reviewing an output:
+Pin the selection when reviewing an output, which also bypasses the schedule:
 
 ```bash
 npm run pipeline -- --artwork recursive-pentagram --quote pascal-infinite-sphere
+npm run pipeline -- --date 2026-08-20
+```
+
+Rehearse the whole run at once — every body built and weighed, every artifact confirmed to
+be on disk — which is how a quotation two characters too long is found before its day
+arrives rather than on it:
+
+```bash
+npm run render -- --all
+npm run pipeline -- --all
 ```
 
 A dry run renders the media and prints the complete post body, weighted character count, quote ID, and artifact path. Use `--skip-render` only when the expected artifact already exists.
@@ -205,7 +241,7 @@ Post text follows this layout:
 
 The weighted count follows twitter-text v3. Plain-text spans are normalized to NFC before counting. Code points from U+0000–U+10FF, U+2000–U+200D, U+2010–U+201F, and U+2032–U+2037 have weight 1; other code points have weight 2. Emoji grapheme clusters have weight 2 and each HTTP or HTTPS URL has weight 23. The default maximum is 280 and can be changed with `--max-weighted-chars`. An over-limit body fails; it is never truncated.
 
-The manifest currently points at the intended GitHub Pages paths, but this repository does not include or enable a Pages deployment. Override the base URL during review with `--base-url`.
+The manifest points at the published gallery, so a post links to a page that is actually there. Override the base URL during review with `--base-url`.
 
 ## Quote catalog
 
@@ -253,19 +289,71 @@ Holmes revised the line between its two 1858 printings. [*The Atlantic Monthly*,
 
 The uploader follows X's current v2 chunked media workflow: INIT, APPEND, FINALIZE, optional STATUS polling, then `POST /2/tweets` with the returned media ID. See the official [chunked media upload guide](https://docs.x.com/x-api/media/quickstart/media-upload-chunked) and [Create Post reference](https://docs.x.com/x-api/posts/create-or-edit-post).
 
-Publishing requires a user access token authorized to upload media and create posts:
+### Why OAuth 2.0, and what it costs
+
+Both endpoints are reached with an OAuth 2.0 user access token, asked for with the scopes
+`tweet.read tweet.write users.read media.write offline.access`. An app-only bearer token
+cannot post, and the OAuth 1.0a route is not available for media: the v1.1 upload endpoint
+that took it was [retired on 9 June 2025](https://devcommunity.x.com/t/deprecating-the-v1-1-media-upload-endpoints/238196),
+and [`POST /2/media/upload`](https://docs.x.com/x-api/media/upload-media) documents the
+OAuth 2.0 scope instead.
+
+What that costs is a token lifecycle. An access token lasts two hours, so a nightly job
+never has a live one and always starts by refreshing; a refresh spends the refresh token it
+was given and issues a different one, which has to be stored before anything else happens.
+The workflow does exactly that, in two steps in that order — see below.
+
+Authorize once, by hand, to mint the first refresh token. The script opens nothing and
+prints nothing but progress: the code, the verifier and the tokens stay in the process and
+in the file it writes.
+
+```bash
+X_CLIENT_ID=... X_CLIENT_SECRET=... \
+npm run x:authorize -- --refresh-token-out ./x-refresh-token
+gh secret set X_REFRESH_TOKEN < ./x-refresh-token && rm ./x-refresh-token
+```
+
+The app needs **Read and write** permissions, the **Web App, Automated App or Bot** type —
+which is what makes it a confidential client and issues a client secret — and
+`http://127.0.0.1:8080/callback` registered as a callback URI, spelled exactly that way.
+The address rather than `localhost`, because that name resolves to both `::1` and
+`127.0.0.1` and a browser may knock at whichever the server is not listening on;
+`--redirect-host` overrides it if the app is already registered with the name.
+
+Publishing by hand, with an access token already in hand:
 
 ```bash
 X_POSTING_ENABLED=true \
-X_USER_ACCESS_TOKEN=... \
+X_OAUTH2_ACCESS_TOKEN=... \
 npm run pipeline -- --artwork koch-curves --publish
 ```
 
-Do not use a bearer-only app token. The workflow expects a user access token in the `X_USER_ACCESS_TOKEN` repository secret. No credentials are stored in the manifest or quote catalog.
-
 ## GitHub Actions
 
-`.github/workflows/daily-post.yml` is manually dispatchable. Its `enable_posting` input defaults to `false`, and the daily cron trigger is intentionally commented out. The workflow always uploads the generated artifact for review; it publishes only when the dispatch input is explicitly enabled and the required secret is present.
+`.github/workflows/daily-post.yml` is manually dispatchable. Its `enable_posting` input
+defaults to `false`, and the daily cron trigger is intentionally commented out. The workflow
+always uploads the generated artifact for review; it publishes only when the dispatch input
+is explicitly enabled, `X_POSTING_ENABLED` is true, `--publish` is passed, and the secrets
+are present.
+
+Four secrets, and no credentials in the manifest or the quote catalog:
+
+| Secret | What it is |
+| --- | --- |
+| `X_CLIENT_ID` | The app's OAuth 2.0 client ID |
+| `X_CLIENT_SECRET` | Its client secret; a confidential client authenticates the refresh itself |
+| `X_REFRESH_TOKEN` | The refresh token, replaced on every run |
+| `X_TOKEN_ROTATION_PAT` | A fine-grained token for this repository with Secrets: read and write, which is what lets the run store the replacement |
+
+The refresh and the store are separate steps, and the store comes first, because a run that
+posted before storing would strand the chain whenever the post failed: the old refresh token
+is already spent, the new one would be lost with the runner, and someone would have to open
+a browser and authorize again.
+
+One run posts at most once, and the schedule gives each date a single entry, so the nightly
+cron cannot post twice for the same day. It is worth being exact about what that does not
+cover: dispatching the workflow again by hand, with posting enabled, will post again. There
+is no read-back against the timeline to prevent it.
 
 ## Gallery
 

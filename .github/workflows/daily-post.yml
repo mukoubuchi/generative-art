@@ -49,11 +49,35 @@ jobs:
       - name: Run unit tests
         run: npm test --prefix p5js
 
+      # An X access token lasts two hours, so a nightly job never has a live one and always
+      # starts by trading the stored refresh token for a pair. Neither value is printed:
+      # both are written to files under the runner's temporary directory, which does not
+      # outlive the run, where the workflow log does.
+      - name: Refresh the X access token
+        if: inputs.enable_posting
+        env:
+          X_CLIENT_ID: ${{ secrets.X_CLIENT_ID }}
+          X_CLIENT_SECRET: ${{ secrets.X_CLIENT_SECRET }}
+          X_REFRESH_TOKEN: ${{ secrets.X_REFRESH_TOKEN }}
+        run: |
+          npm run x:refresh --prefix p5js -- \
+            --access-token-out "$RUNNER_TEMP/x-access-token" \
+            --refresh-token-out "$RUNNER_TEMP/x-refresh-token"
+
+      # Stored before anything is posted, and deliberately its own step. A refresh spends
+      # the token it was given, so the copy in storage is dead the moment the step above
+      # succeeds; storing after the post would strand the chain — and cost a person a
+      # browser and a re-authorization — every time a post failed.
+      - name: Store the rotated refresh token
+        if: inputs.enable_posting
+        env:
+          GH_TOKEN: ${{ secrets.X_TOKEN_ROTATION_PAT }}
+        run: gh secret set X_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/x-refresh-token"
+
       - name: Render and prepare post
         shell: bash
         env:
           X_POSTING_ENABLED: ${{ inputs.enable_posting }}
-          X_USER_ACCESS_TOKEN: ${{ inputs.enable_posting && secrets.X_USER_ACCESS_TOKEN || '' }}
         run: |
           arguments=()
           if [[ -n "$ARTWORK_INPUT" ]]; then
@@ -61,6 +85,8 @@ jobs:
           fi
           if [[ "$ENABLE_POSTING_INPUT" == "true" ]]; then
             arguments+=(--publish)
+            X_OAUTH2_ACCESS_TOKEN="$(cat "$RUNNER_TEMP/x-access-token")"
+            export X_OAUTH2_ACCESS_TOKEN
           fi
           npm run pipeline --prefix p5js -- "${arguments[@]}"
 

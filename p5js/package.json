@@ -12,7 +12,9 @@
     "thumbnails": "node scripts/thumbnails.mjs",
     "site": "node scripts/build-site.mjs",
     "preview": "node scripts/preview.mjs",
-    "pipeline": "node scripts/publish.mjs"
+    "pipeline": "node scripts/publish.mjs",
+    "x:authorize": "node scripts/x-authorize.mjs",
+    "x:refresh": "node scripts/x-refresh.mjs"
   },
   "dependencies": {
     "p5": "2.3.2",

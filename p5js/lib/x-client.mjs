@@ -24,14 +24,19 @@ async function parseResponse(response) {
   return responseBody;
 }
 
+/**
+ * The token is the short-lived one a refresh just produced, not something kept in storage:
+ * an X access token lasts two hours, so there is never a stored one worth reading. It is
+ * passed in through the environment by the step that refreshed it.
+ */
 export function assertPublishingEnabled(environment = process.env) {
   if (environment.X_POSTING_ENABLED !== "true") {
     throw new Error("Publishing is disabled. Set X_POSTING_ENABLED=true as an explicit second gate.");
   }
-  if (!environment.X_USER_ACCESS_TOKEN) {
-    throw new Error("X_USER_ACCESS_TOKEN is required for publishing.");
+  if (!environment.X_OAUTH2_ACCESS_TOKEN) {
+    throw new Error("X_OAUTH2_ACCESS_TOKEN is required for publishing.");
   }
-  return environment.X_USER_ACCESS_TOKEN;
+  return environment.X_OAUTH2_ACCESS_TOKEN;
 }
 
 export function createXClient({

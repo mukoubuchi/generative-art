@@ -1,13 +1,3 @@
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function dayNumber(date) {
-  const timestamp = Date.parse(`${date}T00:00:00Z`);
-  if (!Number.isFinite(timestamp)) {
-    throw new Error(`Invalid pipeline date: ${date}`);
-  }
-  return Math.floor(timestamp / MILLISECONDS_PER_DAY);
-}
-
 export function eligibleArtworks(manifest, quoteCatalog, warn = console.warn) {
   const quotesById = new Map(quoteCatalog.quotes.map((quote) => [quote.id, quote]));
   const eligible = [];
@@ -25,27 +15,28 @@ export function eligibleArtworks(manifest, quoteCatalog, warn = console.warn) {
   return eligible;
 }
 
-export function selectTarget(
-  manifest,
-  quoteCatalog,
-  { artworkId, quoteId, date, warn = console.warn } = {}
-) {
-  const eligible = eligibleArtworks(manifest, quoteCatalog, warn);
-  if (eligible.length === 0) {
-    throw new Error("No artwork has a verified public-domain quote candidate.");
+/**
+ * Which artwork goes out is no longer worked out here. It used to be the date modulo the
+ * number of eligible artworks, which meant the answer changed under you whenever an artwork
+ * was added — the same date would name a different work before and after. The schedule
+ * names the work instead, and this is left with the two things that depend on the catalog:
+ * that the artwork exists and is publishable, and which of its quotations to use.
+ */
+export function selectTarget(manifest, quoteCatalog, { artworkId, quoteId, warn = console.warn }) {
+  if (!artworkId) {
+    throw new Error("An artwork id is required; the schedule or --artwork supplies it.");
   }
-
-  const selectionDay = dayNumber(date ?? new Date().toISOString().slice(0, 10));
-  const target = artworkId
-    ? eligible.find((candidate) => candidate.artwork.id === artworkId)
-    : eligible[selectionDay % eligible.length];
+  const eligible = eligibleArtworks(manifest, quoteCatalog, warn);
+  const target = eligible.find((candidate) => candidate.artwork.id === artworkId);
   if (!target) {
     throw new Error(`Artwork is unavailable or has no verified quote: ${artworkId}`);
   }
 
+  // The first candidate unless one is named. The manifest lists an artwork's quotations in
+  // the order they were chosen for it, so the first is the one it was matched with.
   const quote = quoteId
     ? target.quotes.find((candidate) => candidate.id === quoteId)
-    : target.quotes[selectionDay % target.quotes.length];
+    : target.quotes[0];
   if (!quote) {
     throw new Error(`Quote is not an eligible candidate for ${target.artwork.id}: ${quoteId}`);
   }

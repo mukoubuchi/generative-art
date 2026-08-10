@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "timeZone": "Asia/Tokyo",
+  "posts": [
+    { "date": "2026-08-12", "artwork": "strange-attractor" },
+    { "date": "2026-08-13", "artwork": "bounding-spots" },
+    { "date": "2026-08-14", "artwork": "fibonacci-spiral" },
+    { "date": "2026-08-15", "artwork": "herringbone" },
+    { "date": "2026-08-16", "artwork": "kanizsa-square" },
+    { "date": "2026-08-17", "artwork": "koch-curves" },
+    { "date": "2026-08-18", "artwork": "voronoi-bloom" },
+    { "date": "2026-08-19", "artwork": "windmill" },
+    { "date": "2026-08-20", "artwork": "toggle-color-ball" },
+    { "date": "2026-08-21", "artwork": "ammonite" },
+    { "date": "2026-08-22", "artwork": "pulse-button" },
+    { "date": "2026-08-23", "artwork": "pinwheel" },
+    { "date": "2026-08-24", "artwork": "necker-cube" },
+    { "date": "2026-08-25", "artwork": "sierpinski-gasket" },
+    { "date": "2026-08-26", "artwork": "flow-field" },
+    { "date": "2026-08-27", "artwork": "atan2" },
+    { "date": "2026-08-28", "artwork": "nautilus" },
+    { "date": "2026-08-29", "artwork": "hex-triangle" },
+    { "date": "2026-08-30", "artwork": "loader" },
+    { "date": "2026-08-31", "artwork": "truchet-tides" },
+    { "date": "2026-09-01", "artwork": "eyes-pattern" },
+    { "date": "2026-09-02", "artwork": "recursive-pentagram" },
+    { "date": "2026-09-03", "artwork": "reaction-diffusion-coral" },
+    { "date": "2026-09-04", "artwork": "harriss-spiral" },
+    { "date": "2026-09-05", "artwork": "spring-polygon" }
+  ]
+}
