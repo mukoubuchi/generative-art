@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Node.js and browser tests
+node_modules/
+playwright-report/
+test-results/
+
+# Generated output; nothing rendered is committed
+exports/*
+!exports/.gitkeep
+
+# The libraries are served from the site itself, copied out of node_modules when it is built
+p5js/vendor/
+
+# The Pages site, built from the manifest at deploy time
+site/

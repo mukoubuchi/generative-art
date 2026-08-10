@@ -1,0 +1,74 @@
+name: Daily post pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      artwork:
+        description: Optional artwork ID; leave blank for date-based selection
+        required: false
+        type: string
+      enable_posting:
+        description: Publish to X after rendering and validation
+        required: true
+        default: false
+        type: boolean
+  # schedule:
+  #   - cron: "0 15 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  render-and-prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ARTWORK_INPUT: ${{ inputs.artwork }}
+      ENABLE_POSTING_INPUT: ${{ inputs.enable_posting }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: p5js/package-lock.json
+
+      - name: Install JavaScript dependencies
+        run: npm ci --prefix p5js
+
+      - name: Install Chromium and ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+          cd p5js
+          npx playwright install --with-deps chromium
+
+      - name: Run unit tests
+        run: npm test --prefix p5js
+
+      - name: Render and prepare post
+        shell: bash
+        env:
+          X_POSTING_ENABLED: ${{ inputs.enable_posting }}
+          X_USER_ACCESS_TOKEN: ${{ inputs.enable_posting && secrets.X_USER_ACCESS_TOKEN || '' }}
+        run: |
+          arguments=()
+          if [[ -n "$ARTWORK_INPUT" ]]; then
+            arguments+=(--artwork "$ARTWORK_INPUT")
+          fi
+          if [[ "$ENABLE_POSTING_INPUT" == "true" ]]; then
+            arguments+=(--publish)
+          fi
+          npm run pipeline --prefix p5js -- "${arguments[@]}"
+
+      - name: Upload rendered media
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: daily-post-media
+          path: exports/p5js/
+          if-no-files-found: error
+          retention-days: 14

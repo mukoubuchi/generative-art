@@ -1,0 +1,255 @@
+{
+  "version": 1,
+  "quotes": [
+    {
+      "id": "emerson-repetition-laws",
+      "text": "Nature is an endless combination and repetition of a very few laws.",
+      "lang": "en",
+      "author": "Ralph Waldo Emerson",
+      "source": "Essays: First Series — History",
+      "year": 1841,
+      "publicDomain": true,
+      "sourceUrl": "https://www.gutenberg.org/files/2944/2944-h/2944-h.htm"
+    },
+    {
+      "id": "pascal-infinite-sphere",
+      "text": "C’est une sphère infinie dont le centre est partout, la circonférence nulle part.",
+      "lang": "fr",
+      "author": "Blaise Pascal",
+      "source": "Pensées, article I",
+      "year": 1670,
+      "publicDomain": true,
+      "sourceUrl": "https://fr.wikisource.org/wiki/Page%3APascal_-_Pens%C3%A9es%2C_%C3%A9d._Havet.djvu/81"
+    },
+    {
+      "id": "swift-fleas-ad-infinitum",
+      "text": "So, naturalists observe, a flea\nHas smaller fleas that on him prey;\nAnd these have smaller still to bite 'em,\nAnd so proceed ad infinitum.",
+      "lang": "en",
+      "author": "Jonathan Swift",
+      "source": "On Poetry: a Rhapsody",
+      "year": 1733,
+      "publicDomain": true,
+      "sourceUrl": "https://en.wikisource.org/wiki/Page%3AThe_Works_of_the_Rev._Jonathan_Swift%2C_Volume_8.djvu/186"
+    },
+    {
+      "id": "bernoulli-eadem-mutata-resurgo",
+      "text": "Eadem mutata resurgo.",
+      "lang": "la",
+      "author": "Jakob Bernoulli",
+      "source": "Epitaph, Basel Minster",
+      "year": 1705,
+      "publicDomain": true,
+      "sourceUrl": "https://en.wikisource.org/wiki/Page%3AA_History_of_Mathematics_(1893).djvu/256"
+    },
+    {
+      "id": "dante-amor-che-move",
+      "text": "l’amor che move il sole e l’altre stelle.",
+      "lang": "it",
+      "author": "Dante Alighieri",
+      "source": "Divina Commedia, Paradiso XXXIII",
+      "year": 1321,
+      "publicDomain": true,
+      "sourceUrl": "https://it.wikisource.org/wiki/Divina_Commedia/Paradiso/Canto_XXXIII"
+    },
+    {
+      "id": "vulgata-nihil-sub-sole-novum",
+      "text": "Nihil sub sole novum.",
+      "lang": "la",
+      "author": "Vulgata Clementina",
+      "source": "Ecclesiastes 1:10",
+      "year": 1592,
+      "publicDomain": true,
+      "sourceUrl": "https://la.wikisource.org/wiki/Vulgata_Clementina/Liber_Ecclesiastes"
+    },
+    {
+      "id": "cervantes-molinos-no-gigantes",
+      "text": "molinos de viento, y no gigantes",
+      "lang": "es",
+      "author": "Miguel de Cervantes",
+      "source": "Don Quijote I, capítulo VIII",
+      "year": 1605,
+      "publicDomain": true,
+      "sourceUrl": "https://es.wikisource.org/wiki/Page%3AEl_ingenioso_hidalgo_Don_Quijote_de_la_Mancha.djvu/74"
+    },
+    {
+      "id": "descartes-diviser-les-difficultes",
+      "text": "Le second, de diviser chacune des difficultés que j’examinerois, en autant de parcelles qu’il se pourroit, et qu’il seroit requis pour les mieux résoudre.",
+      "lang": "fr",
+      "author": "René Descartes",
+      "source": "Discours de la méthode, seconde partie",
+      "year": 1637,
+      "publicDomain": true,
+      "sourceUrl": "https://fr.wikisource.org/wiki/Page%3A%C5%92uvres_de_Descartes%2C_%C3%A9d._Cousin%2C_tome_I.djvu/147"
+    },
+    {
+      "id": "yijing-yin-yang-dao",
+      "text": "一陰一陽之謂道",
+      "lang": "lzh",
+      "author": "易傳",
+      "source": "繫辭上傳 第五章",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://zh.wikisource.org/wiki/%E6%98%93%E5%82%B3/%E7%B9%AB%E8%BE%AD%E4%B8%8A"
+    },
+    {
+      "id": "heike-gion-shoja",
+      "text": "祇園精舎の鐘の聲、諸行無常の響あり、娑羅雙樹の花の色、盛者必衰の理を顯はす。",
+      "lang": "ja",
+      "author": "平家物語",
+      "source": "巻一 祇園精舎の事",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://dl.ndl.go.jp/info:ndljp/pid/1018053/152"
+    },
+    {
+      "id": "thompson-stir-a-flower",
+      "text": "And thou canst not stir a flower\nWithout troubling of a star.",
+      "lang": "en",
+      "author": "Francis Thompson",
+      "source": "The Mistress of Vision",
+      "year": 1897,
+      "publicDomain": true,
+      "sourceUrl": "https://en.wikisource.org/wiki/Page%3AThe_Poet%27s_Chantry_pg_149.jpg"
+    },
+    {
+      "id": "holmes-stately-mansions",
+      "text": "Build thee more stately mansions, O my soul,\nAs the swift seasons roll!\nLeave thy low-vaulted past!",
+      "lang": "en",
+      "author": "Oliver Wendell Holmes",
+      "source": "The Autocrat of the Breakfast-Table, chapter IV",
+      "year": 1858,
+      "publicDomain": true,
+      "sourceUrl": "https://en.wikisource.org/wiki/Page%3AThe_Autocrat_of_the_Breakfast-Table_(1858)_Holmes.djvu/139"
+    },
+    {
+      "id": "ovidius-omnia-mutantur",
+      "text": "Omnia mutantur, nihil interit",
+      "lang": "la",
+      "author": "Publius Ovidius Naso",
+      "source": "Metamorphoses XV.165",
+      "year": 8,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:latinLit:phi0959.phi006.perseus-lat2:15.165/"
+    },
+    {
+      "id": "heraclitus-palintropos-harmonie",
+      "text": "παλίντροπος ἁρμονίη",
+      "lang": "grc",
+      "author": "Ἡράκλειτος",
+      "source": "DK 22 B51, in Hippolytus, Refutatio IX.9.2",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:greekLit:tlg2115.tlg060.opp-grc1:9.9.2/"
+    },
+    {
+      "id": "augustinus-ordo-est-dispositio",
+      "text": "Ordo est parium dispariumque rerum sua cuique loca tribuens dispositio.",
+      "lang": "la",
+      "author": "Aurelius Augustinus",
+      "source": "De civitate Dei XIX.13",
+      "year": 426,
+      "publicDomain": true,
+      "sourceUrl": "https://la.wikisource.org/wiki/De_civitate_Dei_(ed._Migne)/19"
+    },
+    {
+      "id": "platon-hen-isopleuron-ex-hex",
+      "text": "ἓν ἰσόπλευρον τρίγωνον ἐξ ἓξ τὸν ἀριθμὸν ὄντων γέγονεν.",
+      "lang": "grc",
+      "author": "Πλάτων",
+      "source": "Timaeus 54e",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:greekLit:tlg0059.tlg031.perseus-grc2:54e/"
+    },
+    {
+      "id": "goethe-sinne-truegen-nicht",
+      "text": "Die Sinne trügen nicht, das Urteil trügt.",
+      "lang": "de",
+      "author": "Johann Wolfgang von Goethe",
+      "source": "Maximen und Reflexionen",
+      "year": 1908,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/sprcheinprosam00goetuoft/page/n169/mode/1up"
+    },
+    {
+      "id": "plotinus-helioeides",
+      "text": "οὐ γὰρ ἂν πώποτε εἶδεν ὀφθαλμὸς ἥλιον ἡλιοειδὴς μὴ γεγενημένος",
+      "lang": "grc",
+      "author": "Πλωτῖνος",
+      "source": "Enneades I.6.9",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:greekLit:tlg2000.tlg001.1st1K-grc1:1.6.9/"
+    },
+    {
+      "id": "platon-skeuaston-skias",
+      "text": "οἱ τοιοῦτοι οὐκ ἂν ἄλλο τι νομίζοιεν τὸ ἀληθὲς ἢ τὰς τῶν σκευαστῶν σκιάς.",
+      "lang": "grc",
+      "author": "Πλάτων",
+      "source": "Politeia VII 515c",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:greekLit:tlg0059.tlg030.perseus-grc2:7.515c/"
+    },
+    {
+      "id": "leibniz-chaque-rameau",
+      "text": "Mais chaque rameau de la plante, chaque membre de l’animal, chaque goutte de ses humeurs est encore un tel jardin, ou un tel étang.",
+      "lang": "fr",
+      "author": "Gottfried Wilhelm Leibniz",
+      "source": "La Monadologie, 67",
+      "year": 1714,
+      "publicDomain": true,
+      "sourceUrl": "https://fr.wikisource.org/wiki/Page%3A%C5%92uvres_philosophiques_de_Leibniz%2C_Alcan%2C_1900%2C_tome_1.djvu/746"
+    },
+    {
+      "id": "turing-dappling",
+      "text": "Another reaction system in two dimensions gives rise to patterns reminiscent of dappling.",
+      "lang": "en",
+      "author": "A. M. Turing",
+      "source": "The Chemical Basis of Morphogenesis",
+      "year": 1952,
+      "publicDomain": true,
+      "sourceUrl": "https://doi.org/10.1098/rstb.1952.0012"
+    },
+    {
+      "id": "hojoki-yuku-kawa",
+      "text": "行く川のながれは絕えずして、しかも本の水にあらず。よどみに浮ぶうたかたは、かつ消えかつ結びて久しくとゞまることなし。",
+      "lang": "ja",
+      "author": "鴨長明",
+      "source": "方丈記",
+      "year": 1212,
+      "publicDomain": true,
+      "sourceUrl": "https://ja.wikisource.org/wiki/%E6%96%B9%E4%B8%88%E8%A8%98_(%E5%9C%8B%E6%96%87%E5%A4%A7%E8%A7%80)"
+    },
+    {
+      "id": "baudelaire-se-repondent",
+      "text": "Les parfums, les couleurs et les sons se répondent.",
+      "lang": "fr",
+      "author": "Charles Baudelaire",
+      "source": "Les Fleurs du mal, Correspondances",
+      "year": 1861,
+      "publicDomain": true,
+      "sourceUrl": "https://fr.wikisource.org/wiki/Page%3ABaudelaire_-_Les_Fleurs_du_mal_1861.djvu/24"
+    },
+    {
+      "id": "lucretius-declinare",
+      "text": "quod nisi declinare solerent, omnia deorsum imbris uti guttae caderent per inane profundum…",
+      "lang": "la",
+      "author": "Lucretius",
+      "source": "De rerum natura II.221–222",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:latinLit:phi0550.phi001.perseus-lat1:2.221-2.222/"
+    },
+    {
+      "id": "nietzsche-tanzenden-stern",
+      "text": "Ich sage euch: man muß noch Chaos in sich haben, um einen tanzenden Stern gebären zu können.",
+      "lang": "de",
+      "author": "Friedrich Nietzsche",
+      "source": "Also sprach Zarathustra, Zarathustras Vorrede 5",
+      "year": 1883,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/alsosprachzarath00niet_0/page/n20/mode/1up"
+    }
+  ]
+}

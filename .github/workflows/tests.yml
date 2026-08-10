@@ -1,0 +1,52 @@
+name: Tests
+
+# The unit tests need no browser: every artwork's geometry lives in a module that runs
+# under `node --test`, which is why this workflow is a checkout, an install and a test run.
+# What does need Chromium — the gallery build and its thumbnails — is checked by pages.yml
+# on pull requests. Keeping the two apart is what lets this one run on every push and be
+# quick enough to be worth a badge.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "p5js/**"
+      - "README.md"
+      - ".github/workflows/tests.yml"
+  pull_request:
+    paths:
+      - "p5js/**"
+      - "README.md"
+      - ".github/workflows/tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: p5js/package-lock.json
+
+      - name: Install JavaScript dependencies
+        # Playwright is a dependency of the render scripts, not of the tests, and its
+        # install step would otherwise fetch a browser this job never opens.
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        run: npm ci --prefix p5js
+
+      - name: Run unit tests
+        run: npm test --prefix p5js

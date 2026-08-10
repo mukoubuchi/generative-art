@@ -1,0 +1,22 @@
+{
+  "name": "generative-art-p5js",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "render": "node scripts/render.mjs",
+    "thumbnails": "node scripts/thumbnails.mjs",
+    "site": "node scripts/build-site.mjs",
+    "preview": "node scripts/preview.mjs",
+    "pipeline": "node scripts/publish.mjs"
+  },
+  "dependencies": {
+    "p5": "2.3.2",
+    "playwright": "1.62.1",
+    "three": "0.185.1"
+  }
+}

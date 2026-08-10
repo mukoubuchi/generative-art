@@ -1,0 +1,78 @@
+name: Gallery site
+
+# The site is generated, so it is built here rather than committed. Deployment is manual
+# for now: Pages has not been enabled on the repository, and enabling it is the owner's
+# decision. Until then this workflow still runs the build, which is what catches a broken
+# gallery before anyone is looking at one.
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to GitHub Pages after building
+        required: true
+        default: false
+        type: boolean
+  pull_request:
+    paths:
+      - "p5js/**"
+      - ".github/workflows/pages.yml"
+      - "LICENSE"
+      - "THIRD_PARTY_LICENSES"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: p5js/package-lock.json
+
+      - name: Install JavaScript dependencies
+        run: npm ci --prefix p5js
+
+      # The gallery needs Chromium to capture thumbnails, but no ffmpeg: a thumbnail is one
+      # frame, so nothing here is encoded into a clip.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: p5js
+
+      - name: Run unit tests
+        run: npm test --prefix p5js
+
+      - name: Build the site
+        run: npm run site --prefix p5js -- --clean
+
+      - name: Upload the site as a Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: inputs.deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

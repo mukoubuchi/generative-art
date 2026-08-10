@@ -1,0 +1,1032 @@
+/*
+ * The gallery's motion has two layers.
+ *
+ * The timing layer comes from the artworks themselves. The reveal order is the golden
+ * angle, set per card in the generated markup: phyllotaxis in time, so the cards arrive in
+ * an order that neither sweeps nor shuffles. The durations are a ladder in the plastic
+ * ratio, the real root of x**3 = x + 1 that Harriss Spiral is built on — each nested layer
+ * of a card moves for the previous layer's time divided by that ratio, so the frame settles
+ * before the card and the label before the frame.
+ *
+ * The shape layer is adapted from yui540's css-animations, under MIT and recorded in
+ * THIRD_PARTY_LICENSES. Ten of its animations are used, each named at the rule that
+ * carries it. The two layers are independent — one decides when a thing moves, the other
+ * what the movement looks like.
+ */
+:root {
+  --duration-card: 720ms;
+  --duration-frame: 543ms;
+  --duration-label: 410ms;
+  --duration-unfurl: 900ms;
+  --ease-settle: cubic-bezier(0.16, 0.84, 0.28, 1);
+  --ease-lift: cubic-bezier(0.34, 0.02, 0.2, 1);
+  /* The easing the adapted animations were authored with. */
+  --ease-turn: cubic-bezier(0.78, 0, 0.2, 1);
+
+  --ground: #14151a;
+  --ground-raised: #1c1e25;
+  --ink: #eceef4;
+  --ink-dim: #a2a7b6;
+  --ink-faint: #767c8c;
+  --edge: #2c2f39;
+  --edge-bright: #4a4f5e;
+  --accent: #8fb8ff;
+}
+
+@property --trace {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 5vw, 4rem) 4rem;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(1.2rem, 4vw, 3rem);
+  max-width: 96rem;
+  margin: 0 auto clamp(2.5rem, 7vw, 5rem);
+}
+
+.masthead__text {
+  flex: 1 1 20rem;
+  max-width: 46rem;
+}
+
+/*
+ * The face alone: the head layer of the drawing, 340 by 234, scaled by one width.
+ *
+ * The drawing was cut at the neck, so the layer ends in a straight line below the knot of
+ * the tie. Only the last twenty-fifth of it is faded out, which is enough to lose that line
+ * and little enough to keep the collar and the knot — the model beside it is framed to show
+ * both, and the two stand-ins have to be pictures of the same thing. The model's own fade
+ * is deeper, because it has suit below the tie to dissolve where this has nothing. The mask
+ * is set on the image and not on the box around it, so the same transform carries it and
+ * the fade stays square to the drawing however far the head is turned.
+ *
+ * The head turns about the neck, 48.9 per cent across the layer and 89.6 per cent down —
+ * a point that now falls inside the faded part, which is why the turn has no visible hinge.
+ *
+ * Seven degrees, not the fifteen a real turn would take: this is one flat drawing, and past
+ * about eight the tilt stops reading as a head turning and starts reading as the whole
+ * portrait leaning. The narrowing carries the rest of the impression, since a face turning
+ * away is a face growing narrower — scaling it down across its width reads as more rotation
+ * than is actually there. A three-dimensional figure would need neither trick.
+ */
+.character {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(11rem, 24vw, 20rem);
+}
+
+/*
+ * A light behind the head. The hair is black and so is the page, and against that ground a
+ * dark silhouette on a dark field reads as a hole rather than as a person. This puts a
+ * faint glow where the head is, so its outline is always legible; it sits behind both the
+ * drawing and the model, and nowhere near the cards.
+ */
+.character::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -1% 3% 13%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgb(214 224 245 / 15%),
+    rgb(214 224 245 / 7%) 62%,
+    rgb(214 224 245 / 0%) 100%
+  );
+  pointer-events: none;
+}
+
+.character__head {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-mask-image: linear-gradient(to bottom, #000 96%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 96%, transparent 100%);
+  transform-origin: 48.9% 89.6%;
+  transform:
+    translate(calc(var(--look-x, 0) * 5px), calc(var(--look-y, 0) * 3.5px))
+    rotate(calc(var(--look-x, 0) * 7deg))
+    scaleX(calc(1 - var(--look-x-abs, 0) * 0.05));
+  transition: transform 380ms var(--ease-lift);
+}
+
+/*
+ * The real head, once it has loaded, over the same box.
+ *
+ * Its fade is deeper than the drawing's — a seventh rather than a twenty-fifth — and that
+ * is what the mesh is cut low for. A flat horizontal edge of geometry against nothing is a
+ * stair-stepped line wherever it is left in shot, and no amount of multisampling helps a
+ * boundary that is genuinely a straight cut. Below the tie there is plain suit for the fade
+ * to dissolve, so the picture ends in nothing and the cut is never reached.
+ *
+ * The drawing is faded rather than removed, so a lost WebGL context has something to fall
+ * back to and the swap costs no layout.
+ */
+.character__model {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  transition: opacity 520ms var(--ease-lift);
+}
+
+.character--model .character__model {
+  opacity: 1;
+}
+
+.character--model .character__head {
+  opacity: 0;
+  transition: opacity 520ms var(--ease-lift);
+}
+
+.masthead__title {
+  margin: 0 0 0.6rem;
+  font-size: clamp(2.2rem, 7vw, 3.6rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.masthead__lede {
+  margin: 0;
+  max-width: 38rem;
+  color: var(--ink-dim);
+  font-size: clamp(0.95rem, 1.6vw, 1.06rem);
+  text-wrap: pretty;
+}
+
+/*
+ * Adapted from yui540's curtain. Two sheets each half again as tall as the opening, which
+ * swing away about their top corner rather than sliding flat — the slant is the whole of
+ * it, because a panel that leaves at an angle reads as cloth and one that leaves square
+ * reads as a wipe. A shadow deepens under the leading edge as it goes, then lifts.
+ *
+ * Changed here: only the opening half is kept, the two sheets are given different weights
+ * of the page's own ground rather than two greys, and it covers the artworks alone. A
+ * curtain over the whole page would put its own duration in front of the first thing the
+ * reader sees; over the grid, the masthead is painted at once and the cards arrive behind
+ * the parting, which is what a gallery opening actually looks like.
+ */
+.stage {
+  position: relative;
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.curtain {
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  /* Only what can be seen at load: below the fold the cards arrive on their own. */
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.curtain__panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50.5%;
+  height: 150%;
+}
+
+.curtain__panel--left {
+  color: #21232c;
+  --part-delay: 300ms;
+}
+
+/* Mirrored as a whole, so one set of keyframes serves both sides. */
+.curtain__panel--right {
+  left: auto;
+  right: 0;
+  color: #191b22;
+  transform: scaleX(-1);
+  --part-delay: 420ms;
+}
+
+.curtain__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  animation: curtain-part 820ms var(--ease-turn) var(--part-delay, 0ms) forwards;
+}
+
+@keyframes curtain-part {
+  from,
+  to {
+    transform-origin: right top;
+  }
+
+  from,
+  50% {
+    box-shadow: -60px -15px 26px rgb(0 0 0 / 34%);
+  }
+  to {
+    box-shadow: -10px -10px 16px rgb(0 0 0 / 0%);
+  }
+
+  from {
+    transform: translateX(0) rotate(0deg);
+  }
+  to {
+    transform: translateX(-101%) rotate(25deg);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+  gap: clamp(1.6rem, 3.4vw, 2.8rem);
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Layer 1: the card itself rises and fades in.
+ *
+ * The hidden state is scoped to `.js`, a class the page sets on itself before first paint.
+ * Without it every rule here is inert, so a browser that never runs the script shows all
+ * 25 cards rather than an empty page: the entrance is an enhancement, not a precondition
+ * for seeing the gallery.
+ */
+.js .card {
+  opacity: 0;
+  transform: translateY(1.15rem);
+}
+
+.card.is-revealed {
+  animation: card-enter var(--duration-card) var(--ease-settle) var(--reveal-delay, 0s) both;
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1.15rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card__link {
+  display: grid;
+  gap: 0.9rem;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 0.9rem;
+  outline-offset: 0.45rem;
+  transition: transform 420ms var(--ease-lift);
+}
+
+/*
+ * Layer 2: the frame settles from slightly small, anchored at its foot so it appears to
+ * stand up rather than to zoom.
+ */
+/*
+ * Every frame is the same shape whatever the artwork's canvas is, and the picture is fitted
+ * inside it rather than cropped to it. The canvases run from 2:1 to square, so sizing each
+ * frame to its own artwork left the rows visibly ragged, and cropping them to a common
+ * shape would cut the apex off a triangle and the ends off an arc. Matting each work on a
+ * common mount is what a gallery does with prints of different sizes, and it costs nothing.
+ */
+.card__frame {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: 0.9rem;
+  background-color: var(--ground-raised);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 22%);
+  transform-origin: 50% 100%;
+  /* Both are the mount rather than the picture, so neither depends on what is in the
+     frame: they read the same over a white ground and a black one. */
+  transition:
+    background-color 560ms var(--ease-lift),
+    box-shadow 420ms var(--ease-lift);
+}
+
+.card.is-revealed .card__frame {
+  animation: frame-popup var(--duration-frame) var(--ease-settle)
+    calc(var(--reveal-delay, 0s) + 60ms) both;
+}
+
+/*
+ * Adapted from yui540's `popup`. Its ball grows from nothing, overshoots, undershoots and
+ * settles, and the trick is that the two axes disagree — 1.2 against 1.25, then 0.9 against
+ * 0.95 — which reads as squash and stretch rather than as a zoom. Opacity finishes early so
+ * what is watched is the shape.
+ *
+ * Changed for a gallery: it starts from 0.9 rather than 0, and the overshoot is a few per
+ * cent rather than a fifth. A card carrying a picture should arrive, not bounce.
+ */
+@keyframes frame-popup {
+  from {
+    opacity: 0;
+  }
+  20%,
+  to {
+    opacity: 1;
+  }
+
+  from {
+    transform: scale(0.9, 0.9);
+  }
+  50% {
+    transform: scale(1.024, 1.038);
+  }
+  75% {
+    transform: scale(0.992, 0.986);
+  }
+  to {
+    transform: scale(1, 1);
+  }
+}
+
+/*
+ * A hairline traced around the frame, from the top and clockwise.
+ *
+ * The mask is a conic gradient whose sweep is a typed custom property, so it interpolates
+ * as an angle rather than snapping, and the border under it is uncovered a little at a
+ * time. It takes its radius from the frame, so it follows the corners at any card width
+ * without a number of its own, and it is drawn on the frame's own edge rather than on the
+ * picture — which is what lets one line read over every artwork here.
+ */
+.card__trace {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--accent);
+  border-radius: inherit;
+  pointer-events: none;
+  /* A dark line under a light one: the edge falls across white grounds as often as dark. */
+  box-shadow: inset 0 0 0 1px rgb(16 17 21 / 30%);
+  -webkit-mask-image: conic-gradient(from 0deg at 50% 50%, #000 var(--trace), transparent 0);
+  mask-image: conic-gradient(from 0deg at 50% 50%, #000 var(--trace), transparent 0);
+  transition: --trace 700ms var(--ease-lift);
+}
+
+.card__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: 50% 50%;
+  transition: transform 620ms var(--ease-lift);
+}
+
+/*
+ * Adapted from yui540's paper-turning animation, where a panel slides in while its top
+ * right corner un-rounds from a full quarter circle. Two animations of different lengths
+ * run together, so the corner is still opening after the slide has landed — which is what
+ * makes it read as a sheet being turned rather than a box arriving.
+ *
+ * Changed here: the entry is vertical only, where the original also slid sideways, because
+ * these cards sit in a grid and a diagonal entry fights the columns. The radius takes the
+ * longer of the two durations, as it does there.
+ */
+.card.is-revealed .card__image {
+  animation:
+    image-turn var(--duration-frame) var(--ease-turn) calc(var(--reveal-delay, 0s) + 90ms) both,
+    image-unfurl var(--duration-unfurl) ease-in-out calc(var(--reveal-delay, 0s) + 90ms) both;
+}
+
+@keyframes image-turn {
+  from {
+    transform: translateY(101%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes image-unfurl {
+  from {
+    border-radius: 0 100% 0 0;
+  }
+  to {
+    border-radius: 0;
+  }
+}
+
+/*
+ * Adapted from yui540's orbit, where a small ball circles a large one and its own turn
+ * finishes at 80 per cent of the cycle, so it comes to rest for the last fifth before
+ * setting off again. That pause is what stops a loop from reading as a spinner.
+ *
+ * Changed here: it is the badge itself rather than a figure in a frame. A mark that says an
+ * artwork moves may as well move, and this site's artworks are made of orbits and spirals,
+ * so the mark is one. It makes a single lap as the card arrives and only keeps going while
+ * the card is under the pointer — eleven of the twenty-five carry it, and eleven things
+ * circling on their own is a page that will not sit still.
+ */
+/*
+ * At the head of the frame rather than at its foot. The foot is where the artworks that
+ * answer to the reader print their legend, and the thumbnail carries it; moving the badge
+ * along to the trailing corner only bought room until a legend grew long enough to reach
+ * it, which Windmill's did — "hold to spin up · release coast to rest" ran under the badge.
+ * Putting the badge on the other edge of the frame is the version of the fix that no
+ * future legend can undo.
+ */
+.card__moving {
+  position: absolute;
+  inset-block-start: 0.6rem;
+  inset-inline-end: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.3rem;
+  background: rgb(20 21 26 / 72%);
+  color: var(--ink-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card__orbit {
+  position: relative;
+  width: 0.86em;
+  height: 0.86em;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.card__orbit::after {
+  content: "";
+  position: absolute;
+  top: -0.11em;
+  left: 50%;
+  width: 0.22em;
+  height: 0.22em;
+  margin-inline-start: -0.11em;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.card.is-revealed .card__orbit {
+  animation: orbit 2.6s var(--ease-lift) calc(var(--reveal-delay, 0s) + 260ms) both;
+}
+
+@media (hover: hover) {
+  .card__link:hover .card__orbit,
+  .card__link:focus-visible .card__orbit {
+    animation: orbit 2.6s linear infinite;
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  80%,
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * Adapted from yui540's ripple, where two rings grow from nothing and are already invisible
+ * at four fifths of the way out, so there is a beat of empty space between one ring and the
+ * next rather than a continuous pulse.
+ *
+ * Changed here: it fires once, from wherever the card was pressed, instead of repeating
+ * from the centre. A press starts a navigation, and until the page changes there is nothing
+ * to say the press was received; this is that.
+ */
+.card__ripple {
+  position: absolute;
+  left: var(--pointer-x, 50%);
+  top: var(--pointer-y, 50%);
+  width: 62%;
+  aspect-ratio: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.card__ripple::before,
+.card__ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgb(143 184 255 / 85%);
+  border-radius: 50%;
+  /* The ring crosses the artworks too, so it carries the same dark edge as the marks. */
+  box-shadow:
+    0 0 0 1px rgb(16 17 21 / 30%),
+    inset 0 0 0 1px rgb(16 17 21 / 22%);
+  opacity: 0;
+  transform: scale(0);
+}
+
+.card.is-pressed .card__ripple::before {
+  animation: ripple 780ms ease-out both;
+}
+
+.card.is-pressed .card__ripple::after {
+  animation: ripple 780ms ease-out 190ms both;
+}
+
+@keyframes ripple {
+  from {
+    opacity: 1;
+    transform: scale(0);
+  }
+  80%,
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* Layer 3: the label follows last, over the shortest of the three durations. */
+.card.is-revealed .card__label {
+  animation: label-rise var(--duration-label) var(--ease-settle)
+    calc(var(--reveal-delay, 0s) + 150ms) both;
+}
+
+@keyframes label-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card__title {
+  margin: 0;
+  font-size: 1.06rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/*
+ * Adapted from the lettering in yui540's paper-turning animation, which stands a character
+ * up from a squashed baseline: `scale(1.4, 0)` to `scale(1, 1)` about `bottom center`, so
+ * it is briefly wide and flat before it rises.
+ *
+ * Changed here: 1.06 rather than 1.4. Theirs is one enormous character, where stretching it
+ * by two fifths is legible; a line of words widened that far is a smear.
+ */
+.card.is-revealed .card__title,
+.masthead__title {
+  transform-origin: bottom center;
+}
+
+.card.is-revealed .card__title {
+  animation: stand-up var(--duration-label) var(--ease-turn)
+    calc(var(--reveal-delay, 0s) + 170ms) both;
+}
+
+.masthead__title {
+  animation: stand-up 620ms var(--ease-turn) 80ms both;
+}
+
+@keyframes stand-up {
+  from {
+    transform: scale(1.06, 0);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+}
+
+.card__description {
+  margin: 0.25rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.92rem;
+  text-wrap: pretty;
+}
+
+/*
+ * Adapted from yui540's scroll, where a roller travels along and the paper appears behind
+ * it — two things moving in step, one leaving the other. The paper arrives by sliding in
+ * whole from the far end rather than by growing, which is what makes it read as unrolling
+ * rather than as drawing.
+ *
+ * Changed here: the roller is not drawn. There is no room for a rod above a line of type in
+ * a card, and animating one across a box of unknown width costs a layout every frame. What
+ * is kept is the relationship: the rule slides in from the end, brighter at its leading
+ * edge, and the quotation follows out from under it. This is the site's own subject —
+ * every artwork is paired with a quotation — so it gets the best of what was on offer.
+ */
+.card__quote {
+  position: relative;
+  overflow: hidden;
+  margin: 0.7rem 0 0;
+  padding: 0.55rem 0 0 0.85rem;
+  border-inline-start: 1px solid var(--edge);
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  font-style: italic;
+  text-wrap: pretty;
+}
+
+.card__quote::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(to right, var(--edge-bright) 0 9%, var(--edge) 9% 100%);
+}
+
+.card.is-revealed .card__quote::before {
+  animation: quote-unroll 620ms var(--ease-turn) calc(var(--reveal-delay, 0s) + 200ms) both;
+}
+
+@keyframes quote-unroll {
+  from {
+    transform: translateX(101%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.card__quote-text {
+  margin: 0;
+}
+
+.card.is-revealed .card__quote-text,
+.card.is-revealed .card__cite {
+  animation: quote-follow 480ms var(--ease-settle) calc(var(--reveal-delay, 0s) + 330ms) both;
+}
+
+@keyframes quote-follow {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Holds the symbol definition; it is never drawn itself. */
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/*
+ * Sized in em so it tracks the quotation's own type rather than a fixed pixel size. The
+ * box keeps the icon's own 448:512 proportions, so it is not letterboxed inside a square,
+ * and sits on the baseline of the line it opens.
+ */
+.card__quote-mark {
+  width: calc(0.95em * 448 / 512);
+  height: 0.95em;
+  vertical-align: -0.05em;
+  margin-inline-end: 0.4em;
+  color: var(--edge-bright);
+}
+
+/*
+ * The attribution is set against the end edge, which is where a reader looks for it after
+ * the quotation rather than at the start of another line of quoted text. `end` rather than
+ * `right` so it follows the direction of whatever language it is set in.
+ *
+ * Its dash is joined to the name by a non-breaking space. Some sources carry a dash of
+ * their own — "Essays: First Series — History" — and when a wrap put the attribution's
+ * dash at the head of a line the two read as two attributions. A nowrap on the whole name
+ * would fix that too, but a long one could then overrun a narrow card; this cannot.
+ */
+.card__cite {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--ink-dim);
+  font-size: 0.76rem;
+  font-style: normal;
+  letter-spacing: 0.01em;
+  text-align: end;
+  text-wrap: pretty;
+}
+
+.card__cite b {
+  font-weight: 600;
+}
+
+/*
+ * Sits below the card's own link rather than inside it: an anchor cannot be nested in
+ * another, and the two destinations are different things. Kept quiet, so the artwork is
+ * still what the card is offering.
+ */
+.card__source {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-top: 0.7rem;
+  padding: 0.15rem 0;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: color 220ms var(--ease-lift);
+}
+
+.card__source-icon {
+  width: calc(0.95em * 576 / 512);
+  height: 0.95em;
+}
+
+.card__source:hover,
+.card__source:focus-visible {
+  color: var(--accent);
+}
+
+/*
+ * Adapted from yui540's scribble, where a stroke is laid down by lengthening its dash and
+ * thickening as it goes, from under half its weight to full — the pressure of a pen being
+ * pushed, which is what separates it from a bar growing sideways. The stroke it runs along
+ * is not quite straight, for the same reason.
+ *
+ * Changed here: theirs then wipes the line away by running the dash off the far end. A
+ * pointer leaving has no animation to trigger in CSS, only a state to return from, so the
+ * line retreats the way it came. The pressure is kept, which is the part that reads.
+ */
+.rule {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -0.05em;
+  width: 100%;
+  height: 0.4em;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rule use {
+  stroke-width: 0.5;
+  stroke-dasharray: 0 122;
+  transition:
+    stroke-dasharray 320ms var(--ease-turn),
+    stroke-width 320ms var(--ease-turn);
+}
+
+.card__source:hover .rule use,
+.card__source:focus-visible .rule use,
+.colophon a:hover .rule use,
+.colophon a:focus-visible .rule use {
+  stroke-width: 1.3;
+  stroke-dasharray: 122 122;
+}
+
+/*
+ * The hover state, which is four quiet things at once: the card lifts, its shadow deepens
+ * and spreads, the mount behind the picture warms a little, and a hairline is traced round
+ * the frame from the top. The picture itself moves by one and a half per cent, which is
+ * barely a move at all — it is there so the print is not the only part of the card that
+ * stays still while the mount comes forward.
+ *
+ * Three of the four are on the mount and the frame rather than on the picture, which is
+ * what lets one treatment serve twenty-five artworks that run from white paper to black
+ * ground. Anything laid over the picture has to be legible against both, and most things
+ * that are legible against both are louder than a gallery ought to be.
+ *
+ * The lift is on the link, not on the card or the frame. Both of those end their arrival
+ * with a filled animation, and a filled animation outranks any transform a rule can set:
+ * a lift written there would simply never appear.
+ */
+@media (hover: hover) {
+  .card__link:hover,
+  .card__link:focus-visible {
+    transform: translateY(-4px);
+  }
+
+  .card__link:hover .card__frame,
+  .card__link:focus-visible .card__frame {
+    background-color: #262a34;
+    box-shadow:
+      0 18px 34px -14px rgb(0 0 0 / 72%),
+      0 4px 10px rgb(0 0 0 / 34%);
+  }
+
+  .card__link:hover .card__trace,
+  .card__link:focus-visible .card__trace {
+    --trace: 360deg;
+  }
+
+  .card__link:hover .card__image,
+  .card__link:focus-visible .card__image {
+    transform: scale(1.015);
+  }
+}
+
+.colophon {
+  max-width: 96rem;
+  margin: clamp(3rem, 8vw, 6rem) auto 0;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+}
+
+/*
+ * Adapted from yui540's painting-in, where lines of unequal length slide in one after
+ * another from the same side. The unevenness is the point: three equal bars arriving in
+ * order is a progress bar, and three unequal ones is a rule being laid down.
+ *
+ * Changed here: they stay, where the original sends them out again, and they arrive when
+ * the foot of the page is reached rather than on a timer. It is the one rule on the page a
+ * reader scrolls towards, so it is the one that can afford to be drawn rather than simply
+ * be there.
+ */
+.colophon__rule {
+  display: flex;
+  gap: 0.3rem;
+  height: 1px;
+  margin-bottom: 1.6rem;
+  overflow: hidden;
+}
+
+.colophon__rule span {
+  flex: 1 1 0;
+  background: var(--edge);
+}
+
+.colophon__rule span:nth-child(2) {
+  flex-grow: 2.4;
+}
+
+.colophon__rule span:nth-child(3) {
+  flex-grow: 0.5;
+  background: var(--edge-bright);
+}
+
+.js .colophon__rule span {
+  transform: translateX(-101%);
+}
+
+.colophon__rule.is-revealed span {
+  animation: paint-in 520ms var(--ease-turn) both;
+}
+
+.colophon__rule.is-revealed span:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.colophon__rule.is-revealed span:nth-child(3) {
+  animation-delay: 190ms;
+}
+
+@keyframes paint-in {
+  from {
+    transform: translateX(-101%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/*
+ * The plain underline hands over to the drawn one. A link in a sentence has to look like a
+ * link before it is pointed at, so the default rule stays; on hover it is faded out from
+ * under the stroke that draws itself in its place, and there is never a moment with two.
+ */
+.colophon a {
+  position: relative;
+  color: var(--ink-dim);
+  text-decoration-color: var(--edge-bright);
+  text-underline-offset: 0.24em;
+  transition:
+    color 220ms var(--ease-lift),
+    text-decoration-color 200ms var(--ease-lift);
+}
+
+.colophon a:hover,
+.colophon a:focus-visible {
+  color: var(--accent);
+  text-decoration-color: transparent;
+}
+
+/*
+ * Adapted from yui540's shutter, whose blocks drop past their resting height and settle
+ * back — 15 to 75 to 73, an overshoot of a few per cent, which is what keeps a shutter from
+ * reading as a window blind being lowered evenly.
+ *
+ * Changed here: it is tied to leaving the page for an artwork, and it never holds the
+ * navigation up for longer than it takes to read as an answer to the click. The blocks fall
+ * in the golden-angle order the cards arrived in, so the page leaves the way it came.
+ */
+.shutter {
+  position: fixed;
+  z-index: 9;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.shutter span {
+  flex: 1 1 0;
+  background: var(--ground-raised);
+  transform: scaleY(0);
+  transform-origin: top center;
+  animation: shutter-drop 300ms var(--ease-settle) var(--block-delay, 0ms) forwards;
+}
+
+@keyframes shutter-drop {
+  from {
+    transform: scaleY(0);
+  }
+  62% {
+    transform: scaleY(1.04);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .card,
+  .card.is-revealed,
+  .card.is-revealed .card__frame,
+  .card.is-revealed .card__image,
+  .card.is-revealed .card__title,
+  .card.is-revealed .card__label,
+  .card.is-revealed .card__quote::before,
+  .card.is-revealed .card__quote-text,
+  .card.is-revealed .card__cite,
+  .card.is-revealed .card__orbit,
+  .card__link:hover .card__orbit,
+  .card__link:focus-visible .card__orbit,
+  .js .colophon__rule span,
+  .colophon__rule.is-revealed span,
+  .masthead__title,
+  .card__link:hover,
+  .card__link:focus-visible {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Motion and nothing else, so it goes entirely rather than being shown still: a ring
+     that is not spreading is a circle drawn on the picture, and a curtain that has not
+     opened is simply a wall. */
+  .card__ripple,
+  .curtain {
+    display: none;
+  }
+
+  /* The frame's outline is still worth having when the tracing of it is not: it appears
+     whole instead. */
+  .card__link:hover .card__trace,
+  .card__link:focus-visible .card__trace {
+    --trace: 360deg;
+  }
+
+  .card__image,
+  .card__link,
+  .card__frame,
+  .card__trace,
+  .rule use,
+  .character__head {
+    transition: none;
+  }
+
+  /* The face rests as the drawing it was cut from. */
+  .character__head {
+    transform: none;
+  }
+
+  .card.is-revealed .card__image {
+    border-radius: 0;
+  }
+}
