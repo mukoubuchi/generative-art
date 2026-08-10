@@ -17,3 +17,16 @@ export function hintMode(parameters, capturing) {
     scale: Number.parseFloat(parameters.get("hintScale") ?? "1") || 1
   };
 }
+
+/**
+ * Whether the input indicator is drawn — the complement of the hint, capture-side.
+ *
+ * The clip gets the indicator and no legend: it shows the artwork being operated, and an
+ * instruction to operate would be false there. The page gets the legend and no indicator:
+ * the reader's own pointer is on it, and a phantom one would be a lie in the other
+ * direction. The thumbnail gets the legend and no indicator, because it is a picture of
+ * the page. So the indicator appears exactly when capturing without the hint.
+ */
+export function indicatorShown(parameters, capturing) {
+  return capturing && parameters.get("hint") !== "1";
+}

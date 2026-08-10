@@ -1,4 +1,5 @@
-import { hintMode } from "../shared/hint-mode.js";
+import { hintMode, indicatorShown } from "../shared/hint-mode.js";
+import { drawPointerIndicator } from "../shared/input-indicator.js";
 import { HINT_TONE, drawKeyHint } from "../shared/key-hint.js";
 import { angleArc, polarAngle, projectionDots, sweptPoint } from "./projection.js";
 
@@ -12,6 +13,7 @@ const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
+const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
 /** The point follows the pointer, so the readouts change with it. */
 const HINT_LEGEND = [
   { cap: "move", text: "the pointer places the point" }
@@ -133,10 +135,20 @@ new P5((p) => {
     if (CAPTURE_MODE) {
       p.noLoop();
       // Every capture frame is a pure function of its index, so any one can stand alone.
-      window.__renderFrame = (frameIndex) => Promise.resolve(publishState(
-        frameIndex,
-        render(sweptPoint(frameIndex, TOTAL_FRAMES, SWEEP_RADIUS))
-      ));
+      window.__renderFrame = (frameIndex) => {
+        const point = sweptPoint(frameIndex, TOTAL_FRAMES, SWEEP_RADIUS);
+        const drawn = render(point);
+        if (INDICATOR) {
+          // On this artwork the point is the pointer's position, so the cursor sits
+          // exactly on it: what sweeps the circle in the clip is a hand, and this says so.
+          p.push();
+          p.scale(RENDER_SCALE);
+          p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+          drawPointerIndicator(p, point.x, point.y, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+          p.pop();
+        }
+        return Promise.resolve(publishState(frameIndex, drawn));
+      };
     }
     publishState(0, render(sweptPoint(0, TOTAL_FRAMES, SWEEP_RADIUS)));
   };

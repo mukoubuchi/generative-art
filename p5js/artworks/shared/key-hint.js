@@ -18,15 +18,20 @@ export const HINT_TONE = {
   cap: [0, 0, 0, 120]
 };
 
-/** Measured in units of the type size, so the token scales with the line. */
-const CAP_PADDING = 0.42;
-const CAP_RISE = 1.0;
-const CAP_DROP = 0.26;
-const CAP_RADIUS = 0.28;
+/**
+ * Measured in units of the type size, so the token scales with the line. Exported because
+ * the input indicator draws the same token on the captured clips: a key lighting up in a
+ * clip and the same key named in the page's legend have to be one design, or the reader is
+ * left to guess whether they are the same key.
+ */
+export const CAP_PADDING = 0.42;
+export const CAP_RISE = 1.0;
+export const CAP_DROP = 0.26;
+export const CAP_RADIUS = 0.28;
 const GAP = 0.42;
 const SEPARATOR = "·";
 
-function capWidth(p, label, size) {
+export function capWidth(p, label, size) {
   return p.textWidth(label) + size * CAP_PADDING * 2;
 }
 

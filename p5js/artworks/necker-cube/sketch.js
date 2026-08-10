@@ -1,4 +1,5 @@
-import { hintMode } from "../shared/hint-mode.js";
+import { hintMode, indicatorShown } from "../shared/hint-mode.js";
+import { drawPointerIndicator } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import { angleAt, envelope, stripQuads, stripVertices } from "./cube.js";
 
@@ -12,6 +13,7 @@ const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
+const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
 /** The pointer's horizontal position sets the viewing angle. */
 const HINT_LEGEND = [
   { cap: "move", text: "the pointer turns the cube" }
@@ -35,6 +37,11 @@ const TOTAL_FRAMES = PLAYBACK_FPS * CLIP_SECONDS;
 const bounds = envelope(RADIUS);
 const ANCHOR_X = LOGICAL_WIDTH / 2;
 const ANCHOR_Y = LOGICAL_HEIGHT / 2 - (bounds.left + bounds.right) / 2;
+
+// Only the pointer's horizontal position turns the cube, so its height in the clip is a
+// free choice; a band under the figure keeps the sweep out of the wireframe, whose two
+// readings are the whole artwork.
+const POINTER_TRACK_Y = LOGICAL_HEIGHT * 0.88;
 
 const P5 = window.p5;
 
@@ -89,6 +96,12 @@ new P5((p) => {
         const pointerX = frameIndex * LOGICAL_WIDTH / TOTAL_FRAMES;
         const angle = angleAt(pointerX, LOGICAL_WIDTH);
         drawAngle(angle);
+        if (INDICATOR) {
+          p.push();
+          p.scale(RENDER_SCALE);
+          drawPointerIndicator(p, pointerX, POINTER_TRACK_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+          p.pop();
+        }
         return Promise.resolve(publishState(frameIndex, pointerX, angle));
       };
     }

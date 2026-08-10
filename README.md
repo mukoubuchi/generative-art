@@ -23,7 +23,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Koch Curves](p5js/artworks/koch-curves/) | An 85-degree Koch substitution rendered as a static PNG |
 | [Recursive Pentagram](p5js/artworks/recursive-pentagram/) | Recursive inward and synchronized outward pentagrams rendered as an MP4 |
 | [Sierpinski Gasket](p5js/artworks/sierpinski-gasket/) | Seven generations of half-size triangles ringing each parent, rendered as a static PNG |
-| [Fibonacci Spiral](p5js/artworks/fibonacci-spiral/) | Golden rectangles and quarter arcs built up with the arrow keys, captured as a static PNG |
+| [Fibonacci Spiral](p5js/artworks/fibonacci-spiral/) | Golden rectangles and quarter arcs taken down and rebuilt with the arrow keys, rendered as an MP4 |
 | [Bounding Spots](p5js/artworks/bounding-spots/) | Twenty dots sweeping nested half circles at speeds set by their radius, rendered as an MP4 |
 | [Loader](p5js/artworks/loader/) | A rotating arc whose two ends take turns leading, rendered as an MP4 |
 | [Windmill](p5js/artworks/windmill/) | Four blades wound up by holding a key and left to coast, rendered as an MP4 |

@@ -1,5 +1,7 @@
-import { hintMode } from "../shared/hint-mode.js";
+import { hintMode, indicatorShown } from "../shared/hint-mode.js";
+import { drawKeyIndicator } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
+import { captureFrameCount, captureState } from "./capture.js";
 import { buildSections, goldenRectangle } from "./geometry.js";
 
 const LOGICAL_WIDTH = 1010;
@@ -36,9 +38,12 @@ const sections = buildSections(
   MINIMUM_SIDE
 );
 
-// The captured artwork is the finished spiral; the page starts from one section so the
-// arrow keys still build it up the way the Processing sketch did.
+// The page starts from one section so the arrow keys build the spiral up the way the
+// Processing sketch did. The capture starts complete: its scenario is in capture.js, and
+// its opening frame — which is also the clip's timeline still — is the finished spiral.
 let visibleSections = CAPTURE_MODE ? sections.length : 1;
+const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
+const TOTAL_FRAMES = captureFrameCount(sections.length);
 const KEY_HINT = [
   { cap: "→", text: "add a section" },
   { cap: "←", text: "remove the newest" }
@@ -47,17 +52,11 @@ const KEY_HINT = [
 const P5 = window.p5;
 
 new P5((p) => {
-  p.setup = () => {
-    p.pixelDensity(1);
-    p.createCanvas(OUTPUT_WIDTH, OUTPUT_HEIGHT).parent("artwork");
-    p.colorMode(p.HSB, HUE_RANGE, SATURATION, BRIGHTNESS);
-    p.noLoop();
-  };
-
-  p.draw = () => {
+  function drawSpiral(count) {
     p.background(0, 0, BRIGHTNESS);
+    p.push();
     p.scale(RENDER_SCALE);
-    for (const section of sections.slice(0, visibleSections)) {
+    for (const section of sections.slice(0, count)) {
       p.push();
       p.translate(section.x, section.y);
       p.rotate(section.rotation);
@@ -65,7 +64,7 @@ new P5((p) => {
       p.fill(section.hue, SATURATION, BRIGHTNESS);
       p.rect(0, 0, section.width, section.height);
       // The quarter arc is inscribed in the square half of the rectangle, so its two
-      // radii lie exactly on edges the neighbouring sections already draw.
+      // radii lie exactly on edges the neighbouring rectangles already draw.
       p.noFill();
       p.stroke(0, 0, 0);
       p.strokeWeight(STROKE_WEIGHT);
@@ -80,19 +79,58 @@ new P5((p) => {
       );
       p.pop();
     }
+    p.pop();
+  }
 
-    if (HINT.shown) {
-      drawKeyHint(p, KEY_HINT, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
-    }
-
+  function publishState(frameIndex, count) {
     window.__ARTWORK_STATE__ = {
-      kind: "image",
+      kind: CAPTURE_MODE ? "video" : "image",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
       sectionCount: sections.length,
-      visibleSections,
+      visibleSections: count,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
     window.__ARTWORK_READY__ = true;
+    return window.__ARTWORK_STATE__;
+  }
+
+  p.setup = () => {
+    p.pixelDensity(1);
+    p.createCanvas(OUTPUT_WIDTH, OUTPUT_HEIGHT).parent("artwork");
+    p.colorMode(p.HSB, HUE_RANGE, SATURATION, BRIGHTNESS);
+    p.noLoop();
+    if (CAPTURE_MODE) {
+      // Every frame is a pure function of its index — the scenario lives in capture.js —
+      // so any frame can be rebuilt on its own.
+      window.__renderFrame = (frameIndex) => {
+        const state = captureState(frameIndex, sections.length);
+        drawSpiral(state.visibleSections);
+        if (INDICATOR) {
+          // The two keys of the page's legend, in the legend's order, each lit while the
+          // scenario is pressing it.
+          p.push();
+          p.scale(RENDER_SCALE);
+          drawKeyIndicator(p, [
+            { label: "→", active: state.rightActive },
+            { label: "←", active: state.leftActive }
+          ], LOGICAL_WIDTH, LOGICAL_HEIGHT);
+          p.pop();
+        } else if (HINT.shown) {
+          drawKeyHint(p, KEY_HINT, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
+        }
+        return Promise.resolve(publishState(frameIndex, state.visibleSections));
+      };
+    }
+  };
+
+  p.draw = () => {
+    drawSpiral(visibleSections);
+    if (HINT.shown) {
+      drawKeyHint(p, KEY_HINT, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
+    }
+    publishState(0, visibleSections);
   };
 
   p.keyPressed = () => {

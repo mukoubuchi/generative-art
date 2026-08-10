@@ -1,4 +1,5 @@
-import { hintMode } from "../shared/hint-mode.js";
+import { hintMode, indicatorShown } from "../shared/hint-mode.js";
+import { drawKeyIndicator } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import {
   STEPS_PER_SECOND,
@@ -18,6 +19,7 @@ const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
+const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -93,8 +95,17 @@ new P5((p) => {
       // Nothing accumulates on the canvas, so a frame can be replayed from rest on its
       // own. The last frame lands exactly on the stopped wheel.
       window.__renderFrame = (frameIndex) => {
-        const wheel = wheelAfter((frameIndex + 1) * STEPS_PER_FRAME, HOLD_STEPS);
+        const steps = (frameIndex + 1) * STEPS_PER_FRAME;
+        const wheel = wheelAfter(steps, HOLD_STEPS);
         drawFrame(wheel);
+        if (INDICATOR) {
+          // The key that is doing this, lit while it is down: the first half of the clip
+          // is the hold, the second is the key released and the wheel coasting.
+          p.push();
+          p.scale(RENDER_SCALE);
+          drawKeyIndicator(p, [{ label: "K", active: steps <= HOLD_STEPS }], LOGICAL_WIDTH, LOGICAL_HEIGHT);
+          p.pop();
+        }
         return Promise.resolve(publishState(frameIndex, wheel));
       };
     }

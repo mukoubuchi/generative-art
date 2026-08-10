@@ -1,7 +1,8 @@
-import { hintMode } from "../shared/hint-mode.js";
+import { hintMode, indicatorShown } from "../shared/hint-mode.js";
+import { drawPointerIndicator, ripplePhase } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import { STEPS_PER_SECOND, createNetwork, grab, release, step, totalSpeed } from "./network.js";
-import { TOTAL_STEPS, networkAfter } from "./scenario.js";
+import { DRAG_STEPS, REST_STEPS, TOTAL_STEPS, networkAfter, scenarioPointer } from "./scenario.js";
 
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
@@ -35,7 +36,11 @@ const NETWORK_OPTIONS = {
   dragTarget: { x: LOGICAL_WIDTH * 0.9, y: LOGICAL_HEIGHT * 0.2 }
 };
 
+const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
+
 const liveNetwork = createNetwork(NETWORK_OPTIONS);
+// Where the scenario's hand starts: on the first bob, at its rest position.
+const SCENARIO_START = { x: liveNetwork.bobs[0].x, y: liveNetwork.bobs[0].y };
 
 const P5 = window.p5;
 
@@ -96,10 +101,26 @@ new P5((p) => {
     if (CAPTURE_MODE) {
       p.noLoop();
       // The scenario is replayed from rest for every frame, so any index stands alone.
-      window.__renderFrame = (frameIndex) => Promise.resolve(publishState(
-        frameIndex,
-        render(networkAfter(frameIndex * STEPS_PER_FRAME, NETWORK_OPTIONS))
-      ));
+      window.__renderFrame = (frameIndex) => {
+        const steps = frameIndex * STEPS_PER_FRAME;
+        const network = render(networkAfter(steps, NETWORK_OPTIONS));
+        if (INDICATOR) {
+          // The scenario already says where the hand is on every step — resting on the
+          // bob, dragging it out, gone after the release — so the indicator simply draws
+          // that, with the ripple on the grab.
+          const pointer = scenarioPointer(steps, SCENARIO_START, NETWORK_OPTIONS.dragTarget);
+          if (pointer) {
+            p.push();
+            p.scale(RENDER_SCALE);
+            drawPointerIndicator(p, pointer.x, pointer.y, LOGICAL_WIDTH, LOGICAL_HEIGHT, {
+              pressed: steps > REST_STEPS && steps <= REST_STEPS + DRAG_STEPS + 1,
+              ripple: ripplePhase((steps - REST_STEPS) / STEPS_PER_FRAME)
+            });
+            p.pop();
+          }
+        }
+        return Promise.resolve(publishState(frameIndex, network));
+      };
     }
     publishState(0, render(liveNetwork));
   };

@@ -1,4 +1,5 @@
-import { hintMode } from "../shared/hint-mode.js";
+import { hintMode, indicatorShown } from "../shared/hint-mode.js";
+import { drawPointerIndicator, ripplePhase } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import {
   CYCLE_STEPS,
@@ -22,10 +23,13 @@ const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
+const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
 /** Only a press inside the button starts a pulse. */
 const HINT_LEGEND = [
   { cap: "click", text: "the button pulses once" }
 ];
+/** How long the capture's click visibly holds the pointer down, in simulation steps. */
+const PRESS_HOLD_STEPS = 8;
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -87,10 +91,22 @@ new P5((p) => {
     if (CAPTURE_MODE) {
       p.noLoop();
       // The capture clicks on a schedule, so each frame is a function of its index.
-      window.__renderFrame = (frameIndex) => Promise.resolve(publishState(
-        frameIndex,
-        render(scheduledPulseStep(frameIndex * STEPS_PER_FRAME))
-      ));
+      window.__renderFrame = (frameIndex) => {
+        const pulseStep = scheduledPulseStep(frameIndex * STEPS_PER_FRAME);
+        const drawn = render(pulseStep);
+        if (INDICATOR) {
+          // The hand rests over the button the whole clip; the pulse step doubles as the
+          // time since the click, which is what the press and its ripple are drawn from.
+          p.push();
+          p.scale(RENDER_SCALE);
+          drawPointerIndicator(p, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2, LOGICAL_WIDTH, LOGICAL_HEIGHT, {
+            pressed: pulseStep !== null && pulseStep <= PRESS_HOLD_STEPS,
+            ripple: ripplePhase(pulseStep === null ? null : pulseStep / STEPS_PER_FRAME)
+          });
+          p.pop();
+        }
+        return Promise.resolve(publishState(frameIndex, drawn));
+      };
     }
     publishState(0, render(null));
   };
