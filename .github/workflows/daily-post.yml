@@ -63,10 +63,24 @@ jobs:
       - name: Run unit tests
         run: npm test --prefix p5js
 
-      # An X access token lasts two hours, so a nightly job never has a live one and always
-      # starts by trading the stored refresh token for a pair. Neither value is printed:
-      # both are written to files under the runner's temporary directory, which does not
-      # outlive the run, where the workflow log does.
+      # Asked before anything is spent. A refresh consumes the stored token, and storing
+      # its replacement is the one step whose failure strands the chain, so a night with
+      # nothing scheduled must not run that gamble at all. The answer comes from the same
+      # lookup the pipeline itself makes; a manual artwork input is a post by definition.
+      - name: Look up the day's entry
+        id: today
+        shell: bash
+        run: |
+          if [[ -n "$ARTWORK_INPUT" ]]; then
+            echo "artwork=$ARTWORK_INPUT" >> "$GITHUB_OUTPUT"
+          else
+            echo "artwork=$(node p5js/scripts/scheduled-today.mjs)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # An X access token lasts two hours, so a night that posts never has a live one and
+      # always starts by trading the stored refresh token for a pair. Neither value is
+      # printed: both are written to files under the runner's temporary directory, which
+      # does not outlive the run, where the workflow log does.
       # Rehearsal only, and first: proves the rotation token may write a secret before a
       # refresh token is spent on finding out. If this credential is wrong, the run stops
       # here with the refresh token untouched; discovering it after the refresh would leave
@@ -79,8 +93,10 @@ jobs:
           gh secret set X_ROTATION_SELF_TEST --repo "$GITHUB_REPOSITORY" --body "ok"
           gh secret delete X_ROTATION_SELF_TEST --repo "$GITHUB_REPOSITORY"
 
+      # The rehearsal input still refreshes on an empty day, deliberately: rotating the
+      # chain on purpose, with nothing riding on it, is what the rehearsal is for.
       - name: Refresh the X access token
-        if: env.PUBLISH == 'true' || inputs.rehearse_tokens
+        if: (env.PUBLISH == 'true' && steps.today.outputs.artwork != '') || inputs.rehearse_tokens
         env:
           X_CLIENT_ID: ${{ secrets.X_CLIENT_ID }}
           X_CLIENT_SECRET: ${{ secrets.X_CLIENT_SECRET }}
@@ -95,7 +111,7 @@ jobs:
       # succeeds; storing after the post would strand the chain — and cost a person a
       # browser and a re-authorization — every time a post failed.
       - name: Store the rotated refresh token
-        if: env.PUBLISH == 'true' || inputs.rehearse_tokens
+        if: (env.PUBLISH == 'true' && steps.today.outputs.artwork != '') || inputs.rehearse_tokens
         env:
           GH_TOKEN: ${{ secrets.X_TOKEN_ROTATION_PAT }}
         run: gh secret set X_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/x-refresh-token"
@@ -111,8 +127,12 @@ jobs:
           fi
           if [[ "$PUBLISH" == "true" ]]; then
             arguments+=(--publish)
-            X_OAUTH2_ACCESS_TOKEN="$(cat "$RUNNER_TEMP/x-access-token")"
-            export X_OAUTH2_ACCESS_TOKEN
+            # Absent exactly when the refresh was skipped for an empty day; the pipeline
+            # then says nothing is scheduled and stops before it would ask for a token.
+            if [[ -f "$RUNNER_TEMP/x-access-token" ]]; then
+              X_OAUTH2_ACCESS_TOKEN="$(cat "$RUNNER_TEMP/x-access-token")"
+              export X_OAUTH2_ACCESS_TOKEN
+            fi
           fi
           npm run pipeline --prefix p5js -- "${arguments[@]}"
 
