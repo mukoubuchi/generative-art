@@ -318,33 +318,39 @@ The workflow does exactly that, in two steps in that order — see below.
 
 Authorize once, by hand, to mint the first refresh token. The script opens nothing and
 prints nothing but progress: the code, the verifier and the tokens stay in the process and
-in the file it writes.
+in the files it writes.
 
 ```bash
 read -rsp "Client ID: " X_CLIENT_ID; echo
 read -rsp "Client secret: " X_CLIENT_SECRET; echo
 export X_CLIENT_ID X_CLIENT_SECRET
 
-npm run x:authorize -- --refresh-token-out ./x-refresh-token --access-token-out ./x-access-token
-npm run x:check -- --access-token-file ./x-access-token
-gh secret set X_REFRESH_TOKEN < ./x-refresh-token && rm ./x-refresh-token ./x-access-token
+npm run x:authorize
 ```
+
+It writes both tokens to a fresh temporary directory and prints the three commands to run
+next — the check, the store, and the removal — with the paths filled in.
 
 The secret is read rather than typed into the command, because a value written on the
 command line is written into the shell's history file too, and that file outlives the
 session by design.
 
-The middle line asks the upload endpoint one question — may these credentials upload media?
-— by sending the INIT of a one-pixel PNG the script builds on the spot. Nothing is appended,
+**The tokens are written outside the repository, and the scripts refuse a path inside it.**
+Not a warning — an error, and a test holds it there. A file that is never in the working
+tree cannot be swept into a commit by a careless `git add`, and that particular carelessness
+has no undo: rewriting the branch leaves the old commit fetchable at its own address, so the
+only remedy for a credential that reached a public repository is to revoke it.
+
+The check asks the upload endpoint one question — may these credentials upload media? — by
+sending the INIT of a one-pixel PNG the script builds on the spot. Nothing is appended,
 nothing is finalized, and no post is created; an initialized upload that is never finished
 expires by itself.
 
-It is asked here, in this order, on purpose. The access token comes from the authorization
-that just happened rather than from a refresh, so the refresh token about to be stored is
-still untouched: if the answer is no, nothing has been spent and the OAuth 1.0a keys are
-still an option. Doing the same check from the workflow would mean refreshing, storing, and
-finding out — with the chain already rotated once — inside a log that a public repository
-keeps.
+It is asked in this order on purpose. The access token comes from the authorization that
+just happened rather than from a refresh, so the refresh token about to be stored is still
+untouched: if the answer is no, nothing has been spent and the OAuth 1.0a keys are still an
+option. Doing the same check from the workflow would mean refreshing, storing, and finding
+out — with the chain already rotated once — inside a log that a public repository keeps.
 
 The app needs **Read and write** permissions, the **Web App, Automated App or Bot** type —
 which is what makes it a confidential client and issues a client secret — and

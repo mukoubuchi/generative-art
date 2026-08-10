@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import { join } from "node:path";
+import { assertOutsideRepository, secretDirectory, writeSecret } from "../lib/secret-file.mjs";
 import {
   authorizationUrl,
   createPkcePair,
@@ -18,7 +19,13 @@ import {
  * X will only redirect to an address registered with the app, so the browser is sent back
  * to a server this script starts on the loopback interface and shuts down as soon as it has
  * answered. Nothing is printed but progress: the code, the tokens and the verifier stay in
- * this process and in the file the token is written to.
+ * this process and in the files the tokens are written to.
+ *
+ * Those files land outside the repository — in a temporary directory by default, and never
+ * inside the working tree even when a path is given. A credential that is never in the
+ * repository cannot be committed from it, which matters here because there is no undoing a
+ * push: a rewritten branch leaves the old commit fetchable, so the only remedy is to revoke
+ * the credential and start again.
  */
 const DEFAULT_PORT = 8080;
 
@@ -45,11 +52,14 @@ function parseArguments(argumentsList) {
     options[name] = name === "port" ? Number(argumentsList[index + 1]) : argumentsList[index + 1];
     index += 1;
   }
-  if (!options.refreshTokenPath) {
-    throw new Error("--refresh-token-out is required.");
-  }
   if (!Number.isInteger(options.port) || options.port <= 0) {
     throw new Error("--port must be a positive integer.");
+  }
+  if (options.refreshTokenPath) {
+    assertOutsideRepository(options.refreshTokenPath, "--refresh-token-out");
+  }
+  if (options.accessTokenPath) {
+    assertOutsideRepository(options.accessTokenPath, "--access-token-out");
   }
   return options;
 }
@@ -128,19 +138,28 @@ try {
     { code, verifier, clientId, redirectUri },
     { clientSecret }
   );
-  await writeFile(options.refreshTokenPath, tokens.refreshToken, { mode: 0o600 });
-  console.log("");
-  console.log(`Authorized. Scopes: ${tokens.scope}`);
-  console.log(`Refresh token written to ${options.refreshTokenPath}`);
+  const directory = options.refreshTokenPath && options.accessTokenPath
+    ? undefined
+    : await secretDirectory();
+  const refreshTokenPath = options.refreshTokenPath ?? join(directory, "x-refresh-token");
   // The access token this exchange also returned, for anything that wants to try the
   // credentials at once. Taking it from here rather than refreshing for it is the whole
   // point: a refresh would spend the token that is about to be stored, and the copy in
   // storage would be dead on arrival.
-  if (options.accessTokenPath) {
-    await writeFile(options.accessTokenPath, tokens.accessToken, { mode: 0o600 });
-    console.log(`Access token written to ${options.accessTokenPath}, good for ${tokens.expiresIn} seconds.`);
-  }
-  console.log("Store the refresh token as the X_REFRESH_TOKEN secret, then delete the files.");
+  const accessTokenPath = options.accessTokenPath ?? join(directory, "x-access-token");
+
+  await writeSecret(refreshTokenPath, tokens.refreshToken);
+  await writeSecret(accessTokenPath, tokens.accessToken);
+
+  console.log("");
+  console.log(`Authorized. Scopes: ${tokens.scope}`);
+  console.log(`Refresh token: ${refreshTokenPath}`);
+  console.log(`Access token:  ${accessTokenPath} (good for ${tokens.expiresIn} seconds)`);
+  console.log("");
+  console.log("Next:");
+  console.log(`  npm run x:check -- --access-token-file ${accessTokenPath}`);
+  console.log(`  gh secret set X_REFRESH_TOKEN < ${refreshTokenPath}`);
+  console.log(`  rm ${refreshTokenPath} ${accessTokenPath}`);
 } finally {
   server.close();
 }

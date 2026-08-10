@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { writeFile } from "node:fs/promises";
+import { assertOutsideRepository, writeSecret } from "../lib/secret-file.mjs";
 import { refreshAccessToken } from "../lib/x-oauth.mjs";
 
 /**
@@ -29,6 +29,8 @@ function parseArguments(argumentsList) {
   if (!options.accessTokenPath || !options.refreshTokenPath) {
     throw new Error("Both --access-token-out and --refresh-token-out are required.");
   }
+  assertOutsideRepository(options.accessTokenPath, "--access-token-out");
+  assertOutsideRepository(options.refreshTokenPath, "--refresh-token-out");
   return options;
 }
 
@@ -49,8 +51,8 @@ const tokens = await refreshAccessToken({ refreshToken, clientId }, { clientSecr
 
 // Written before anything is reported, and readable only by this user: the rotated token is
 // now the single thing standing between the account and a re-authorization by hand.
-await writeFile(options.refreshTokenPath, tokens.refreshToken, { mode: 0o600 });
-await writeFile(options.accessTokenPath, tokens.accessToken, { mode: 0o600 });
+await writeSecret(options.refreshTokenPath, tokens.refreshToken);
+await writeSecret(options.accessTokenPath, tokens.accessToken);
 
 console.log(`Refreshed. Scopes: ${tokens.scope}`);
 console.log(`Access token expires in ${tokens.expiresIn} seconds.`);
