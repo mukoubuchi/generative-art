@@ -4,11 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       artwork:
-        description: Optional artwork ID; leave blank for date-based selection
+        description: Optional artwork ID; leave blank to use the day's scheduled entry
         required: false
         type: string
       enable_posting:
         description: Publish to X after rendering and validation
+        required: true
+        default: false
+        type: boolean
+      # The token dance is the part of this workflow that cannot be rehearsed by reading it:
+      # it spends a refresh token, stores its replacement through a second credential, and
+      # is unforgiving about the order. This input runs that dance and nothing else, so it
+      # can be proved on an afternoon rather than discovered at midnight.
+      rehearse_tokens:
+        description: Refresh and store the rotated token without posting
         required: true
         default: false
         type: boolean
@@ -53,8 +62,20 @@ jobs:
       # starts by trading the stored refresh token for a pair. Neither value is printed:
       # both are written to files under the runner's temporary directory, which does not
       # outlive the run, where the workflow log does.
+      # Rehearsal only, and first: proves the rotation token may write a secret before a
+      # refresh token is spent on finding out. If this credential is wrong, the run stops
+      # here with the refresh token untouched; discovering it after the refresh would leave
+      # a spent token in storage and a person at a browser.
+      - name: Check that the rotation token can write a secret
+        if: inputs.rehearse_tokens
+        env:
+          GH_TOKEN: ${{ secrets.X_TOKEN_ROTATION_PAT }}
+        run: |
+          gh secret set X_ROTATION_SELF_TEST --repo "$GITHUB_REPOSITORY" --body "ok"
+          gh secret delete X_ROTATION_SELF_TEST --repo "$GITHUB_REPOSITORY"
+
       - name: Refresh the X access token
-        if: inputs.enable_posting
+        if: inputs.enable_posting || inputs.rehearse_tokens
         env:
           X_CLIENT_ID: ${{ secrets.X_CLIENT_ID }}
           X_CLIENT_SECRET: ${{ secrets.X_CLIENT_SECRET }}
@@ -69,7 +90,7 @@ jobs:
       # succeeds; storing after the post would strand the chain — and cost a person a
       # browser and a re-authorization — every time a post failed.
       - name: Store the rotated refresh token
-        if: inputs.enable_posting
+        if: inputs.enable_posting || inputs.rehearse_tokens
         env:
           GH_TOKEN: ${{ secrets.X_TOKEN_ROTATION_PAT }}
         run: gh secret set X_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/x-refresh-token"
@@ -96,5 +117,8 @@ jobs:
         with:
           name: daily-post-media
           path: exports/p5js/
-          if-no-files-found: error
+          # A run on a day the schedule does not cover renders nothing and is right not to.
+          # Failing here would turn that correct no-op red; a render that was attempted and
+          # produced nothing throws inside the pipeline long before this step.
+          if-no-files-found: warn
           retention-days: 14
