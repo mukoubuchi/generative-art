@@ -14,7 +14,8 @@
     "preview": "node scripts/preview.mjs",
     "pipeline": "node scripts/publish.mjs",
     "x:authorize": "node scripts/x-authorize.mjs",
-    "x:refresh": "node scripts/x-refresh.mjs"
+    "x:refresh": "node scripts/x-refresh.mjs",
+    "x:check": "node scripts/x-check-media.mjs"
   },
   "dependencies": {
     "p5": "2.3.2",

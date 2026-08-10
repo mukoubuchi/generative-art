@@ -152,5 +152,8 @@ export function createXClient({
     });
   }
 
-  return { uploadMedia, createPost };
+  // `initializeUpload` is exposed on its own so that the question "may these credentials
+  // upload media?" can be asked without uploading anything: an initialized upload that is
+  // never appended to expires by itself and creates no post.
+  return { initializeUpload, uploadMedia, createPost };
 }

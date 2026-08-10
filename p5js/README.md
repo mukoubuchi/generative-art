@@ -309,9 +309,22 @@ in the file it writes.
 
 ```bash
 X_CLIENT_ID=... X_CLIENT_SECRET=... \
-npm run x:authorize -- --refresh-token-out ./x-refresh-token
-gh secret set X_REFRESH_TOKEN < ./x-refresh-token && rm ./x-refresh-token
+npm run x:authorize -- --refresh-token-out ./x-refresh-token --access-token-out ./x-access-token
+npm run x:check -- --access-token-file ./x-access-token
+gh secret set X_REFRESH_TOKEN < ./x-refresh-token && rm ./x-refresh-token ./x-access-token
 ```
+
+The middle line asks the upload endpoint one question — may these credentials upload media?
+— by sending the INIT of a one-pixel PNG the script builds on the spot. Nothing is appended,
+nothing is finalized, and no post is created; an initialized upload that is never finished
+expires by itself.
+
+It is asked here, in this order, on purpose. The access token comes from the authorization
+that just happened rather than from a refresh, so the refresh token about to be stored is
+still untouched: if the answer is no, nothing has been spent and the OAuth 1.0a keys are
+still an option. Doing the same check from the workflow would mean refreshing, storing, and
+finding out — with the chain already rotated once — inside a log that a public repository
+keeps.
 
 The app needs **Read and write** permissions, the **Web App, Automated App or Bot** type —
 which is what makes it a confidential client and issues a client secret — and

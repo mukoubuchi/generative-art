@@ -33,6 +33,7 @@ function parseArguments(argumentsList) {
   const options = { port: DEFAULT_PORT, host: DEFAULT_HOST };
   const names = new Map([
     ["--refresh-token-out", "refreshTokenPath"],
+    ["--access-token-out", "accessTokenPath"],
     ["--redirect-host", "host"],
     ["--port", "port"]
   ]);
@@ -131,7 +132,15 @@ try {
   console.log("");
   console.log(`Authorized. Scopes: ${tokens.scope}`);
   console.log(`Refresh token written to ${options.refreshTokenPath}`);
-  console.log("Store it as the X_REFRESH_TOKEN secret, then delete the file.");
+  // The access token this exchange also returned, for anything that wants to try the
+  // credentials at once. Taking it from here rather than refreshing for it is the whole
+  // point: a refresh would spend the token that is about to be stored, and the copy in
+  // storage would be dead on arrival.
+  if (options.accessTokenPath) {
+    await writeFile(options.accessTokenPath, tokens.accessToken, { mode: 0o600 });
+    console.log(`Access token written to ${options.accessTokenPath}, good for ${tokens.expiresIn} seconds.`);
+  }
+  console.log("Store the refresh token as the X_REFRESH_TOKEN secret, then delete the files.");
 } finally {
   server.close();
 }
