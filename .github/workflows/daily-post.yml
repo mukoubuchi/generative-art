@@ -33,7 +33,11 @@ jobs:
     timeout-minutes: 20
     env:
       ARTWORK_INPUT: ${{ inputs.artwork }}
-      ENABLE_POSTING_INPUT: ${{ inputs.enable_posting }}
+      # A dispatched run posts only when someone ticks the box; a scheduled run is the box
+      # already ticked, since posting nightly is the entire reason a schedule exists. The
+      # `inputs` context is empty on a schedule event, so reading the flag alone would make
+      # the cron a nightly rehearsal that never posts — quietly, and looking green.
+      PUBLISH: ${{ github.event_name == 'schedule' || inputs.enable_posting == true }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -75,7 +79,7 @@ jobs:
           gh secret delete X_ROTATION_SELF_TEST --repo "$GITHUB_REPOSITORY"
 
       - name: Refresh the X access token
-        if: inputs.enable_posting || inputs.rehearse_tokens
+        if: env.PUBLISH == 'true' || inputs.rehearse_tokens
         env:
           X_CLIENT_ID: ${{ secrets.X_CLIENT_ID }}
           X_CLIENT_SECRET: ${{ secrets.X_CLIENT_SECRET }}
@@ -90,7 +94,7 @@ jobs:
       # succeeds; storing after the post would strand the chain — and cost a person a
       # browser and a re-authorization — every time a post failed.
       - name: Store the rotated refresh token
-        if: inputs.enable_posting || inputs.rehearse_tokens
+        if: env.PUBLISH == 'true' || inputs.rehearse_tokens
         env:
           GH_TOKEN: ${{ secrets.X_TOKEN_ROTATION_PAT }}
         run: gh secret set X_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" < "$RUNNER_TEMP/x-refresh-token"
@@ -98,13 +102,13 @@ jobs:
       - name: Render and prepare post
         shell: bash
         env:
-          X_POSTING_ENABLED: ${{ inputs.enable_posting }}
+          X_POSTING_ENABLED: ${{ env.PUBLISH }}
         run: |
           arguments=()
           if [[ -n "$ARTWORK_INPUT" ]]; then
             arguments+=(--artwork "$ARTWORK_INPUT")
           fi
-          if [[ "$ENABLE_POSTING_INPUT" == "true" ]]; then
+          if [[ "$PUBLISH" == "true" ]]; then
             arguments+=(--publish)
             X_OAUTH2_ACCESS_TOKEN="$(cat "$RUNNER_TEMP/x-access-token")"
             export X_OAUTH2_ACCESS_TOKEN
