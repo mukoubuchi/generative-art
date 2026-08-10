@@ -39,6 +39,35 @@ export function thumbnailHref(artwork) {
   return `thumbnails/${artwork.id}.jpg`;
 }
 
+/**
+ * How far an artwork page has to climb to reach the site root, counted from its own address
+ * rather than assumed. The site mirrors the repository, so today every page is three levels
+ * down; an artwork filed somewhere else would still get a link that arrives.
+ */
+export function siteRootFrom(artwork) {
+  const depth = artworkHref(artwork).replace(/\/$/u, "").split("/").length;
+  return "../".repeat(depth);
+}
+
+/**
+ * The two ways out of an artwork page: back to the gallery it belongs to, and on to the
+ * code that made it.
+ *
+ * A post links to the artwork's own page, so that page is where a reader arrives and where
+ * they must find everything else — without it they can see one work and nothing around it.
+ * The markup is added by the site build rather than written into the twenty-five pages,
+ * because the source address is already derived from the manifest for the gallery card, and
+ * deriving it a second time is how two links come to disagree about where a work lives.
+ */
+export function renderArtworkNav(manifest, artwork) {
+  return `    <nav class="page-nav">
+      <a class="page-nav__link" href="${escapeHtml(siteRootFrom(artwork))}">&larr;&nbsp;Generative Art</a>
+      <span class="page-nav__dot" aria-hidden="true">·</span>
+      <a class="page-nav__link" href="${escapeHtml(sourceHref(manifest, artwork))}"
+        target="_blank" rel="noopener noreferrer">view source</a>
+    </nav>`;
+}
+
 const ESCAPES = new Map([
   ["&", "&amp;"],
   ["<", "&lt;"],

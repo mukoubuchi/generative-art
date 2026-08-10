@@ -11,3 +11,49 @@ main,
 canvas {
   display: block;
 }
+
+/*
+ * The way back to the gallery and on to the source. The markup is added to each page by the
+ * site build, so it is absent when a page is opened straight out of the repository — the
+ * addresses come from the manifest, and inventing them a second time here is how two links
+ * come to point at different places.
+ *
+ * Fixed, so it cannot push a canvas that is drawn at its own size. On a plate for the same
+ * reason the artworks' legends have one: these pages are white, black, and most values
+ * between, and type without a plate is legible on only some of them.
+ */
+.page-nav {
+  position: fixed;
+  inset-block-start: 0.7rem;
+  inset-inline-start: 0.7rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  padding: 0.28rem 0.62rem;
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 84%);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+  font: 0.78rem/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+
+.page-nav__link {
+  color: rgb(17 24 34 / 88%);
+  text-decoration: none;
+}
+
+.page-nav__dot {
+  color: rgb(17 24 34 / 40%);
+}
+
+/* Underlined on approach only, so the plate reads as one quiet line until it is wanted. */
+@media (hover: hover) {
+  .page-nav__link:hover {
+    text-decoration: underline;
+  }
+}
+
+.page-nav__link:focus-visible {
+  outline: 2px solid rgb(17 24 34 / 70%);
+  outline-offset: 2px;
+}

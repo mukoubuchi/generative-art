@@ -1,7 +1,7 @@
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { P5JS_DIRECTORY, REPOSITORY_ROOT } from "./catalog.mjs";
-import { VENDOR_THREE, renderIndexPage } from "./gallery.mjs";
+import { VENDOR_THREE, artworkHref, renderArtworkNav, renderIndexPage } from "./gallery.mjs";
 import { renderThumbnails } from "./render.mjs";
 
 export const SITE_DIRECTORY = resolve(REPOSITORY_ROOT, "site");
@@ -44,6 +44,28 @@ export const VENDOR_THREE_FILES = [
   ["examples/jsm/utils/SkeletonUtils.js", "utils/SkeletonUtils.js"]
 ];
 
+/**
+ * Gives each copied artwork page its way back to the gallery and on to its source.
+ *
+ * Done here, on the copy, rather than in the twenty-five pages themselves: the links are
+ * derived from the manifest, so they cannot drift from the gallery's, and the pages stay
+ * what they are in the repository — a canvas and the sketch that fills it.
+ *
+ * The markup is written into the file rather than added by a script on load, because it has
+ * to survive a reader with scripting turned off, who is exactly the reader most likely to
+ * be looking at a page that never drew anything.
+ */
+async function addNavigation(directory, manifest) {
+  for (const artwork of manifest.artworks) {
+    const page = resolve(directory, artworkHref(artwork), "index.html");
+    const html = await readFile(page, "utf8");
+    if (!html.includes("</body>")) {
+      throw new Error(`${artwork.id} has no body to add its navigation to.`);
+    }
+    await writeFile(page, html.replace("</body>", `${renderArtworkNav(manifest, artwork)}\n  </body>`), "utf8");
+  }
+}
+
 async function removeSiteDirectory(directory) {
   // Only ever the build output, never a path that happens to be passed in.
   if (directory !== SITE_DIRECTORY || basename(directory) !== "site") {
@@ -70,6 +92,8 @@ export async function buildSite(manifest, quoteCatalog, options = {}) {
     await mkdir(dirname(target), { recursive: true });
     await cp(resolve(REPOSITORY_ROOT, source), target, { recursive: true });
   }
+
+  await addNavigation(directory, manifest);
 
   const vendorTarget = resolve(directory, VENDOR_DESTINATION);
   await mkdir(dirname(vendorTarget), { recursive: true });
