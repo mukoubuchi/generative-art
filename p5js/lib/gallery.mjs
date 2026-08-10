@@ -45,10 +45,12 @@ export function thumbnailHref(artwork) {
  * `<use>` would have nothing to point at. Both are Font Awesome Free's solid style, copied
  * unmodified from the npm distribution and recorded in THIRD_PARTY_LICENSES, which carries
  * the attribution their CC BY 4.0 licence requires. `code` is the same glyph the gallery
- * card uses for the same destination.
+ * card uses for the same destination; `table-cells-large` stands for the gallery because
+ * the gallery is that picture — a grid of cards — where a bare arrow, once its label was
+ * dropped, would have read as the browser's own back button.
  */
-const ARROW_LEFT_ICON = '<svg class="page-nav__icon" viewBox="0 0 512 512" aria-hidden="true" focusable="false">'
-  + '<path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 288 480 288c17.7 0 32-14.3 32-32s-14.3-32-32-32l-370.7 0 105.4-105.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg>';
+const GRID_ICON = '<svg class="page-nav__icon" viewBox="0 0 448 512" aria-hidden="true" focusable="false">'
+  + '<path fill="currentColor" d="M384 96l-128 0 0 128 128 0 0-128zm64 128l0 192c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96C0 60.7 28.7 32 64 32l320 0c35.3 0 64 28.7 64 64l0 128zM64 288l0 128 128 0 0-128-128 0zm128-64l0-128-128 0 0 128 128 0zm64 64l0 128 128 0 0-128-128 0z"/></svg>';
 
 const CODE_ICON = '<svg class="page-nav__icon" viewBox="0 0 576 512" aria-hidden="true" focusable="false">'
   + '<path fill="currentColor" d="M360.8 1.2c-17-4.9-34.7 5-39.6 22l-128 448c-4.9 17 5 34.7 22 39.6s34.7-5 39.6-22l128-448c4.9-17-5-34.7-22-39.6zm64.6 136.1c-12.5 12.5-12.5 32.8 0 45.3l73.4 73.4-73.4 73.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l96-96c12.5-12.5 12.5-32.8 0-45.3l-96-96c-12.5-12.5-32.8-12.5-45.3 0zm-274.7 0c-12.5-12.5-32.8-12.5-45.3 0l-96 96c-12.5 12.5-12.5 32.8 0 45.3l96 96c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 150.6 182.6c12.5-12.5 12.5-32.8 0-45.3z"/></svg>';
@@ -74,12 +76,15 @@ export function siteRootFrom(artwork) {
  * deriving it a second time is how two links come to disagree about where a work lives.
  */
 export function renderArtworkNav(manifest, artwork) {
-  return `    <nav class="page-nav page-nav--back">
-      <a class="page-nav__link" href="${escapeHtml(siteRootFrom(artwork))}">${ARROW_LEFT_ICON}Generative Art</a>
-    </nav>
-    <nav class="page-nav page-nav--source">
+  // Icons only, so each link says where it goes twice over: `aria-label` for a screen
+  // reader, `title` for the tooltip a pointer hovers up. Without them an icon-only link
+  // is a door with no name on it.
+  return `    <nav class="page-nav" aria-label="Artwork page navigation">
+      <a class="page-nav__link" href="${escapeHtml(siteRootFrom(artwork))}"
+        title="Generative Art — all works" aria-label="Generative Art — all works">${GRID_ICON}</a>
       <a class="page-nav__link" href="${escapeHtml(sourceHref(manifest, artwork))}"
-        target="_blank" rel="noopener noreferrer">${CODE_ICON}view source</a>
+        target="_blank" rel="noopener noreferrer"
+        title="View source on GitHub" aria-label="View source on GitHub">${CODE_ICON}</a>
     </nav>`;
 }
 

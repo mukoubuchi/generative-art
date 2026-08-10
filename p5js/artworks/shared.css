@@ -22,55 +22,59 @@ canvas {
  * reason the artworks' legends have one: these pages are white, black, and most values
  * between, and type without a plate is legible on only some of them.
  */
+/*
+ * One plate, two doors, no words: the grid icon leads back to the gallery — which is that
+ * picture, a grid of cards — and the code icon leads to the artwork's source. Each link
+ * names its destination in `title` and `aria-label`, since there is no visible text left
+ * to do it. Always on screen, so a touch reader who can never hover still has both doors.
+ */
 .page-nav {
   position: fixed;
   inset-block-start: 0.7rem;
+  inset-inline-start: 0.7rem;
   z-index: 1;
-  padding: 0.28rem 0.62rem;
-  border-radius: 0.55rem;
+  display: flex;
+  padding: 0.18rem;
+  border-radius: 0.6rem;
   background: rgb(255 255 255 / 84%);
   box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
-  font: 0.78rem/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
-}
-
-/*
- * The two destinations are two things, so they are two plates rather than one line with a
- * separator in it. Back on the leading edge, where a way back belongs; the source on the
- * trailing one, which keeps the corner the artworks' legends use free and leaves neither
- * plate wide enough to meet the other on a narrow screen.
- */
-.page-nav--back {
-  inset-inline-start: 0.7rem;
-}
-
-.page-nav--source {
-  inset-inline-end: 0.7rem;
 }
 
 .page-nav__link {
-  display: inline-flex;
-  gap: 0.42rem;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  /* A finger-sized door: the icon is small, the link is not. */
+  width: 1.9rem;
+  height: 1.65rem;
+  border-radius: 0.45rem;
   color: rgb(17 24 34 / 88%);
-  text-decoration: none;
 }
 
 /* Sized by height so each glyph keeps its own proportions: the two boxes are not the same. */
 .page-nav__icon {
   width: auto;
-  height: 0.8em;
-  flex: none;
+  height: 0.95rem;
   opacity: 0.72;
 }
 
-/* Underlined on approach only, so the plate reads as one quiet line until it is wanted. */
+/*
+ * The hover has to carry the whole "this is a link" message now that there is no wording
+ * or underline to carry it: the door lights up, and the glyph comes to full ink. The
+ * pointer becomes a hand by the browser's own rule, and the `title` tooltip names the
+ * destination for anyone who waits on it.
+ */
 @media (hover: hover) {
   .page-nav__link:hover {
-    text-decoration: underline;
+    background: rgb(17 24 34 / 10%);
+  }
+
+  .page-nav__link:hover .page-nav__icon {
+    opacity: 1;
   }
 }
 
 .page-nav__link:focus-visible {
   outline: 2px solid rgb(17 24 34 / 70%);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }

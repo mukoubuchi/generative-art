@@ -536,18 +536,19 @@ Three icons from this set, all in the solid style, are redistributed with the
 published gallery. The path data is taken unmodified from the distribution named
 above; no other part of the set is included, and the list below is complete.
 
-   `quote-left`  at the head of each quotation on the index page, embedded once
-                 as an SVG symbol and referenced from each card
-   `code`        on the link from a card to the artwork's source directory, and
-                 on the same link on the artwork's own page
-   `arrow-left`  on the link from an artwork's page back to the gallery
+   `quote-left`         at the head of each quotation on the index page,
+                        embedded once as an SVG symbol and referenced from
+                        each card
+   `code`               on the link from a card to the artwork's source
+                        directory, and on the same link on the artwork's page
+   `table-cells-large`  on the link from an artwork's page back to the gallery
 
 Font Awesome Free is licensed in three parts: the icons under CC BY 4.0, the
 fonts under SIL OFL 1.1, and the code under the MIT License. Only icons are
 used here, so only the first applies. Its terms are at the URL above; the
 following notice reproduces the attribution CC BY 4.0 requires.
 
-   "quote-left", "code" and "arrow-left" from Font Awesome Free 7.3.1
+   "quote-left", "code" and "table-cells-large" from Font Awesome Free 7.3.1
    Copyright 2026 Fonticons, Inc.
    Licensed under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
    Not modified.
