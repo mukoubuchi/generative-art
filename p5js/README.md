@@ -308,11 +308,18 @@ prints nothing but progress: the code, the verifier and the tokens stay in the p
 in the file it writes.
 
 ```bash
-X_CLIENT_ID=... X_CLIENT_SECRET=... \
+read -rsp "Client ID: " X_CLIENT_ID; echo
+read -rsp "Client secret: " X_CLIENT_SECRET; echo
+export X_CLIENT_ID X_CLIENT_SECRET
+
 npm run x:authorize -- --refresh-token-out ./x-refresh-token --access-token-out ./x-access-token
 npm run x:check -- --access-token-file ./x-access-token
 gh secret set X_REFRESH_TOKEN < ./x-refresh-token && rm ./x-refresh-token ./x-access-token
 ```
+
+The secret is read rather than typed into the command, because a value written on the
+command line is written into the shell's history file too, and that file outlives the
+session by design.
 
 The middle line asks the upload endpoint one question — may these credentials upload media?
 — by sending the INIT of a one-pixel PNG the script builds on the spot. Nothing is appended,
