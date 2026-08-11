@@ -9,12 +9,12 @@ import { buildPostBody, quoteYearSuffix } from "../lib/post-text.mjs";
 import { buildSite } from "../lib/site.mjs";
 
 /**
- * The words were verified against primary sources, and these tests hold the three
- * surfaces that print them to that work: the artwork page carries the quotation with a
- * link to the source it was verified against, the gallery card and the post body dates
- * theirs the same way, and all three read from one catalog so none can drift. The dates
- * follow one rule — printed when the catalog has one, absent when it records unknown —
- * and both branches are exercised by the real catalog, which carries both kinds.
+ * The quotations were verified against primary sources, and two surfaces say so: the
+ * gallery card and the post body, which date their attributions by one shared rule —
+ * the year printed when the catalog has one, absent when it records unknown. The
+ * artwork page is deliberately not one of them. Captions were tried there and removed
+ * by decision: the page shows the artwork alone, and these tests hold the removal as
+ * firmly as they hold the rule.
  */
 const { manifest, quoteCatalog } = await loadCatalog();
 const quotesById = new Map(quoteCatalog.quotes.map((quote) => [quote.id, quote]));
@@ -31,12 +31,6 @@ try {
   await rm(built, { recursive: true, force: true });
 }
 
-function attribution(html, id) {
-  const start = html.indexOf('<figure class="page-attribution"');
-  assert.notEqual(start, -1, `${id} carries no attribution`);
-  return html.slice(start, html.indexOf("</figure>", start));
-}
-
 test("the dating rule has both of its branches to exercise", () => {
   // If every entry gained a year, the omission branch below would pass vacuously —
   // and the catalog's records of "unknown" are themselves worth noticing the loss of.
@@ -45,71 +39,47 @@ test("the dating rule has both of its branches to exercise", () => {
   assert.ok(years.some((year) => year === null), "no undated quotes are left");
 });
 
-test("every artwork page quotes its words in their own language", () => {
-  for (const artwork of manifest.artworks) {
-    const quote = quotesById.get(artwork.quoteIds[0]);
-    const figure = attribution(pages.get(artwork.id), artwork.id);
-    assert.ok(
-      figure.includes(`<blockquote class="page-attribution__quote" lang="${escapeHtml(quote.lang)}">`),
-      `${artwork.id} mislabels or drops the quotation's language`
-    );
-    assert.ok(figure.includes(escapeHtml(quote.text)), `${artwork.id} does not carry its quotation`);
-  }
-});
-
-test("every artwork page links its words to the source they were verified against", () => {
-  for (const artwork of manifest.artworks) {
-    const quote = quotesById.get(artwork.quoteIds[0]);
-    const figure = attribution(pages.get(artwork.id), artwork.id);
-    const anchor = figure.match(/<a\s[^>]*>/u)?.[0];
-    assert.ok(anchor, `${artwork.id} has an attribution with no link in it`);
-    assert.ok(anchor.includes(`href="${escapeHtml(quote.sourceUrl)}"`),
-      `${artwork.id} links somewhere other than its verified source`);
-    assert.ok(anchor.includes('rel="noopener noreferrer"'));
-    assert.ok(figure.includes(`>${escapeHtml(quote.source)}</a>`),
-      `${artwork.id} names a source other than the catalog's`);
-    assert.ok(figure.includes(`<b>${escapeHtml(quote.author)}</b>`));
-  }
-});
-
-test("the three surfaces date an attribution by one rule", () => {
+test("the card and the post date an attribution by one rule", () => {
   for (const artwork of manifest.artworks) {
     const quote = quotesById.get(artwork.quoteIds[0]);
     const suffix = quoteYearSuffix(quote);
-    const dated = `${escapeHtml(quote.source)}${escapeHtml(suffix)}`;
-
-    const figure = attribution(pages.get(artwork.id), artwork.id);
-    const caption = figure.slice(figure.indexOf("<figcaption"));
-    assert.ok(caption.includes(`</a>${escapeHtml(suffix)}</figcaption>`),
-      `${artwork.id}'s page dates its source differently`);
 
     const card = index.slice(index.indexOf(`<h2 class="card__title">${escapeHtml(artwork.title)}</h2>`));
-    assert.ok(card.slice(0, card.indexOf("</cite>")).includes(dated),
+    const cite = card.slice(card.indexOf("card__cite"), card.indexOf("</cite>"));
+    assert.ok(cite.includes(`${escapeHtml(quote.source)}${escapeHtml(suffix)}`),
       `${artwork.id}'s card dates its source differently`);
+    if (quote.year === null) {
+      assert.ok(!cite.includes("("), `${artwork.id}'s card prints a date the catalog does not have`);
+    }
 
     const body = buildPostBody(artwork, quote, manifest.defaults.interactiveBaseUrl);
     // The quotation itself may span lines — an epitaph does — so the attribution line
     // is found after however many the quotation takes.
     const attributionLine = body.split("\n")[quote.text.split("\n").length];
-    assert.ok(attributionLine === `— ${quote.author}, ${quote.source}${suffix}`,
+    assert.equal(attributionLine, `— ${quote.author}, ${quote.source}${suffix}`,
       `${artwork.id}'s post dates its source differently`);
-
-    if (quote.year === null) {
-      assert.ok(!caption.includes("()"), `${artwork.id} prints an empty date`);
-      assert.ok(!caption.includes("null"), `${artwork.id} prints a null date`);
-    } else {
-      assert.ok(caption.includes(`(${quote.year})`), `${artwork.id} drops its date`);
-    }
   }
 });
 
-test("the caption sits under the canvas, on a page that can now be scrolled to it", async () => {
-  // The attribution lives below a canvas drawn at its own size, so the page must allow
-  // vertical scroll or the caption is unreachable on a short window.
+test("the artwork page shows the artwork alone", () => {
+  // Captions under the canvas were built, shipped, and removed the same day by the
+  // owner's decision. This pins the removal so it cannot quietly return: a page carries
+  // its navigation doors and nothing else that quotes or attributes.
+  for (const artwork of manifest.artworks) {
+    const page = pages.get(artwork.id);
+    assert.ok(!page.includes("page-attribution"), `${artwork.id} grew its caption back`);
+    assert.ok(!page.includes("<blockquote"), `${artwork.id} quotes something on the page`);
+    assert.ok(!page.includes("<figcaption"), `${artwork.id} attributes something on the page`);
+  }
+});
+
+test("the page neither scrolls nor needs to", async () => {
+  // The vertical scroll existed only so a caption below the canvas could be reached;
+  // with the caption gone the page went back to being a clipped, unscrolling canvas.
   const stylesheet = await readFile(
     resolve(new URL("../artworks/shared.css", import.meta.url).pathname),
     "utf8"
   );
-  assert.match(stylesheet, /overflow-y:\s*auto/u);
-  assert.doesNotMatch(stylesheet, /overflow:\s*hidden/u);
+  assert.match(stylesheet, /overflow:\s*hidden/u);
+  assert.ok(!stylesheet.includes("page-attribution"), "the caption's styles outlived it");
 });

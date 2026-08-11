@@ -1,13 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { P5JS_DIRECTORY, REPOSITORY_ROOT } from "./catalog.mjs";
-import {
-  VENDOR_THREE,
-  artworkHref,
-  renderArtworkAttribution,
-  renderArtworkNav,
-  renderIndexPage
-} from "./gallery.mjs";
+import { VENDOR_THREE, artworkHref, renderArtworkNav, renderIndexPage } from "./gallery.mjs";
 import { renderThumbnails } from "./render.mjs";
 
 export const SITE_DIRECTORY = resolve(REPOSITORY_ROOT, "site");
@@ -51,28 +45,26 @@ export const VENDOR_THREE_FILES = [
 ];
 
 /**
- * Gives each copied artwork page its way back to the gallery, its way on to its source,
- * and the quotation it will be posted with, attributed to the primary source it was
- * verified against.
+ * Gives each copied artwork page its way back to the gallery and on to its source.
  *
- * Done here, on the copy, rather than in the artwork pages themselves: everything is
- * derived from the manifest and the quote catalog, so none of it can drift from the
- * gallery's or the posts', and the pages stay what they are in the repository — a canvas
- * and the sketch that fills it.
+ * Done here, on the copy, rather than in the artwork pages themselves: the links are
+ * derived from the manifest, so they cannot drift from the gallery's, and the pages stay
+ * what they are in the repository — a canvas and the sketch that fills it. Nothing else
+ * is added: the page shows the artwork alone, and the quotation's attribution lives on
+ * the gallery card and in the post.
  *
  * The markup is written into the file rather than added by a script on load, because it has
  * to survive a reader with scripting turned off, who is exactly the reader most likely to
  * be looking at a page that never drew anything.
  */
-async function decorateArtworkPages(directory, manifest, quoteCatalog) {
+async function addNavigation(directory, manifest) {
   for (const artwork of manifest.artworks) {
     const page = resolve(directory, artworkHref(artwork), "index.html");
     const html = await readFile(page, "utf8");
     if (!html.includes("</body>")) {
-      throw new Error(`${artwork.id} has no body to decorate.`);
+      throw new Error(`${artwork.id} has no body to add its navigation to.`);
     }
-    const additions = `${renderArtworkNav(manifest, artwork)}\n${renderArtworkAttribution(artwork, quoteCatalog)}\n  </body>`;
-    await writeFile(page, html.replace("</body>", additions), "utf8");
+    await writeFile(page, html.replace("</body>", `${renderArtworkNav(manifest, artwork)}\n  </body>`), "utf8");
   }
 }
 
@@ -103,7 +95,7 @@ export async function buildSite(manifest, quoteCatalog, options = {}) {
     await cp(resolve(REPOSITORY_ROOT, source), target, { recursive: true });
   }
 
-  await decorateArtworkPages(directory, manifest, quoteCatalog);
+  await addNavigation(directory, manifest);
 
   const vendorTarget = resolve(directory, VENDOR_DESTINATION);
   await mkdir(dirname(vendorTarget), { recursive: true });

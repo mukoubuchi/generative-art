@@ -1,15 +1,9 @@
-/*
- * Sideways, the canvas is clipped as it always was; downwards the page now scrolls,
- * because the attribution lives below the canvas and a caption that cannot be reached
- * is not an attribution. The canvas itself never moves for it.
- */
 html,
 body {
   width: 100%;
   height: 100%;
   margin: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   background: #fff;
 }
 
@@ -83,52 +77,4 @@ canvas {
 .page-nav__link:focus-visible {
   outline: 2px solid rgb(17 24 34 / 70%);
   outline-offset: 1px;
-}
-
-/*
- * The quotation and its provenance, set under the canvas like a caption under a print.
- * Added to each page by the site build from the same catalog the posts and the cards
- * read, so the three can never disagree. The tone follows the plate above: quiet ink on
- * the page's own white, and the one link goes to the primary source the words were
- * verified against.
- */
-.page-attribution {
-  margin: 1.1rem 1rem 1.6rem;
-  max-width: 46rem;
-  font-family: Georgia, "Times New Roman", serif;
-  color: rgb(17 24 34 / 66%);
-}
-
-.page-attribution__quote {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.page-attribution__quote p {
-  margin: 0;
-}
-
-.page-attribution__cite {
-  margin-top: 0.3rem;
-  font-size: 0.8rem;
-  font-style: normal;
-  line-height: 1.5;
-}
-
-.page-attribution__cite b {
-  font-weight: 600;
-}
-
-.page-attribution__cite a {
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-color: rgb(17 24 34 / 30%);
-  text-underline-offset: 2px;
-}
-
-.page-attribution__cite a:hover,
-.page-attribution__cite a:focus-visible {
-  color: rgb(17 24 34 / 92%);
-  text-decoration-color: currentColor;
 }

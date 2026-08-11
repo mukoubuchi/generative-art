@@ -89,29 +89,6 @@ export function renderArtworkNav(manifest, artwork) {
     </nav>`;
 }
 
-/**
- * The quotation and its provenance, set under the canvas like a caption under a print.
- *
- * A post's reader lands on the artwork page having read the words already; this is where
- * the page answers for them. The one link goes to the primary source the catalog verified
- * the text against — which is the point of printing an attribution at all — and the
- * markup comes from the same catalog the post and the card read, injected by the site
- * build so the three surfaces cannot drift apart.
- */
-export function renderArtworkAttribution(artwork, quoteCatalog) {
-  const quote = quoteFor(artwork, quoteCatalog);
-  if (!quote) {
-    return "";
-  }
-  return `    <figure class="page-attribution">
-      <blockquote class="page-attribution__quote" lang="${escapeHtml(quote.lang)}">
-        <p>${escapeHtml(quote.text)}</p>
-      </blockquote>
-      <figcaption class="page-attribution__cite">—&nbsp;<b>${escapeHtml(quote.author)}</b>, `
-    + `<a href="${escapeHtml(quote.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(quote.source)}</a>`
-    + `${escapeHtml(quoteYearSuffix(quote))}</figcaption>
-    </figure>`;
-}
 
 const ESCAPES = new Map([
   ["&", "&amp;"],
