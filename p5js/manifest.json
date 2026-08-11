@@ -45,12 +45,12 @@
         "pascal-infinite-sphere"
       ],
       "thumbnail": {
-        "frame": 380
+        "frame": 150
       },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/RecursivePentagram.mp4",
-        "durationSeconds": 13.5,
+        "durationSeconds": 10,
         "scale": 2
       }
     },
