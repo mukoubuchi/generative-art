@@ -35,6 +35,15 @@ export function weightedCharacterCount(text) {
   return weight + plainTextWeight(text.slice(offset));
 }
 
+/**
+ * The year's place in an attribution, shared by every surface that prints one — the
+ * post, the gallery card, and the artwork page — so the three cannot drift. A catalog
+ * entry whose date is recorded as unknown simply has no year to print.
+ */
+export function quoteYearSuffix(quote) {
+  return quote.year == null ? "" : ` (${quote.year})`;
+}
+
 export function buildPostBody(artwork, quote, interactiveBaseUrl) {
   const normalizedBaseUrl = interactiveBaseUrl.endsWith("/")
     ? interactiveBaseUrl
@@ -42,7 +51,7 @@ export function buildPostBody(artwork, quote, interactiveBaseUrl) {
   const interactiveUrl = new URL(artwork.interactivePath, normalizedBaseUrl).href;
   return [
     quote.text,
-    `— ${quote.author}, ${quote.source}`,
+    `— ${quote.author}, ${quote.source}${quoteYearSuffix(quote)}`,
     "",
     artwork.description,
     "",
