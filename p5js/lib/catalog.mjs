@@ -150,8 +150,8 @@ export async function loadCatalog() {
 /**
  * Which frame of a moving artwork stands for it in the gallery. Halfway through is the
  * default: several clips open and close on a resting state, so their ends say least. An
- * artwork whose telling moment lies elsewhere overrides it in the manifest — Pulse Button
- * spends its middle mid-fade, and Recursive Pentagram is still drawing itself there.
+ * artwork whose telling moment lies elsewhere overrides it in the manifest — Temple Bell
+ * is mid-toll at frame 40, and Recursive Pentagram is still drawing itself at its middle.
  */
 export function thumbnailFrame(manifest, artwork) {
   if (artwork.render.kind !== "video") {

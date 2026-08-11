@@ -117,7 +117,7 @@
       "title": "Loader",
       "entry": "p5js/artworks/loader/index.html",
       "interactivePath": "loader/",
-      "description": "One end of the arc runs ahead, then the other end closes the gap.",
+      "description": "The arc grows, closes, and spins forever, and never paints anything new.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -128,8 +128,11 @@
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/Loader.mp4",
-        "durationSeconds": 7.8,
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 0
       }
     },
     {
@@ -157,7 +160,7 @@
       "title": "Atan2",
       "entry": "p5js/artworks/atan2/index.html",
       "interactivePath": "atan2/",
-      "description": "One angle, two parts.",
+      "description": "One question, asked everywhere.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -171,7 +174,7 @@
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/Atan2.mp4",
-        "durationSeconds": 8,
+        "durationSeconds": 10,
         "scale": 2
       }
     },
@@ -197,10 +200,10 @@
     },
     {
       "id": "pulse-button",
-      "title": "Pulse Button",
+      "title": "Temple Bell",
       "entry": "p5js/artworks/pulse-button/index.html",
       "interactivePath": "pulse-button/",
-      "description": "A tap makes the button swell, thin out, and settle back.",
+      "description": "One strike; the sound crosses the dark and dies away.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -209,12 +212,12 @@
         "heike-gion-shoja"
       ],
       "thumbnail": {
-        "frame": 0
+        "frame": 40
       },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/PulseButton.mp4",
-        "durationSeconds": 7.5,
+        "durationSeconds": 10,
         "scale": 2
       }
     },

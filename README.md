@@ -25,11 +25,11 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Sierpinski Gasket](p5js/artworks/sierpinski-gasket/) | Seven generations of half-size triangles ringing each parent, rendered as a static PNG |
 | [Fibonacci Spiral](p5js/artworks/fibonacci-spiral/) | Golden rectangles and quarter arcs taken down and rebuilt with the arrow keys, rendered as an MP4 |
 | [Bounding Spots](p5js/artworks/bounding-spots/) | Twenty dots sweeping nested half circles at speeds set by their radius, rendered as an MP4 |
-| [Loader](p5js/artworks/loader/) | A rotating arc whose two ends take turns leading, rendered as an MP4 |
+| [Loader](p5js/artworks/loader/) | A spinning arc that relays the same ring forever over its own fading track, rendered as an MP4 |
 | [Windmill](p5js/artworks/windmill/) | Four blades wound up by holding a key and left to coast, rendered as an MP4 |
-| [Atan2](p5js/artworks/atan2/) | The polar angle of a moving point and its two Cartesian parts, rendered as an MP4 |
+| [Atan2](p5js/artworks/atan2/) | A field of needles all answering atan2 toward one probe, torn along a single ray, rendered as an MP4 |
 | [Toggle Color Ball](p5js/artworks/toggle-color-ball/) | Four discs swinging in opposition, handing the front colour on in turn, rendered as an MP4 |
-| [Pulse Button](p5js/artworks/pulse-button/) | A play button that swells and fades when tapped, rendered as an MP4 |
+| [Temple Bell](p5js/artworks/pulse-button/) | A struck bell whose sound crosses the dark and dies away exponentially, rendered as an MP4 |
 | [Spring Polygon](p5js/artworks/spring-polygon/) | Five coupled bobs disturbed by a drag and left to settle, rendered as an MP4 |
 | [Nautilus](p5js/artworks/nautilus/) | Translucent squares shrinking and turning into a chambered shell, rendered as a static PNG |
 | [Ammonite](p5js/artworks/ammonite/) | A triangle strip spiralling out through five radius-doubling bands, rendered as a static PNG |

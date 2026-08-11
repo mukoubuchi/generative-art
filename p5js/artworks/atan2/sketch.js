@@ -1,12 +1,19 @@
 import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawPointerIndicator } from "../shared/input-indicator.js";
-import { HINT_TONE, drawKeyHint } from "../shared/key-hint.js";
-import { angleArc, polarAngle, projectionDots, sweptPoint } from "./projection.js";
+import { drawKeyHint } from "../shared/key-hint.js";
+import {
+  angleArc,
+  angleTone,
+  centreLegs,
+  needleAngle,
+  needleGrid,
+  orbitPoint
+} from "./compass.js";
 
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
 const PLAYBACK_FPS = 30;
-const SWEEP_SECONDS = 8;
+const SWEEP_SECONDS = 10;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
@@ -14,102 +21,148 @@ const RENDER_SCALE = CAPTURE_MODE
   : 1;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
 const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
-/** The point follows the pointer, so the readouts change with it. */
 const HINT_LEGEND = [
-  { cap: "move", text: "the pointer places the point" }
+  { cap: "move", text: "the pointer carries the point" }
 ];
-/**
- * An opaque plate here, where the others use a translucent one. This is the artwork that
- * prints its own readouts, and the lower of them passes behind the legend; seen through a
- * plate that lets it through, the two sets of type read as one smudge.
- */
-const HINT_TONE_ATAN2 = { ...HINT_TONE, plate: [255, 255, 255, 255] };
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
-// Ratios of the Processing sketch's 400 px canvas. Its axes reached exactly 0.5, which
-// put the arrowheads on the canvas edge; 0.47 keeps them whole.
-const AXIS_RADIUS = BASE_DIMENSION * 0.47;
-const ARROW_SIZE = BASE_DIMENSION * (5 / 400);
-const POINT_DIAMETER = BASE_DIMENSION * (8 / 400);
-const ARC_DIAMETER = BASE_DIMENSION * (50 / 400);
-const DOT_SPACING = BASE_DIMENSION * (5 / 400);
-const DOT_WEIGHT = BASE_DIMENSION * (1 / 400);
-const TEXT_SIZE = BASE_DIMENSION * (12 / 400);
-const SWEEP_RADIUS = BASE_DIMENSION * 0.25;
+/** The lattice: spacing wide enough for the needles to read as individuals. */
+const NEEDLE_SPACING = BASE_DIMENSION * (40 / 680);
+const GRID_MARGIN = BASE_DIMENSION * (34 / 680);
+const NEEDLE_LENGTH = BASE_DIMENSION * (24 / 680);
+const NEEDLE_WEIGHT = 1.8;
+const HEAD_RADIUS = 2.6;
+/** The centre needle keeps the original artwork's whole diagram around itself. */
+const CENTRE_LENGTH = BASE_DIMENSION * (34 / 680);
+const CENTRE_WEIGHT = 2.4;
+const ARC_RADIUS = BASE_DIMENSION * (44 / 680);
+const PROBE_RADIUS = 5;
+const ORBIT_RADIUS = BASE_DIMENSION * 0.3;
+const TEXT_SIZE = BASE_DIMENSION * (16 / 680);
 const TOTAL_FRAMES = SWEEP_SECONDS * PLAYBACK_FPS;
-const QUARTER_TURN = Math.PI / 2;
+
+/** The charcoal the field stands on. */
+const GROUND = [16, 16, 18];
+/** The two families the answer's sign divides the plane into, and their meeting tone. */
+const NEUTRAL = [172, 170, 174];
+const GOLD = [255, 196, 72];
+const STEEL = [104, 156, 228];
+/** The scaffolding of the centre's diagram: legs, arc, readouts. */
+const SCAFFOLD = [160, 160, 166, 130];
+const ARC_INK = [206, 204, 210, 210];
+const READOUT_INK = [218, 216, 222];
+const PROBE_INK = [242, 242, 246];
+
+/**
+ * The corner the readouts occupy, in centred coordinates. No needle stands under the
+ * type: a needle half-hidden by the plate reads as a defect, and the corner is the
+ * readouts' ground the way the rest of the canvas is the field's.
+ */
+const READOUT_BLOCK = {
+  left: -LOGICAL_WIDTH / 2,
+  top: -LOGICAL_HEIGHT / 2,
+  right: -LOGICAL_WIDTH / 2 + TEXT_SIZE * 13,
+  bottom: -LOGICAL_HEIGHT / 2 + TEXT_SIZE * 4.6
+};
+
+const GRID = needleGrid(LOGICAL_WIDTH, LOGICAL_HEIGHT, NEEDLE_SPACING, GRID_MARGIN)
+  .filter((foot) => !(
+    foot.x >= READOUT_BLOCK.left - NEEDLE_LENGTH && foot.x <= READOUT_BLOCK.right
+    && foot.y >= READOUT_BLOCK.top - NEEDLE_LENGTH && foot.y <= READOUT_BLOCK.bottom
+  ));
+
+function mix(from, to, amount) {
+  return [
+    from[0] + (to[0] - from[0]) * amount,
+    from[1] + (to[1] - from[1]) * amount,
+    from[2] + (to[2] - from[2]) * amount
+  ];
+}
+
+function toneColor(tone) {
+  if (tone.family === "gold") {
+    return mix(NEUTRAL, GOLD, tone.strength);
+  }
+  if (tone.family === "steel") {
+    return mix(NEUTRAL, STEEL, tone.strength);
+  }
+  return NEUTRAL;
+}
+
+const live = { probe: orbitPoint(0, TOTAL_FRAMES, ORBIT_RADIUS), followPointer: false };
 
 const P5 = window.p5;
 
 new P5((p) => {
-  function drawAxes() {
-    for (let quadrant = 0; quadrant < 4; quadrant += 1) {
-      p.push();
-      p.rotate(quadrant * QUARTER_TURN);
-      // Only the positive x and y directions carry an arrowhead and a label.
-      if (quadrant === 0 || quadrant === 3) {
-        p.push();
-        p.translate(0, AXIS_RADIUS);
-        p.noStroke();
-        p.triangle(0, 0, -ARROW_SIZE, -ARROW_SIZE, ARROW_SIZE, -ARROW_SIZE);
-        if (quadrant === 0) {
-          p.text("y", -3 * ARROW_SIZE, -2 * ARROW_SIZE);
-        } else {
-          p.push();
-          p.translate(-4 * ARROW_SIZE, -2 * ARROW_SIZE);
-          p.rotate(QUARTER_TURN);
-          p.text("x", 0, 0);
-          p.pop();
-        }
-        p.pop();
-      }
-      p.stroke(0);
-      p.strokeWeight(DOT_WEIGHT);
-      p.line(0, 0, 0, AXIS_RADIUS);
-      p.pop();
-    }
+  function drawNeedle(foot, probe, length, weight) {
+    const angle = needleAngle(foot, probe);
+    const color = toneColor(angleTone(angle));
+    const tipX = foot.x + length * Math.cos(angle);
+    const tipY = foot.y + length * Math.sin(angle);
+    p.stroke(...color);
+    p.strokeWeight(weight);
+    p.line(foot.x, foot.y, tipX, tipY);
+    p.noStroke();
+    p.fill(...color);
+    p.circle(tipX, tipY, HEAD_RADIUS * 2);
   }
 
-  function render(point) {
-    const angle = polarAngle(point);
-    const arc = angleArc(angle);
+  function render(probe) {
+    const centreAngle = needleAngle({ x: 0, y: 0 }, probe);
+    const arc = angleArc(centreAngle);
+    const legs = centreLegs(probe);
 
     p.push();
     p.scale(RENDER_SCALE);
-    p.background(255);
-    p.fill(0);
-    p.textSize(TEXT_SIZE);
+    p.background(...GROUND);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-    drawAxes();
 
-    // Fixed decimal places keep the readout stable: Java and JavaScript print floats
-    // with different numbers of digits.
-    p.noStroke();
-    p.text(`radian: ${angle.toFixed(4)}`, ARROW_SIZE * 2, AXIS_RADIUS - TEXT_SIZE * 2.5);
-    p.text(`degree: ${p.degrees(angle).toFixed(2)}`, ARROW_SIZE * 2, AXIS_RADIUS - TEXT_SIZE * 0.8);
-    p.text(
-      `(${Math.trunc(point.x)}, ${Math.trunc(point.y)})`,
-      point.x + ARROW_SIZE * 2,
-      point.y + (angle > 0 ? TEXT_SIZE * 1.7 : -TEXT_SIZE * 0.8)
-    );
-
-    p.ellipse(point.x, point.y, POINT_DIAMETER, POINT_DIAMETER);
-    p.arc(0, 0, ARC_DIAMETER, ARC_DIAMETER, arc.start, arc.end, p.PIE);
-
-    p.stroke(0);
-    p.strokeWeight(DOT_WEIGHT);
-    p.line(0, 0, point.x, point.y);
-    for (const dot of projectionDots(point, DOT_SPACING)) {
-      p.point(dot.x, dot.y);
+    // The field: every needle answers for itself.
+    for (const foot of GRID) {
+      if (foot.x === 0 && foot.y === 0) {
+        continue;
+      }
+      drawNeedle(foot, probe, NEEDLE_LENGTH, NEEDLE_WEIGHT);
     }
+
+    // The centre keeps the original diagram: the journey divided into its two legs,
+    // the angle those legs are handed to atan2 as, and the answer read out plainly.
+    p.stroke(...SCAFFOLD);
+    p.strokeWeight(1.4);
+    p.line(legs.horizontal.from.x, legs.horizontal.from.y, legs.horizontal.to.x, legs.horizontal.to.y);
+    p.line(legs.vertical.from.x, legs.vertical.from.y, legs.vertical.to.x, legs.vertical.to.y);
+    p.noFill();
+    p.stroke(...ARC_INK);
+    p.strokeWeight(1.8);
+    p.arc(0, 0, ARC_RADIUS * 2, ARC_RADIUS * 2, arc.start, arc.end);
+    drawNeedle({ x: 0, y: 0 }, probe, CENTRE_LENGTH, CENTRE_WEIGHT);
+
+    // The probe: the one point the whole plane is asking about.
+    p.noStroke();
+    p.fill(...PROBE_INK);
+    p.circle(probe.x, probe.y, PROBE_RADIUS * 2);
+    p.pop();
+
+    // Readouts in the top-left corner, over a plate of the ground so the needles
+    // passing beneath stay needles rather than noise behind type.
+    p.push();
+    p.scale(RENDER_SCALE);
+    p.noStroke();
+    p.fill(...GROUND, 216);
+    p.rect(0, 0, TEXT_SIZE * 13, TEXT_SIZE * 4.6);
+    p.fill(...READOUT_INK);
+    p.textSize(TEXT_SIZE);
+    p.text(`radian: ${centreAngle.toFixed(4)}`, TEXT_SIZE, TEXT_SIZE * 1.6);
+    p.text(`degree: ${p.degrees(centreAngle).toFixed(2)}`, TEXT_SIZE, TEXT_SIZE * 3.0);
+    p.text(`(${Math.trunc(probe.x)}, ${Math.trunc(probe.y)})`, TEXT_SIZE, TEXT_SIZE * 4.4);
     p.pop();
 
     if (HINT.shown) {
-      drawKeyHint(p, HINT_LEGEND, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale, HINT_TONE_ATAN2);
+      drawKeyHint(p, HINT_LEGEND, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
     }
 
-    return { point, angle };
+    return { probe, angle: centreAngle };
   }
 
   function publishState(frameIndex, drawn) {
@@ -118,7 +171,8 @@ new P5((p) => {
       frameIndex,
       totalFrames: TOTAL_FRAMES,
       angle: drawn.angle,
-      point: drawn.point,
+      probe: drawn.probe,
+      needles: GRID.length,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
@@ -136,31 +190,37 @@ new P5((p) => {
       p.noLoop();
       // Every capture frame is a pure function of its index, so any one can stand alone.
       window.__renderFrame = (frameIndex) => {
-        const point = sweptPoint(frameIndex, TOTAL_FRAMES, SWEEP_RADIUS);
-        const drawn = render(point);
+        const probe = orbitPoint(frameIndex, TOTAL_FRAMES, ORBIT_RADIUS);
+        const drawn = render(probe);
         if (INDICATOR) {
-          // On this artwork the point is the pointer's position, so the cursor sits
-          // exactly on it: what sweeps the circle in the clip is a hand, and this says so.
+          // The probe is the pointer's position: what orbits in the clip is a hand.
           p.push();
           p.scale(RENDER_SCALE);
           p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-          drawPointerIndicator(p, point.x, point.y, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+          drawPointerIndicator(p, probe.x, probe.y, LOGICAL_WIDTH, LOGICAL_HEIGHT);
           p.pop();
         }
         return Promise.resolve(publishState(frameIndex, drawn));
       };
     }
-    publishState(0, render(sweptPoint(0, TOTAL_FRAMES, SWEEP_RADIUS)));
+    publishState(0, render(live.probe));
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
       return;
     }
-    // The page follows the real pointer, which is what the sketch is for.
-    publishState(p.frameCount, render({
-      x: p.mouseX - LOGICAL_WIDTH / 2,
-      y: p.mouseY - LOGICAL_HEIGHT / 2
-    }));
+    if (live.followPointer) {
+      live.probe = {
+        x: p.mouseX - LOGICAL_WIDTH / 2,
+        y: p.mouseY - LOGICAL_HEIGHT / 2
+      };
+    }
+    publishState(p.frameCount, render(live.probe));
+  };
+
+  p.mouseMoved = () => {
+    live.followPointer = true;
+    return true;
   };
 });

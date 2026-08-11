@@ -2,21 +2,19 @@ import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawPointerIndicator, ripplePhase } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import {
-  CYCLE_STEPS,
-  PULSE_STEPS,
+  HORIZON_STEPS,
   STEPS_PER_SECOND,
-  alphaAt,
-  inkAlpha,
-  isInsideButton,
-  playTriangle,
-  pulseScale,
-  scheduledPulseStep
-} from "./pulse.js";
+  STRIKE_PERIOD_STEPS,
+  bellGlow,
+  isInsideBell,
+  periodicStrikes,
+  ringsFromStrikes
+} from "./bell.js";
 
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
 const PLAYBACK_FPS = 30;
-const CAPTURE_CYCLES = 3;
+const CAPTURE_STRIKES = 3;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
@@ -24,49 +22,79 @@ const RENDER_SCALE = CAPTURE_MODE
   : 1;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
 const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
-/** Only a press inside the button starts a pulse. */
 const HINT_LEGEND = [
-  { cap: "click", text: "the button pulses once" }
+  { cap: "click", text: "the bell tolls" }
 ];
-/** How long the capture's click visibly holds the pointer down, in simulation steps. */
+/** How long the capture's strike visibly holds the pointer down, in simulation steps. */
 const PRESS_HOLD_STEPS = 8;
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
-// The Processing sketch used a radius of 150 on a 600 px canvas.
-const BUTTON_RADIUS = BASE_DIMENSION * (150 / 600);
+/** The bell's mouth, seen end on. Small enough that the night around it is most of the picture. */
+const BELL_RADIUS = BASE_DIMENSION * 0.18;
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
-const TOTAL_FRAMES = CAPTURE_CYCLES * CYCLE_STEPS / STEPS_PER_FRAME;
+const TOTAL_FRAMES = CAPTURE_STRIKES * STRIKE_PERIOD_STEPS / STEPS_PER_FRAME;
 
-const TRIANGLE = playTriangle(BUTTON_RADIUS);
-let livePulseStep = null;
+/** The night the bell hangs in. */
+const GROUND = [12, 14, 24];
+/** The wavefronts: pale moon-silver, thinning and dimming as they die. */
+const RING_SILVER = [214, 220, 236];
+const RING_PEAK_ALPHA = 235;
+/** The bell at rest and the bell just struck. */
+const BELL_SLATE = [36, 40, 56];
+const BELL_LIT = [206, 210, 226];
+const RIM_REST = [122, 128, 148];
+const RIM_LIT = [230, 234, 246];
+/** The body swells a breath on the strike and settles as the sound does. */
+const SWELL = 0.06;
+
+function mix(from, to, amount) {
+  return [
+    from[0] + (to[0] - from[0]) * amount,
+    from[1] + (to[1] - from[1]) * amount,
+    from[2] + (to[2] - from[2]) * amount
+  ];
+}
+
+const live = { step: 0, strikes: [] };
 
 const P5 = window.p5;
 
 new P5((p) => {
-  function render(pulseStep) {
-    const alpha = alphaAt(pulseStep);
+  function render(step, strikes) {
+    const rings = ringsFromStrikes(step, strikes);
+    const glow = bellGlow(step, strikes);
 
     p.push();
     p.scale(RENDER_SCALE);
-    p.background(255);
+    p.background(...GROUND);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-    p.scale(pulseScale(alpha));
-    p.noStroke();
-    p.fill(0, inkAlpha(alpha));
-    p.ellipse(0, 0, BUTTON_RADIUS * 2, BUTTON_RADIUS * 2);
-    p.triangle(
-      TRIANGLE[0].x, TRIANGLE[0].y,
-      TRIANGLE[1].x, TRIANGLE[1].y,
-      TRIANGLE[2].x, TRIANGLE[2].y
-    );
+
+    // The sound: each front a circle, its strength the one decay law. Oldest first,
+    // so a fresh toll passes over the remnant of the last one.
+    p.noFill();
+    for (let index = rings.length - 1; index >= 0; index -= 1) {
+      const ring = rings[index];
+      p.stroke(...RING_SILVER, RING_PEAK_ALPHA * ring.amplitude);
+      p.strokeWeight(2.5 + 7 * ring.amplitude);
+      p.circle(0, 0, 2 * ring.radius * BELL_RADIUS);
+    }
+
+    // The bell: its body and rim ring with the most recent strike and fade with it.
+    p.push();
+    p.scale(1 + SWELL * glow);
+    p.stroke(...mix(RIM_REST, RIM_LIT, glow));
+    p.strokeWeight(3);
+    p.fill(...mix(BELL_SLATE, BELL_LIT, glow));
+    p.circle(0, 0, 2 * BELL_RADIUS);
+    p.pop();
     p.pop();
 
     if (HINT.shown) {
       drawKeyHint(p, HINT_LEGEND, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
     }
 
-    return { pulseStep, alpha };
+    return { ringCount: rings.length, glow };
   }
 
   function publishState(frameIndex, drawn) {
@@ -74,8 +102,8 @@ new P5((p) => {
       kind: "video",
       frameIndex,
       totalFrames: TOTAL_FRAMES,
-      pulseStep: drawn.pulseStep,
-      alpha: drawn.alpha,
+      ringCount: drawn.ringCount,
+      bellGlow: drawn.glow,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
@@ -90,48 +118,54 @@ new P5((p) => {
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();
-      // The capture clicks on a schedule, so each frame is a function of its index.
+      // The capture strikes on the periodic clock, so each frame is a function of its
+      // index alone — including the faded remnant of the toll before the clip began.
       window.__renderFrame = (frameIndex) => {
-        const pulseStep = scheduledPulseStep(frameIndex * STEPS_PER_FRAME);
-        const drawn = render(pulseStep);
+        const step = frameIndex * STEPS_PER_FRAME;
+        const strikes = periodicStrikes(step);
+        const drawn = render(step, strikes);
         if (INDICATOR) {
-          // The hand rests over the button the whole clip; the pulse step doubles as the
-          // time since the click, which is what the press and its ripple are drawn from.
+          const lastStruck = strikes.filter((struck) => struck <= step).at(-1);
+          const age = lastStruck === undefined ? null : step - lastStruck;
           p.push();
           p.scale(RENDER_SCALE);
-          drawPointerIndicator(p, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2, LOGICAL_WIDTH, LOGICAL_HEIGHT, {
-            pressed: pulseStep !== null && pulseStep <= PRESS_HOLD_STEPS,
-            ripple: ripplePhase(pulseStep === null ? null : pulseStep / STEPS_PER_FRAME)
-          });
+          // The hand rests on the bell but off its heart, the way a striker lands.
+          drawPointerIndicator(
+            p,
+            LOGICAL_WIDTH / 2 + BELL_RADIUS * 0.45,
+            LOGICAL_HEIGHT / 2 + BELL_RADIUS * 0.35,
+            LOGICAL_WIDTH,
+            LOGICAL_HEIGHT,
+            {
+              pressed: age !== null && age <= PRESS_HOLD_STEPS,
+              ripple: ripplePhase(age === null ? null : age / STEPS_PER_FRAME)
+            }
+          );
           p.pop();
         }
         return Promise.resolve(publishState(frameIndex, drawn));
       };
     }
-    publishState(0, render(null));
+    publishState(0, render(0, []));
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
       return;
     }
-    for (let step = 0; step < STEPS_PER_FRAME; step += 1) {
-      if (livePulseStep === null) {
-        continue;
-      }
-      livePulseStep = livePulseStep + 1 < PULSE_STEPS ? livePulseStep + 1 : null;
-    }
-    publishState(p.frameCount, render(livePulseStep));
+    live.step += STEPS_PER_FRAME;
+    live.strikes = live.strikes.filter((struck) => live.step - struck <= HORIZON_STEPS);
+    publishState(p.frameCount, render(live.step, live.strikes));
   };
 
   p.mousePressed = () => {
-    const inside = isInsideButton(
+    const inside = isInsideBell(
       p.mouseX - LOGICAL_WIDTH / 2,
       p.mouseY - LOGICAL_HEIGHT / 2,
-      BUTTON_RADIUS
+      BELL_RADIUS
     );
-    if (inside && livePulseStep === null) {
-      livePulseStep = 0;
+    if (inside) {
+      live.strikes.push(live.step);
     }
     return true;
   };
