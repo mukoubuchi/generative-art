@@ -71,3 +71,50 @@ test("the cron fires at midnight in the schedule's own time zone", () => {
   assert.equal(schedule.timeZone, "Asia/Tokyo");
   assert.match(workflow, /^\s*- cron: "0 15 \* \* \*"$/mu);
 });
+
+/** A named step's whole block: from its name to the next step's, or to the end. */
+function blockOf(name) {
+  const from = stepIndex(name);
+  const next = workflow.indexOf("- name:", from + 1);
+  return next === -1 ? workflow.slice(from) : workflow.slice(from, next);
+}
+
+test("the queue is reported after the night's post, and cannot take it down", () => {
+  const post = stepIndex("Render and prepare post");
+  const report = stepIndex("Report the queue level");
+  assert.ok(post < report, "the count must describe the queue as the night leaves it");
+  // A missed reminder is recoverable in a way a missed post is not: the report may fail
+  // without failing the run, and it speaks only on runs that actually publish.
+  assert.match(blockOf("Report the queue level"), /continue-on-error: true/u);
+  assert.equal(guardOf("Report the queue level"), "env.PUBLISH == 'true'");
+});
+
+test("the report runs on empty nights and sits out the rehearsals", () => {
+  const guard = guardOf("Report the queue level");
+  // No artwork condition: the final notice belongs to the night nothing is scheduled.
+  assert.ok(!guard.includes("steps.today.outputs.artwork"));
+  // No rehearse_tokens: a token rehearsal is not a posting night and must stay silent.
+  assert.ok(!guard.includes("rehearse_tokens"));
+});
+
+test("the queue steps hold the repository token and never an X secret", () => {
+  for (const name of ["Report the queue level", "Rehearse the queue notice"]) {
+    const block = blockOf(name);
+    assert.match(block, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
+    assert.ok(!block.includes("secrets."), `"${name}" reaches into the secret store`);
+    assert.ok(!block.includes("X_"), `"${name}" touches the X pipeline's environment`);
+  }
+});
+
+test("the rehearsal fires only when asked with a date", () => {
+  assert.equal(guardOf("Rehearse the queue notice"), "inputs.rehearse_queue_notice != ''");
+});
+
+test("the workflow may write issues, read contents, and nothing else", () => {
+  const block = workflow.match(/^permissions:\n((?:  [a-z-]+: [a-z-]+\n)+)/mu);
+  assert.ok(block, "the workflow declares no permissions block");
+  assert.deepEqual(
+    block[1].trim().split("\n").map((line) => line.trim()).sort(),
+    ["contents: read", "issues: write"]
+  );
+});

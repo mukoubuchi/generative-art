@@ -399,6 +399,29 @@ cron cannot post twice for the same day. It is worth being exact about what that
 cover: dispatching the workflow again by hand, with posting enabled, will post again. There
 is no read-back against the timeline to prevent it.
 
+### Queue notifications
+
+A queue that runs out does so silently: the cron keeps firing, and every night is a
+correct, green no-op. So the nightly run reports on the queue itself, to the one issue
+titled "Posting queue status", where a comment reaches the owner's inbox through GitHub's
+own notifications — no new credential, and no address written down anywhere.
+
+While more than ten scheduled posts remain, nothing is said. From the night that leaves
+ten or fewer, every posting night gets a comment with the count, the last scheduled date,
+and how to refill. The first night that finds the queue empty gets one more, marked as the
+final notice, and the issue closes. Refilling `schedule.json` is the whole reset: the
+notices resume, and the issue reopens, from the file's own dates — the last scheduled date
+recorded in the closed issue's body is what tells a new, longer schedule apart from the
+one already reported dead.
+
+The step runs after the post, on publishing runs only, under `continue-on-error`, and with
+the repository token alone: a missed reminder must not cost a post, and the reporter never
+holds an X credential. Re-running a night cannot comment twice, because each notice
+carries its date in a marker the next run reads first. The `rehearse_queue_notice`
+dispatch input takes a date and posts what that night's notice would say, marked as a
+rehearsal and carrying a marker the nightly dedup deliberately does not read — which is
+how the channel is proved end to end long before the first live notice is due.
+
 ## Gallery
 
 ```bash

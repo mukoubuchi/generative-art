@@ -21,12 +21,23 @@ on:
         required: true
         default: false
         type: boolean
+      # The queue notice's own rehearsal: proves the issue-comment channel reaches an
+      # inbox months before the first live notice is due, with a marker the nightly
+      # dedup deliberately does not read.
+      rehearse_queue_notice:
+        description: Date (YYYY-MM-DD) whose queue notice to post as a marked rehearsal; leave blank to skip
+        required: false
+        default: ""
+        type: string
   # 15:00 UTC is midnight in Tokyo, which is the zone the schedule file keeps its dates in.
   schedule:
     - cron: "0 15 * * *"
 
+# The repository token writes exactly one thing: comments on the queue-status issue.
+# Everything else it could name stays at none, and the X secrets never meet it at all.
 permissions:
   contents: read
+  issues: write
 
 jobs:
   render-and-prepare:
@@ -147,3 +158,24 @@ jobs:
           # produced nothing throws inside the pipeline long before this step.
           if-no-files-found: warn
           retention-days: 14
+
+      # After the post, so the count describes the queue as the night leaves it, and on
+      # publishing runs only — a rehearsal or a dry run is not a posting night and must
+      # not speak for one. It runs on empty nights too, which is where its final word is
+      # said, and it still spends nothing there: this step never holds an X credential.
+      # A missed reminder is recoverable in a way a missed post is not, so a failure
+      # here is not allowed to take the pipeline down with it.
+      - name: Report the queue level
+        if: env.PUBLISH == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node p5js/scripts/queue-status.mjs
+
+      - name: Rehearse the queue notice
+        if: inputs.rehearse_queue_notice != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REHEARSE_DATE: ${{ inputs.rehearse_queue_notice }}
+        run: node p5js/scripts/queue-status.mjs --rehearse "$REHEARSE_DATE"
