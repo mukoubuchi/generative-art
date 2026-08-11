@@ -71,7 +71,7 @@ export function siteRootFrom(artwork) {
  *
  * A post links to the artwork's own page, so that page is where a reader arrives and where
  * they must find everything else — without it they can see one work and nothing around it.
- * The markup is added by the site build rather than written into the twenty-five pages,
+ * The markup is added by the site build rather than written into the artwork pages,
  * because the source address is already derived from the manifest for the gallery card, and
  * deriving it a second time is how two links come to disagree about where a work lives.
  */
@@ -110,7 +110,7 @@ function quoteFor(artwork, quoteCatalog) {
  * CC BY 4.0 licence requires. Its box is 448 by 512, not square.
  *
  * The path is defined once as a symbol and referenced from each card. Repeating it inline
- * 25 times would add some 15 kB to a 27 kB page for one glyph.
+ * once per card would add some 15 kB to a 27 kB page for one glyph.
  */
 const QUOTE_SYMBOL_ID = "icon-quote-left";
 const CODE_SYMBOL_ID = "icon-code";

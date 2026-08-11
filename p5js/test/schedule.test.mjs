@@ -20,11 +20,26 @@ test("the committed schedule names artworks the manifest has, once each", async 
   }
 });
 
-test("the first run covers the whole catalogue", async () => {
+/**
+ * Artworks finished and merged but not yet given a posting date; scheduling one retires
+ * its line here. Kept as an explicit roster so that no artwork can be in neither place:
+ * finished work missing from both would be work nobody will ever post, silently.
+ */
+const AWAITING_SCHEDULE = ["moebius-band", "ulam-spiral"];
+
+test("every artwork is scheduled, or named as still waiting for a date", async () => {
   const schedule = await loadSchedule(catalog.manifest);
-  // Not a literal count: the point is that the opening run posts every artwork there is,
-  // which stays the claim when a twenty-sixth is added and appended to the schedule.
-  assert.equal(schedule.posts.length, catalog.manifest.artworks.length);
+  const scheduled = new Set(schedule.posts.map((post) => post.artwork));
+  for (const artwork of catalog.manifest.artworks) {
+    // Exactly one of the two: a waiting entry that gets scheduled must leave the roster,
+    // and an artwork in neither place fails rather than being quietly forgotten.
+    assert.notEqual(
+      scheduled.has(artwork.id),
+      AWAITING_SCHEDULE.includes(artwork.id),
+      `${artwork.id} must be either scheduled or on the waiting roster, and not both`
+    );
+  }
+  assert.equal(scheduled.size + AWAITING_SCHEDULE.length, catalog.manifest.artworks.length);
 });
 
 test("a schedule is rejected before it can post the wrong thing", () => {

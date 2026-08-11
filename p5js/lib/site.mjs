@@ -47,7 +47,7 @@ export const VENDOR_THREE_FILES = [
 /**
  * Gives each copied artwork page its way back to the gallery and on to its source.
  *
- * Done here, on the copy, rather than in the twenty-five pages themselves: the links are
+ * Done here, on the copy, rather than in the artwork pages themselves: the links are
  * derived from the manifest, so they cannot drift from the gallery's, and the pages stay
  * what they are in the repository — a canvas and the sketch that fills it.
  *

@@ -506,6 +506,48 @@
         "artifact": "exports/p5js/StrangeAttractor.png",
         "scale": 2
       }
+    },
+    {
+      "id": "moebius-band",
+      "title": "Möbius Band",
+      "entry": "p5js/artworks/moebius-band/index.html",
+      "interactivePath": "moebius-band/",
+      "description": "A half-twisted band a traveller must lap twice to come home.",
+      "canvas": {
+        "width": 800,
+        "height": 600
+      },
+      "quoteIds": [
+        "moebius-einseitige-flaeche"
+      ],
+      "thumbnail": {
+        "frame": 150
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/MoebiusBand.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
+    },
+    {
+      "id": "ulam-spiral",
+      "title": "Ulam Spiral",
+      "entry": "p5js/artworks/ulam-spiral/index.html",
+      "interactivePath": "ulam-spiral/",
+      "description": "The primes alone on a number spiral, crowding onto diagonals.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "euclid-primes-beyond"
+      ],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/UlamSpiral.png",
+        "scale": 2
+      }
     }
   ]
 }

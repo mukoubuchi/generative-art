@@ -250,6 +250,26 @@
       "year": 1883,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/alsosprachzarath00niet_0/page/n20/mode/1up"
+    },
+    {
+      "id": "euclid-primes-beyond",
+      "text": "οἱ πρῶτοι ἀριθμοὶ πλείους εἰσὶ παντὸς τοῦ προτεθέντος πλήθους πρώτων ἀριθμῶν.",
+      "lang": "grc",
+      "author": "Euclid",
+      "source": "Elements IX.20",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:greekLit:tlg1799.tlg001.perseus-grc2:9.prop.20/"
+    },
+    {
+      "id": "moebius-einseitige-flaeche",
+      "text": "es entsteht eine einseitige, von nur einer Linie begrenzte Fläche…",
+      "lang": "de",
+      "author": "August Ferdinand Möbius",
+      "source": "Zur Theorie der Polyëder und der Elementarverwandtschaft",
+      "year": 1858,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/gesammeltewerkeh02mbuoft/page/520"
     }
   ]
 }

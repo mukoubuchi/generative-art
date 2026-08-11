@@ -7,7 +7,7 @@
 
 A collection of generative artworks made with p5.js.
 
-The artworks began as Processing and py5 sketches. All 25 have been ported to p5.js and the originals removed; each port's README records what it kept from its original and where it departed.
+The artworks began as Processing and py5 sketches. All 25 have been ported to p5.js and the originals removed; each port's README records what it kept from its original and where it departed. Newer artworks are born browser-native — there is no original to keep faith with, so their notes explain the construction instead.
 
 ## Repository layout
 
@@ -45,6 +45,8 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Voronoi Bloom](p5js/artworks/voronoi-bloom/) | Voronoi boundaries lit from golden-angle sites, rendered as a static PNG |
 | [Flow Field](p5js/artworks/flow-field/) | Particle trails combed into streams by a noise field, rendered as a static PNG |
 | [Strange Attractor](p5js/artworks/strange-attractor/) | A de Jong orbit accumulated into a luminous cloud, rendered as a static PNG |
+| [Möbius Band](p5js/artworks/moebius-band/) | A half-twisted band a traveller must lap twice to come home, rendered as an MP4 |
+| [Ulam Spiral](p5js/artworks/ulam-spiral/) | The primes alone on a square spiral of the counting numbers, rendered as a static PNG |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 
@@ -69,7 +71,7 @@ Each artwork's geometry lives in a module that runs under `node --test` without 
 
 ## Gallery
 
-`npm run site --prefix p5js` builds a browsable gallery of all 25 artworks into `site/`, generated from the manifest rather than from a hand-written list. Nothing it produces is committed. See [p5js/README.md](p5js/README.md).
+`npm run site --prefix p5js` builds a browsable gallery of every artwork in the manifest into `site/`, generated from it rather than from a hand-written list. Nothing it produces is committed. See [p5js/README.md](p5js/README.md).
 
 ## License
 
