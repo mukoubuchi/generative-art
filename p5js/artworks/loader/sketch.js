@@ -62,6 +62,23 @@ const FADE_STEPS = 45;
 const FLOOR_ALPHA = 70;
 const PEAK_ALPHA = 150;
 
+/**
+ * The paint smoothing: a small Gaussian along the track, six cells' reach — three
+ * degrees of arc. Wide enough to round the folds the machine's step boundaries leave
+ * in the fade's slope, narrow enough to leave the fade itself untouched.
+ */
+const SMOOTH_REACH = 6;
+const SMOOTH_SIGMA = 2.5;
+const SMOOTH_WEIGHTS = Array.from(
+  { length: SMOOTH_REACH + 1 },
+  (unused, distance) => Math.exp(-(distance * distance) / (2 * SMOOTH_SIGMA * SMOOTH_SIGMA))
+);
+
+/** The cell holding the live arc's trailing end, where the walk along the track begins. */
+function liveTrailCell(step) {
+  return Math.floor(visualSpan(stateAfter(step)).start / CELL_DEGREES) % TRACK_CELLS;
+}
+
 function mix(from, to, amount) {
   return [
     from[0] + (to[0] - from[0]) * amount,
@@ -100,14 +117,39 @@ new P5((p) => {
     // The track: every point of the ring lit by how recently the arc last passed it.
     // What sits just ahead of the live arc is the faintest light — its own previous
     // pass, one cycle old, about to be laid down again exactly.
+    //
+    // The ages themselves are exact and stay exact; what is smoothed is the paint.
+    // Age climbs the track at a slope set by how fast the trailing end was moving,
+    // and that slope snaps at each step of the machine — a fold the eye amplifies
+    // into spokes at close range. A small angular kernel over the painted colours
+    // erases the folds. It runs along the track only, clamped at both ends, so the
+    // frontier where the oldest light meets the live arc stays a knife edge.
     const ages = trackAges(step, TRACK_CELLS);
-    for (let cell = 0; cell < TRACK_CELLS; cell += 1) {
+    const trackCells = [];
+    for (let offset = 0; offset < TRACK_CELLS; offset += 1) {
+      // Walk the track in one arc, starting just behind the live span's trailing end.
+      const cell = (liveTrailCell(step) + TRACK_CELLS - 1 - offset) % TRACK_CELLS;
       if (ages[cell] === 0) {
         continue;
       }
-      p.stroke(...trackColor(ages[cell]));
-      const from = cell * CELL_DEGREES - CELL_OVERLAP_DEGREES;
-      const to = (cell + 1) * CELL_DEGREES + CELL_OVERLAP_DEGREES;
+      trackCells.push({ cell, color: trackColor(ages[cell]) });
+    }
+    for (let index = 0; index < trackCells.length; index += 1) {
+      const blended = [0, 0, 0];
+      let weight = 0;
+      for (let reach = -SMOOTH_REACH; reach <= SMOOTH_REACH; reach += 1) {
+        const neighbour = trackCells[
+          Math.min(Math.max(index + reach, 0), trackCells.length - 1)
+        ];
+        const share = SMOOTH_WEIGHTS[Math.abs(reach)];
+        blended[0] += neighbour.color[0] * share;
+        blended[1] += neighbour.color[1] * share;
+        blended[2] += neighbour.color[2] * share;
+        weight += share;
+      }
+      p.stroke(blended[0] / weight, blended[1] / weight, blended[2] / weight);
+      const from = trackCells[index].cell * CELL_DEGREES - CELL_OVERLAP_DEGREES;
+      const to = (trackCells[index].cell + 1) * CELL_DEGREES + CELL_OVERLAP_DEGREES;
       p.arc(0, 0, ARC_DIAMETER, ARC_DIAMETER, p.radians(from), p.radians(to), p.OPEN);
     }
 

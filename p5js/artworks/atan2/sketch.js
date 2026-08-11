@@ -55,15 +55,18 @@ const READOUT_INK = [218, 216, 222];
 const PROBE_INK = [242, 242, 246];
 
 /**
- * The corner the readouts occupy, in centred coordinates. No needle stands under the
- * type: a needle half-hidden by the plate reads as a defect, and the corner is the
- * readouts' ground the way the rest of the canvas is the field's.
+ * The corner the readouts occupy, in centred coordinates. The bottom-right one: the
+ * published page hangs its hub plates in both top corners and its legend at the
+ * bottom-left foot, and the readouts are printed into the capture too, so this is the
+ * corner that is quiet in every context. No needle stands under the type — a needle
+ * half-hidden by the plate reads as a defect, and the corner is the readouts' ground
+ * the way the rest of the canvas is the field's.
  */
 const READOUT_BLOCK = {
-  left: -LOGICAL_WIDTH / 2,
-  top: -LOGICAL_HEIGHT / 2,
-  right: -LOGICAL_WIDTH / 2 + TEXT_SIZE * 13,
-  bottom: -LOGICAL_HEIGHT / 2 + TEXT_SIZE * 4.6
+  left: LOGICAL_WIDTH / 2 - TEXT_SIZE * 13,
+  top: LOGICAL_HEIGHT / 2 - TEXT_SIZE * 4.6,
+  right: LOGICAL_WIDTH / 2,
+  bottom: LOGICAL_HEIGHT / 2
 };
 
 const GRID = needleGrid(LOGICAL_WIDTH, LOGICAL_HEIGHT, NEEDLE_SPACING, GRID_MARGIN)
@@ -144,18 +147,20 @@ new P5((p) => {
     p.circle(probe.x, probe.y, PROBE_RADIUS * 2);
     p.pop();
 
-    // Readouts in the top-left corner, over a plate of the ground so the needles
-    // passing beneath stay needles rather than noise behind type.
+    // Readouts in the bottom-right corner, over a plate of the ground so any needle
+    // tip reaching in stays a needle rather than noise behind type.
     p.push();
     p.scale(RENDER_SCALE);
     p.noStroke();
+    const plateLeft = LOGICAL_WIDTH - TEXT_SIZE * 13;
+    const plateTop = LOGICAL_HEIGHT - TEXT_SIZE * 4.6;
     p.fill(...GROUND, 216);
-    p.rect(0, 0, TEXT_SIZE * 13, TEXT_SIZE * 4.6);
+    p.rect(plateLeft, plateTop, TEXT_SIZE * 13, TEXT_SIZE * 4.6);
     p.fill(...READOUT_INK);
     p.textSize(TEXT_SIZE);
-    p.text(`radian: ${centreAngle.toFixed(4)}`, TEXT_SIZE, TEXT_SIZE * 1.6);
-    p.text(`degree: ${p.degrees(centreAngle).toFixed(2)}`, TEXT_SIZE, TEXT_SIZE * 3.0);
-    p.text(`(${Math.trunc(probe.x)}, ${Math.trunc(probe.y)})`, TEXT_SIZE, TEXT_SIZE * 4.4);
+    p.text(`radian: ${centreAngle.toFixed(4)}`, plateLeft + TEXT_SIZE, plateTop + TEXT_SIZE * 1.6);
+    p.text(`degree: ${p.degrees(centreAngle).toFixed(2)}`, plateLeft + TEXT_SIZE, plateTop + TEXT_SIZE * 3.0);
+    p.text(`(${Math.trunc(probe.x)}, ${Math.trunc(probe.y)})`, plateLeft + TEXT_SIZE, plateTop + TEXT_SIZE * 4.4);
     p.pop();
 
     if (HINT.shown) {
