@@ -7,6 +7,14 @@ import {
   allCentres,
   latticeCentres,
   visibleCentres
+,
+  DISSOLVE_FRAMES,
+  FIRST_LATTICE_FRAMES,
+  HOLD_FRAMES,
+  REST_FRAMES,
+  SECOND_LATTICE_FRAMES,
+  TOTAL_FRAMES,
+  rippleOrder
 } from "../artworks/eyes-pattern/geometry.js";
 
 const offsetLattice = latticeCentres(CIRCLE_RADIUS);
@@ -58,4 +66,66 @@ test("every circle the sketch draws either shows or sits just past the edge", ()
     assert.ok(centre.x + CIRCLE_RADIUS > 0 && centre.x - CIRCLE_RADIUS < GRID_SIZE);
     assert.ok(centre.y + CIRCLE_RADIUS > 0 && centre.y - CIRCLE_RADIUS < GRID_SIZE);
   }
+});
+
+test("one family alone is tangent and eyeless; the eyes exist only between the families", () => {
+  const integer = visibleCentres(latticeCentres(0));
+  const half = visibleCentres(latticeCentres(CIRCLE_RADIUS));
+
+  // Within a family the closest circles just touch: distance exactly one diameter.
+  for (const family of [integer, half]) {
+    let closest = Infinity;
+    for (let a = 0; a < family.length; a += 1) {
+      for (let b = a + 1; b < family.length; b += 1) {
+        closest = Math.min(closest, Math.hypot(
+          family[a].x - family[b].x,
+          family[a].y - family[b].y
+        ));
+      }
+    }
+    assert.equal(closest, CIRCLE_DIAMETER);
+  }
+
+  // Across the families the nearest pairs overlap, and every such pair is a lens.
+  let lenses = 0;
+  for (const a of integer) {
+    for (const b of half) {
+      const gap = Math.hypot(a.x - b.x, a.y - b.y);
+      if (gap < CIRCLE_DIAMETER - 1e-9) {
+        assert.ok(Math.abs(gap - Math.SQRT1_2) < 1e-9);
+        lenses += 1;
+      }
+    }
+  }
+  // Sixteen half-point circles, each cutting a lens with its four integer
+  // neighbours: sixty-four eyes, none of them drawn.
+  assert.equal(lenses, 16 * 4);
+});
+
+test("each family ripples out from the centre, whole and exactly once", () => {
+  for (const offset of [0, CIRCLE_RADIUS]) {
+    const order = rippleOrder(offset);
+    const visible = visibleCentres(latticeCentres(offset));
+    assert.equal(order.length, visible.length);
+    const key = (point) => `${point.x},${point.y}`;
+    assert.deepEqual(new Set(order.map(key)), new Set(visible.map(key)));
+    for (let index = 1; index < order.length; index += 1) {
+      assert.ok(order[index].reach >= order[index - 1].reach - 1e-9);
+    }
+  }
+});
+
+test("the clip's plan lands on three hundred frames and the manifest agrees", async () => {
+  assert.equal(
+    FIRST_LATTICE_FRAMES + REST_FRAMES + SECOND_LATTICE_FRAMES + HOLD_FRAMES + DISSOLVE_FRAMES,
+    TOTAL_FRAMES
+  );
+  assert.equal(TOTAL_FRAMES, 300);
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const artwork = manifest.artworks.find((entry) => entry.id === "eyes-pattern");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.durationSeconds * 30, TOTAL_FRAMES);
 });

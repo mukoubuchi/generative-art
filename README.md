@@ -33,11 +33,11 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Spring Polygon](p5js/artworks/spring-polygon/) | Five coupled bobs disturbed by a drag and left to settle, rendered as an MP4 |
 | [Nautilus](p5js/artworks/nautilus/) | A chambered shell built room by room, coloured by age from abyss teal to pearl, rendered as a static PNG |
 | [Ammonite](p5js/artworks/ammonite/) | A radius-doubling spiral that grows forever without changing shape, looping one doubling per clip, rendered as an MP4 |
-| [Herringbone](p5js/artworks/herringbone/) | Identical tiles woven in two perpendicular directions, rendered as a static PNG |
-| [Pinwheel](p5js/artworks/pinwheel/) | Large and small squares turned about each other into a pinwheel paving, rendered as a static PNG |
+| [Herringbone](p5js/artworks/herringbone/) | Two families of planks laid together into a diagonal weave, ochre one way and slate the other, rendered as an MP4 |
+| [Pinwheel](p5js/artworks/pinwheel/) | Walls go up and squares of two sizes take the places left for them, terracotta and gold, rendered as an MP4 |
 | [Hex Triangle](p5js/artworks/hex-triangle/) | Six triangles orbiting a hexagon, closing on the centre and opening out, rendered as an MP4 |
 | [Kanizsa Square](p5js/artworks/kanizsa-square/) | An illusory square broken by turning its inducers and then made real, rendered as an MP4 |
-| [Eyes Pattern](p5js/artworks/eyes-pattern/) | Two offset lattices of circles whose overlaps read as eyes, rendered as a static PNG |
+| [Eyes Pattern](p5js/artworks/eyes-pattern/) | Two circle lattices on indigo; the eyes open only when the second family arrives, rendered as an MP4 |
 | [Necker Cube](p5js/artworks/necker-cube/) | A reversible wireframe cube turned by the pointer, rendered as an MP4 |
 | [Harriss Spiral](p5js/artworks/harriss-spiral/) | A branching spiral on recursively subdivided plastic rectangles, rendered as a static PNG |
 | [Reaction Diffusion Coral](p5js/artworks/reaction-diffusion-coral/) | A Gray-Scott colony grown from seeded specks, rendered as a static PNG |

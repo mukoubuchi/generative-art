@@ -39,3 +39,32 @@ export function visibleCentres(centres) {
     && centre.y - CIRCLE_RADIUS < GRID_SIZE
   ));
 }
+
+/**
+ * The order a lattice's circles are drawn in: outward from the canvas centre, ties
+ * broken deterministically, so each family arrives as a ripple. The first lattice is
+ * whole before the second begins — the point of the staging: a single family is only
+ * tangent circles, and not one eye exists until the other family lands between them.
+ */
+export function rippleOrder(offset) {
+  const centre = GRID_SIZE / 2;
+  return visibleCentres(latticeCentres(offset))
+    .map((point) => ({
+      ...point,
+      reach: Math.hypot(point.x - centre, point.y - centre)
+    }))
+    .sort((a, b) => a.reach - b.reach || a.x - b.x || a.y - b.y);
+}
+
+/**
+ * The clip's plan, in frames at thirty a second: the integer lattice ripples out,
+ * rests tangent and eyeless, the half lattice arrives and cuts every lens, the whole
+ * holds, then lets go for the loop.
+ */
+export const FIRST_LATTICE_FRAMES = 75;
+export const REST_FRAMES = 30;
+export const SECOND_LATTICE_FRAMES = 105;
+export const HOLD_FRAMES = 75;
+export const DISSOLVE_FRAMES = 15;
+export const TOTAL_FRAMES = FIRST_LATTICE_FRAMES + REST_FRAMES + SECOND_LATTICE_FRAMES
+  + HOLD_FRAMES + DISSOLVE_FRAMES;

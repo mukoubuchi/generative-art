@@ -8,6 +8,12 @@ import {
   horizontalSegments,
   verticalSegments,
   visibleSegments
+,
+  DISSOLVE_FRAMES,
+  HOLD_FRAMES,
+  LAY_FRAMES,
+  TOTAL_FRAMES,
+  layingOrder
 } from "../artworks/herringbone/geometry.js";
 
 const GAP = RUN_STEP - TILE_LENGTH;
@@ -91,4 +97,40 @@ test("every column carries the same rhythm, a quarter turn round", () => {
     assert.ok(starts[0] <= GAP, `column ${column} starts too far in`);
     assert.ok(starts[starts.length - 1] + TILE_LENGTH >= GRID_SIZE - GAP, `column ${column} stops short`);
   }
+});
+
+test("the laying order covers every visible tile once, both families arriving together", () => {
+  const order = layingOrder();
+  const visible = visibleSegments(allSegments());
+
+  assert.equal(order.length, visible.length);
+  assert.equal(order.length, 60);
+  const key = (tile) => `${tile.x1},${tile.y1},${tile.x2},${tile.y2}`;
+  assert.deepEqual(new Set(order.map(key)), new Set(visible.map(key)));
+
+  // The sweep never retreats.
+  const measure = (tile) => (tile.x1 + tile.x2 + tile.y1 + tile.y2) / 2;
+  for (let index = 1; index < order.length; index += 1) {
+    assert.ok(measure(order[index]) >= measure(order[index - 1]) - 1e-9);
+  }
+  // The harmony is of opposites arriving together: every quarter of the laying holds
+  // both directions, and the whole is thirty of each.
+  assert.equal(order.filter((tile) => tile.horizontal).length, 30);
+  for (let quarter = 0; quarter < 4; quarter += 1) {
+    const slice = order.slice(quarter * 15, (quarter + 1) * 15);
+    assert.ok(slice.some((tile) => tile.horizontal));
+    assert.ok(slice.some((tile) => !tile.horizontal));
+  }
+});
+
+test("the clip's plan lands on three hundred frames and the manifest agrees", async () => {
+  const { readFileSync } = await import("node:fs");
+  assert.equal(LAY_FRAMES + HOLD_FRAMES + DISSOLVE_FRAMES, TOTAL_FRAMES);
+  assert.equal(TOTAL_FRAMES, 300);
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const artwork = manifest.artworks.find((entry) => entry.id === "herringbone");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.durationSeconds * 30, TOTAL_FRAMES);
 });

@@ -58,3 +58,36 @@ export function visibleSegments(segments) {
     return high > 0 && low < GRID_SIZE && across >= 0 && across <= GRID_SIZE;
   });
 }
+
+/**
+ * The order the weave is laid in: a diagonal sweep from the top-left, both families
+ * interleaved as their tiles' positions fall — which is the artwork's whole point made
+ * procedural. The harmony is not one direction finished and then the other begun; the
+ * opposing runs arrive together, each tile beside the crosswise tiles it locks with.
+ * Ties along the sweep are broken deterministically, horizontals first, then by
+ * position, so the laying is the same every time it happens.
+ */
+export function layingOrder() {
+  const measure = (segment) => {
+    const midX = (segment.x1 + segment.x2) / 2;
+    const midY = (segment.y1 + segment.y2) / 2;
+    return midX + midY;
+  };
+  return visibleSegments(allSegments())
+    .map((segment) => ({ ...segment, horizontal: segment.y1 === segment.y2 }))
+    .sort((a, b) =>
+      measure(a) - measure(b)
+      || Number(b.horizontal) - Number(a.horizontal)
+      || a.x1 - b.x1
+      || a.y1 - b.y1
+    );
+}
+
+/**
+ * The clip's plan, in frames at thirty a second: the weave laid tile by tile along the
+ * sweep, held whole, then let go, so the loop returns to the empty loom it began on.
+ */
+export const LAY_FRAMES = 195;
+export const HOLD_FRAMES = 75;
+export const DISSOLVE_FRAMES = 30;
+export const TOTAL_FRAMES = LAY_FRAMES + HOLD_FRAMES + DISSOLVE_FRAMES;

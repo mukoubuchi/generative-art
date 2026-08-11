@@ -10,6 +10,14 @@ import {
   horizontalSegments,
   verticalSegments,
   visibleSegments
+,
+  DISSOLVE_FRAMES,
+  FILL_FRAMES,
+  HOLD_FRAMES,
+  LATTICE_FRAMES,
+  TOTAL_FRAMES,
+  emergentSquares,
+  layingOrder
 } from "../artworks/pinwheel/geometry.js";
 
 const horizontals = horizontalSegments();
@@ -90,4 +98,49 @@ test("every column carries the same rhythm, a quarter turn round", () => {
       `column ${column} stops short`
     );
   }
+});
+
+test("the squares emerge from the walls: two sizes only, large and small, each in its place", () => {
+  const squares = emergentSquares();
+
+  assert.ok(squares.length >= 40);
+  const sizes = new Set(squares.map((square) => square.size));
+  assert.deepEqual([...sizes].sort(), [1, 2]);
+  // Every found region is a full square, not a clipped or merged shape.
+  for (const square of squares) {
+    assert.equal(square.cells, square.size * square.size);
+  }
+  // Both families are well represented and no two squares overlap.
+  assert.ok(squares.filter((square) => square.size === 2).length >= 20);
+  assert.ok(squares.filter((square) => square.size === 1).length >= 16);
+  const claimed = new Set();
+  for (const square of squares) {
+    for (let dx = 0; dx < square.size; dx += 1) {
+      for (let dy = 0; dy < square.size; dy += 1) {
+        const cell = `${square.x + dx},${square.y + dy}`;
+        assert.ok(!claimed.has(cell));
+        claimed.add(cell);
+      }
+    }
+  }
+});
+
+test("the laying order covers every visible tile once and the clip plan lands on three hundred", async () => {
+  const order = layingOrder();
+  const visible = visibleSegments(allSegments());
+  assert.equal(order.length, visible.length);
+  const measure = (tile) => (tile.x1 + tile.x2 + tile.y1 + tile.y2) / 2;
+  for (let index = 1; index < order.length; index += 1) {
+    assert.ok(measure(order[index]) >= measure(order[index - 1]) - 1e-9);
+  }
+
+  assert.equal(LATTICE_FRAMES + FILL_FRAMES + HOLD_FRAMES + DISSOLVE_FRAMES, TOTAL_FRAMES);
+  assert.equal(TOTAL_FRAMES, 300);
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const artwork = manifest.artworks.find((entry) => entry.id === "pinwheel");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.durationSeconds * 30, TOTAL_FRAMES);
 });

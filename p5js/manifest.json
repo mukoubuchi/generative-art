@@ -285,7 +285,7 @@
       "title": "Herringbone",
       "entry": "p5js/artworks/herringbone/index.html",
       "interactivePath": "herringbone/",
-      "description": "Every tile is the same; only the direction alternates.",
+      "description": "Two directions, laid together; neither alone is a weave.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -294,9 +294,13 @@
         "heraclitus-palintropos-harmonie"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/Herringbone.png",
+        "kind": "video",
+        "artifact": "exports/p5js/Herringbone.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 190
       }
     },
     {
@@ -304,7 +308,7 @@
       "title": "Pinwheel",
       "entry": "p5js/artworks/pinwheel/index.html",
       "interactivePath": "pinwheel/",
-      "description": "One tile length builds squares of two sizes, each in its own place.",
+      "description": "The walls go up, and squares of two sizes take the places left for them.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -313,9 +317,13 @@
         "augustinus-ordo-est-dispositio"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/Pinwheel.png",
+        "kind": "video",
+        "artifact": "exports/p5js/Pinwheel.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 245
       }
     },
     {
@@ -363,7 +371,7 @@
       "title": "Eyes Pattern",
       "entry": "p5js/artworks/eyes-pattern/index.html",
       "interactivePath": "eyes-pattern/",
-      "description": "Nothing is drawn but circles. The eyes are where two of them cross.",
+      "description": "One family of circles is sealed; the eyes open when the second arrives.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -372,9 +380,13 @@
         "plotinus-helioeides"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/EyesPattern.png",
+        "kind": "video",
+        "artifact": "exports/p5js/EyesPattern.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 250
       }
     },
     {
