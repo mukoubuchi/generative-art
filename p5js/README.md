@@ -373,11 +373,12 @@ npm run pipeline -- --artwork koch-curves --publish
 
 ## GitHub Actions
 
-`.github/workflows/daily-post.yml` is manually dispatchable. Its `enable_posting` input
-defaults to `false`, and the daily cron trigger is intentionally commented out. The workflow
-always uploads the generated artifact for review; it publishes only when the dispatch input
-is explicitly enabled, `X_POSTING_ENABLED` is true, `--publish` is passed, and the secrets
-are present.
+`.github/workflows/daily-post.yml` runs nightly at 15:00 UTC — midnight in the schedule's
+own time zone — and can also be dispatched by hand. The nightly run publishes by
+definition, posting whatever `schedule.json` names for the new day and spending nothing on
+a day it names nothing; a dispatched run publishes only when its `enable_posting` input is
+explicitly enabled, `X_POSTING_ENABLED` is true, `--publish` is passed, and the secrets
+are present. Either way the generated artifact is uploaded for review.
 
 Four secrets, and no credentials in the manifest or the quote catalog:
 

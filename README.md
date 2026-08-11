@@ -46,7 +46,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Flow Field](p5js/artworks/flow-field/) | Particle trails combed into streams by a noise field, rendered as a static PNG |
 | [Strange Attractor](p5js/artworks/strange-attractor/) | A de Jong orbit accumulated into a luminous cloud, rendered as a static PNG |
 
-See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the disabled-by-default publishing workflow.
+See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 
 ## Adding sketches
 
