@@ -2,74 +2,81 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   PHI,
+  SECTION_COUNT,
   buildSections,
+  convergence,
+  fibonacciNumbers,
   goldenRectangle,
   sectionCorners
 } from "../artworks/fibonacci-spiral/geometry.js";
 
-const LOGICAL_WIDTH = 1010;
-const LOGICAL_HEIGHT = 640;
-const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
-const MARGIN = BASE_DIMENSION * 0.03125;
-const MINIMUM_SIDE = BASE_DIMENSION * 0.001;
-const ROOT = goldenRectangle(LOGICAL_WIDTH - 2 * MARGIN, LOGICAL_HEIGHT - 2 * MARGIN);
-const ORIGIN = {
-  x: (LOGICAL_WIDTH - ROOT.width) / 2,
-  y: (LOGICAL_HEIGHT - ROOT.height) / 2
-};
+const sections = buildSections();
 
-function sections() {
-  return buildSections(ORIGIN, ROOT.width, ROOT.height, MINIMUM_SIDE);
-}
+test("the tiling is fifteen integer rectangles whose sides are consecutive Fibonacci numbers", () => {
+  const fibonacci = fibonacciNumbers();
 
-test("the root rectangle is exactly golden and fits inside the margins", () => {
-  assert.ok(Math.abs(ROOT.width / ROOT.height - PHI) < 1e-12);
-  assert.ok(ROOT.width <= LOGICAL_WIDTH - 2 * MARGIN + 1e-9);
-  assert.ok(ROOT.height <= LOGICAL_HEIGHT - 2 * MARGIN + 1e-9);
-  // The Processing canvas was 806x500, which is 1.612 rather than phi.
-  assert.ok(Math.abs(806 / 500 - PHI) > 1e-3);
+  assert.equal(fibonacci.length, SECTION_COUNT + 1);
+  for (let index = 2; index < fibonacci.length; index += 1) {
+    assert.equal(fibonacci[index], fibonacci[index - 1] + fibonacci[index - 2]);
+  }
+  assert.equal(sections.length, SECTION_COUNT);
+  assert.equal(sections[0].width, 987);
+  assert.equal(sections[0].height, 610);
+  assert.equal(sections.at(-1).width, 1);
+  assert.equal(sections.at(-1).height, 1);
 });
 
-test("each section turns a quarter and hands its short side to the next long side", () => {
-  const built = sections();
-
-  assert.ok(built.length > 10);
-  built.forEach((section, index) => {
-    assert.ok(Math.abs(section.width / section.height - PHI) < 1e-9);
-    assert.ok(Math.abs(section.rotation - index * Math.PI / 2) < 1e-9);
-    assert.equal(section.hue, index * 60 % 360);
-    if (index > 0) {
-      assert.ok(Math.abs(section.width - built[index - 1].height) < 1e-9);
-    }
-  });
-});
-
-test("the sections stop just below half an output pixel", () => {
-  const built = sections();
-  const smallest = built[built.length - 1];
-
-  assert.ok(smallest.height >= MINIMUM_SIDE);
-  assert.ok(smallest.height / PHI < MINIMUM_SIDE);
-});
-
-test("every section stays inside the root rectangle", () => {
-  const right = ORIGIN.x + ROOT.width;
-  const bottom = ORIGIN.y + ROOT.height;
-
-  for (const section of sections()) {
-    for (const corner of sectionCorners(section)) {
-      assert.ok(corner.x >= ORIGIN.x - 1e-9 && corner.x <= right + 1e-9);
-      assert.ok(corner.y >= ORIGIN.y - 1e-9 && corner.y <= bottom + 1e-9);
-    }
+test("the recurrence is carpentry: each square split leaves exactly the next rectangle", () => {
+  for (let index = 0; index < sections.length - 1; index += 1) {
+    // Splitting the height-square off a width-by-height rectangle leaves width minus
+    // height across, and that is the next section's height — as integers, with ===.
+    assert.equal(sections[index].width - sections[index].height, sections[index + 1].height);
+    assert.equal(sections[index].height, sections[index + 1].width);
   }
 });
 
-test("the second section occupies the gnomon the first one leaves behind", () => {
-  const [first, second] = sections();
-  const xs = sectionCorners(second).map((corner) => corner.x);
+test("each section starts on the last one's far edge, a quarter turn on", () => {
+  for (let index = 0; index < sections.length - 1; index += 1) {
+    const here = sections[index];
+    const next = sections[index + 1];
+    assert.ok(Math.abs(next.x - (here.x + here.width * Math.cos(here.rotation))) < 1e-9);
+    assert.ok(Math.abs(next.y - (here.y + here.width * Math.sin(here.rotation))) < 1e-9);
+    assert.ok(Math.abs(next.rotation - here.rotation - Math.PI / 2) < 1e-12);
+    assert.equal(sectionCorners(here).length, 4);
+  }
+});
 
-  // An exact golden root makes the split land on first.height, so the arc radii fall on
-  // section boundaries instead of cutting across a rectangle.
-  assert.ok(Math.abs(Math.min(...xs) - (first.x + first.height)) < 1e-9);
-  assert.ok(Math.abs(Math.max(...xs) - (first.x + first.width)) < 1e-9);
+test("the convergents close on phi from both sides, the error shrinking by phi squared", () => {
+  const errors = sections.map((section) => section.ratio - PHI);
+
+  // Build order runs best convergent first, so read the walk from the rough end.
+  const walk = [...errors].reverse();
+  for (let index = 1; index < walk.length; index += 1) {
+    assert.ok(Math.sign(walk[index]) !== Math.sign(walk[index - 1]));
+    assert.ok(Math.abs(walk[index]) < Math.abs(walk[index - 1]));
+  }
+  for (let index = walk.length - 4; index < walk.length; index += 1) {
+    const shrink = Math.abs(walk[index - 1]) / Math.abs(walk[index]);
+    assert.ok(Math.abs(shrink - PHI ** 2) < 0.02);
+  }
+  // The root's own aspect misses phi by about one part in a million.
+  assert.ok(Math.abs(sections[0].ratio - PHI) < 1.3e-6);
+});
+
+test("the colour key is the convergence: zero at one-to-one, saturated at the root", () => {
+  const roughest = sections.at(-1);
+  const finest = sections[0];
+
+  assert.equal(convergence(roughest), 0);
+  assert.ok(convergence(finest) > 0.95);
+  for (let index = 0; index < sections.length - 1; index += 1) {
+    assert.ok(convergence(sections[index]) > convergence(sections[index + 1]));
+  }
+});
+
+test("the exact golden rectangle stays as the skeleton", () => {
+  const root = goldenRectangle(946.75, 620);
+
+  assert.ok(Math.abs(root.width / root.height - PHI) < 1e-12);
+  assert.ok(root.width <= 946.75 + 1e-9 && root.height <= 620 + 1e-9);
 });

@@ -5,21 +5,11 @@ import {
   captureFrameCount,
   captureState
 } from "../artworks/fibonacci-spiral/capture.js";
-import { buildSections, goldenRectangle } from "../artworks/fibonacci-spiral/geometry.js";
+import { buildSections } from "../artworks/fibonacci-spiral/geometry.js";
 import { loadCatalog } from "../lib/catalog.mjs";
 
-/** The sketch's own construction, repeated with its constants, to get the section count. */
-const WIDTH = 1010;
-const HEIGHT = 640;
-const BASE = Math.min(WIDTH, HEIGHT);
-const MARGIN = BASE * 0.03125;
-const ROOT = goldenRectangle(WIDTH - 2 * MARGIN, HEIGHT - 2 * MARGIN);
-const SECTIONS = buildSections(
-  { x: (WIDTH - ROOT.width) / 2, y: (HEIGHT - ROOT.height) / 2 },
-  ROOT.width,
-  ROOT.height,
-  BASE * 0.001
-).length;
+/** The tiling's own section count: fifteen integer rectangles, 987 by 610 down to 1 by 1. */
+const SECTIONS = buildSections().length;
 
 const { manifest } = await loadCatalog();
 const artwork = manifest.artworks.find((candidate) => candidate.id === "fibonacci-spiral");

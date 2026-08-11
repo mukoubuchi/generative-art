@@ -2,7 +2,7 @@ import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawKeyIndicator } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import { captureFrameCount, captureState } from "./capture.js";
-import { buildSections, goldenRectangle } from "./geometry.js";
+import { buildSections, convergence, goldenRectangle } from "./geometry.js";
 
 const LOGICAL_WIDTH = 1010;
 const LOGICAL_HEIGHT = 640;
@@ -16,27 +16,40 @@ const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const MARGIN = BASE_DIMENSION * 0.03125;
-// Sections stop once the short side falls below this, which is under half an output pixel.
-const MINIMUM_SIDE = BASE_DIMENSION * 0.001;
 // The Processing sketch drew at the default weight of 1 px on a 500 px short side.
 const STROKE_WEIGHT = BASE_DIMENSION * 0.002;
-const HUE_RANGE = 360;
-const SATURATION = 100;
-const BRIGHTNESS = 100;
 const QUARTER_TURN = Math.PI / 2;
 
-// The canvas is only the display frame: the exact golden ratio lives in this rectangle,
-// which is the largest one that fits inside the margins, then centred.
-const ROOT = goldenRectangle(LOGICAL_WIDTH - 2 * MARGIN, LOGICAL_HEIGHT - 2 * MARGIN);
-const sections = buildSections(
-  {
-    x: (LOGICAL_WIDTH - ROOT.width) / 2,
-    y: (LOGICAL_HEIGHT - ROOT.height) / 2
-  },
-  ROOT.width,
-  ROOT.height,
-  MINIMUM_SIDE
+/** The dark table, the convergence's two ends, and the ivory the spiral is drawn in. */
+const GROUND = [14, 12, 10];
+const EMBER = [158, 74, 44];
+const GOLD = [246, 198, 98];
+const ARC_IVORY = [248, 234, 202];
+const SKELETON = [204, 192, 168, 88];
+
+// The tiling is integers — 987 by 610 units — scaled to the canvas in one transform.
+// The exact golden rectangle stays as the skeleton: the limit the convergents close on,
+// missing the integer root's aspect by about one part in a million.
+const sections = buildSections();
+const ROOT_UNITS = { width: sections[0].width, height: sections[0].height };
+const UNIT_SCALE = Math.min(
+  (LOGICAL_WIDTH - 2 * MARGIN) / ROOT_UNITS.width,
+  (LOGICAL_HEIGHT - 2 * MARGIN) / ROOT_UNITS.height
 );
+const TILING_LEFT = (LOGICAL_WIDTH - ROOT_UNITS.width * UNIT_SCALE) / 2;
+const TILING_TOP = (LOGICAL_HEIGHT - ROOT_UNITS.height * UNIT_SCALE) / 2;
+const SKELETON_RECT = goldenRectangle(
+  LOGICAL_WIDTH - 2 * MARGIN,
+  LOGICAL_HEIGHT - 2 * MARGIN
+);
+
+function mix(from, to, amount) {
+  return [
+    from[0] + (to[0] - from[0]) * amount,
+    from[1] + (to[1] - from[1]) * amount,
+    from[2] + (to[2] - from[2]) * amount
+  ];
+}
 
 // The page starts from one section so the arrow keys build the spiral up the way the
 // Processing sketch did. The capture starts complete: its scenario is in capture.js, and
@@ -53,21 +66,35 @@ const P5 = window.p5;
 
 new P5((p) => {
   function drawSpiral(count) {
-    p.background(0, 0, BRIGHTNESS);
+    p.background(...GROUND);
     p.push();
     p.scale(RENDER_SCALE);
+    // The skeleton first: the exact golden rectangle the integer tiling converges to.
+    p.noFill();
+    p.stroke(...SKELETON);
+    p.strokeWeight(STROKE_WEIGHT);
+    p.rect(
+      (LOGICAL_WIDTH - SKELETON_RECT.width) / 2,
+      (LOGICAL_HEIGHT - SKELETON_RECT.height) / 2,
+      SKELETON_RECT.width,
+      SKELETON_RECT.height
+    );
+    p.translate(TILING_LEFT, TILING_TOP);
+    p.scale(UNIT_SCALE);
     for (const section of sections.slice(0, count)) {
       p.push();
       p.translate(section.x, section.y);
       p.rotate(section.rotation);
       p.noStroke();
-      p.fill(section.hue, SATURATION, BRIGHTNESS);
+      // Colour is the convergence: the rough inner convergents in ember, the sections
+      // whose ratio has all but reached phi in gold. Adding a section gilds the spiral.
+      p.fill(...mix(EMBER, GOLD, convergence(section)));
       p.rect(0, 0, section.width, section.height);
       // The quarter arc is inscribed in the square half of the rectangle, so its two
       // radii lie exactly on edges the neighbouring rectangles already draw.
       p.noFill();
-      p.stroke(0, 0, 0);
-      p.strokeWeight(STROKE_WEIGHT);
+      p.stroke(...ARC_IVORY);
+      p.strokeWeight(STROKE_WEIGHT / UNIT_SCALE);
       p.arc(
         section.height,
         section.height,
@@ -99,7 +126,6 @@ new P5((p) => {
   p.setup = () => {
     p.pixelDensity(1);
     p.createCanvas(OUTPUT_WIDTH, OUTPUT_HEIGHT).parent("artwork");
-    p.colorMode(p.HSB, HUE_RANGE, SATURATION, BRIGHTNESS);
     p.noLoop();
     if (CAPTURE_MODE) {
       // Every frame is a pure function of its index — the scenario lives in capture.js —
