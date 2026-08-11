@@ -186,12 +186,37 @@ function leaveThroughShutter(cards) {
   }
 }
 
+/**
+ * The shutter must not outlive the departure it dressed. The back-forward cache freezes
+ * the page as it left — fallen blocks and all — and restores it without re-running any
+ * script, so a reader coming back through the browser's own button found the gallery
+ * alive but under an opaque lid. Both ends of the journey are swept: pagehide, so the
+ * frozen snapshot is taken clean where the browser allows that, and pageshow on a
+ * persisted restore, for the snapshots that kept the lid anyway.
+ */
+function liftShutterOnReturn() {
+  const lift = () => {
+    for (const shutter of document.querySelectorAll(".shutter")) {
+      shutter.remove();
+    }
+  };
+  window.addEventListener("pagehide", lift);
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      lift();
+    }
+  });
+}
+
 const cards = [...document.querySelectorAll(".card")];
 const footRule = document.querySelector(".colophon__rule");
 // Tells the page's own timer that the reveal is in hand, so it leaves the hidden state
 // alone. If this file never runs, that timer unhides everything instead.
 document.documentElement.dataset.gallery = "ready";
 revealOnApproach(footRule ? [...cards, footRule] : cards);
+// Registered whether or not motion is allowed: the sweep must run even if the reader's
+// motion preference changed between leaving and coming back.
+liftShutterOnReturn();
 if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
   followPointer(cards);
   rippleOnPress(cards);

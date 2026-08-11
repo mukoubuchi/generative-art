@@ -149,3 +149,17 @@ test("a source base that does not end in a separator is rejected", async () => {
   // last segment instead of extending it, and every link would lose a directory.
   assert.throws(() => validateManifest(doctored), /invalid source base URL/u);
 });
+
+test("the shutter cannot outlive the departure it dressed", async () => {
+  // The gallery leaves through a shutter, and the back-forward cache restores the page
+  // exactly as it left — fallen blocks included — without re-running a line of script.
+  // The only defence is listeners registered up front, so their presence is pinned: a
+  // sweep on pagehide, and a sweep on the persisted pageshow of a frozen restore. This
+  // bug was found by a reader on a real device; it must not return quietly.
+  const { readFile } = await import("node:fs/promises");
+  const script = await readFile(new URL("../gallery/gallery.js", import.meta.url), "utf8");
+  assert.match(script, /addEventListener\("pagehide"/u, "no pagehide sweep is registered");
+  assert.match(script, /addEventListener\("pageshow"/u, "no pageshow sweep is registered");
+  assert.match(script, /event\.persisted/u, "the pageshow sweep ignores whether the page was restored");
+  assert.match(script, /querySelectorAll\("\.shutter"\)/u, "the sweep does not look for shutters");
+});
