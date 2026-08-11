@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   ROTATION_STEP,
   boundingBox,
+  buildChambers,
   buildSquares,
   fitToCanvas,
   shrinkStep,
@@ -10,6 +11,24 @@ import {
 } from "../artworks/nautilus/geometry.js";
 
 const squares = buildSquares();
+
+test("growth order: each chamber outgrows the last, from the low-vaulted first room out", () => {
+  const chambers = buildChambers();
+
+  assert.equal(chambers.length, 158);
+  for (let index = 1; index < chambers.length; index += 1) {
+    assert.ok(chambers[index].radius > chambers[index - 1].radius);
+  }
+  // The first room is tiny and the last is the whole start radius: the shell's life
+  // runs from under a hundredth to one.
+  assert.ok(chambers[0].radius < 0.01);
+  assert.equal(chambers.at(-1).radius, 1);
+  // Growth order and construction order are one list read two ways.
+  assert.deepEqual(
+    chambers.map((chamber) => chamber.corners).reverse(),
+    squares
+  );
+});
 
 test("the shell is built from a fixed number of four-cornered squares", () => {
   // The eased step lands on 158 squares whether the loop is run in the original's 32-bit

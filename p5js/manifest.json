@@ -246,7 +246,7 @@
       "title": "Nautilus",
       "entry": "p5js/artworks/nautilus/index.html",
       "interactivePath": "nautilus/",
-      "description": "Each square is smaller than the last and turned ten degrees past it.",
+      "description": "Each chamber outgrows the last, and the shell carries them all.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -274,8 +274,9 @@
         "ovidius-omnia-mutantur"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/Ammonite.png",
+        "kind": "video",
+        "artifact": "exports/p5js/Ammonite.mp4",
+        "durationSeconds": 10,
         "scale": 2
       }
     },

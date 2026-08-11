@@ -39,15 +39,29 @@ export function squareAt(radius, angle) {
   ].map((corner) => rotate(corner, angle));
 }
 
-/** Every square of the shell, largest first, in the order the original drew them. */
-export function buildSquares() {
-  const squares = [];
+/**
+ * Every chamber of the shell in the order the creature built them: smallest first.
+ *
+ * The construction loop walks the schedule from the grand outer chamber inward, because
+ * that is how the shrink schedule is stated; the animal lived it the other way, adding
+ * each chamber larger than the last and abandoning none. Growth order is what the page
+ * animates and what the age palette is keyed to, so it is the order handed out.
+ */
+export function buildChambers() {
+  const chambers = [];
   let angle = 0;
   for (let radius = START_RADIUS; radius > 0; radius -= shrinkStep(radius)) {
-    squares.push(squareAt(radius, angle));
+    chambers.push({ radius, angle, corners: squareAt(radius, angle) });
     angle += ROTATION_STEP;
   }
-  return squares;
+  return chambers.reverse();
+}
+
+/** Every square of the shell, largest first, in the order the original drew them. */
+export function buildSquares() {
+  return buildChambers()
+    .map((chamber) => chamber.corners)
+    .reverse();
 }
 
 export function boundingBox(squares) {

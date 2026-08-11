@@ -31,8 +31,8 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Toggle Color Ball](p5js/artworks/toggle-color-ball/) | Four discs swinging in opposition, handing the front colour on in turn, rendered as an MP4 |
 | [Temple Bell](p5js/artworks/pulse-button/) | A struck bell whose sound crosses the dark and dies away exponentially, rendered as an MP4 |
 | [Spring Polygon](p5js/artworks/spring-polygon/) | Five coupled bobs disturbed by a drag and left to settle, rendered as an MP4 |
-| [Nautilus](p5js/artworks/nautilus/) | Translucent squares shrinking and turning into a chambered shell, rendered as a static PNG |
-| [Ammonite](p5js/artworks/ammonite/) | A triangle strip spiralling out through five radius-doubling bands, rendered as a static PNG |
+| [Nautilus](p5js/artworks/nautilus/) | A chambered shell built room by room, coloured by age from abyss teal to pearl, rendered as a static PNG |
+| [Ammonite](p5js/artworks/ammonite/) | A radius-doubling spiral that grows forever without changing shape, looping one doubling per clip, rendered as an MP4 |
 | [Herringbone](p5js/artworks/herringbone/) | Identical tiles woven in two perpendicular directions, rendered as a static PNG |
 | [Pinwheel](p5js/artworks/pinwheel/) | Large and small squares turned about each other into a pinwheel paving, rendered as a static PNG |
 | [Hex Triangle](p5js/artworks/hex-triangle/) | Six triangles orbiting a hexagon, closing on the centre and opening out, rendered as an MP4 |
