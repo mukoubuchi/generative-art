@@ -55,25 +55,41 @@ const READOUT_INK = [218, 216, 222];
 const PROBE_INK = [242, 242, 246];
 
 /**
- * The corner the readouts occupy, in centred coordinates. The bottom-right one: the
- * published page hangs its hub plates in both top corners and its legend at the
- * bottom-left foot, and the readouts are printed into the capture too, so this is the
- * corner that is quiet in every context. No needle stands under the type — a needle
- * half-hidden by the plate reads as a defect, and the corner is the readouts' ground
- * the way the rest of the canvas is the field's.
+ * The band the readouts occupy, in centred coordinates: the dark space across the top
+ * of the canvas, centred, clear of the page's hub plate (top-left) and its legend
+ * (bottom-left foot) in every context the readouts are printed into. No needle stands
+ * under the type — the band is the readouts' ground the way the rest of the canvas is
+ * the field's — so the line floats on the artwork's own dark with no plate at all.
  */
 const READOUT_BLOCK = {
-  left: LOGICAL_WIDTH / 2 - TEXT_SIZE * 13,
-  top: LOGICAL_HEIGHT / 2 - TEXT_SIZE * 4.6,
-  right: LOGICAL_WIDTH / 2,
-  bottom: LOGICAL_HEIGHT / 2
+  left: -TEXT_SIZE * 11.5,
+  top: -LOGICAL_HEIGHT / 2,
+  right: TEXT_SIZE * 11.5,
+  bottom: -LOGICAL_HEIGHT / 2 + TEXT_SIZE * 4
 };
 
 const GRID = needleGrid(LOGICAL_WIDTH, LOGICAL_HEIGHT, NEEDLE_SPACING, GRID_MARGIN)
   .filter((foot) => !(
-    foot.x >= READOUT_BLOCK.left - NEEDLE_LENGTH && foot.x <= READOUT_BLOCK.right
-    && foot.y >= READOUT_BLOCK.top - NEEDLE_LENGTH && foot.y <= READOUT_BLOCK.bottom
+    foot.x >= READOUT_BLOCK.left - NEEDLE_LENGTH && foot.x <= READOUT_BLOCK.right + NEEDLE_LENGTH
+    && foot.y >= READOUT_BLOCK.top - NEEDLE_LENGTH && foot.y <= READOUT_BLOCK.bottom + NEEDLE_LENGTH
   ));
+
+/** A pixel coordinate, sign always shown, three digits wide whatever it holds. */
+function signedPixels(value) {
+  const rounded = Math.round(value);
+  return (rounded < 0 ? "-" : "+") + String(Math.abs(rounded)).padStart(3, " ");
+}
+
+/**
+ * A measurement, sign always shown, integer part padded to a fixed width. The digits
+ * are designed rather than defaulted: at the orbit's radius one pixel of probe motion
+ * is about 0.005 radians, or three tenths of a degree, so radians carry three decimals
+ * and degrees one — the last digit shown is the last digit the hand can mean.
+ */
+function signedFixed(value, decimals, integerWidth) {
+  const magnitude = Math.abs(value).toFixed(decimals);
+  return (value < 0 ? "-" : "+") + magnitude.padStart(integerWidth + 1 + decimals, " ");
+}
 
 function mix(from, to, amount) {
   return [
@@ -147,20 +163,28 @@ new P5((p) => {
     p.circle(probe.x, probe.y, PROBE_RADIUS * 2);
     p.pop();
 
-    // Readouts in the bottom-right corner, over a plate of the ground so any needle
-    // tip reaching in stays a needle rather than noise behind type.
+    // The readouts, top and centre: the coordinates named as coordinates, then the
+    // whole computation as the equation it is — atan2 taking y first, which is the
+    // function's own signature and the thing every diagram forgets to teach. Monospace
+    // type, every sign always printed, every field zero-jitter wide, so the line holds
+    // still while its numbers run.
     p.push();
     p.scale(RENDER_SCALE);
     p.noStroke();
-    const plateLeft = LOGICAL_WIDTH - TEXT_SIZE * 13;
-    const plateTop = LOGICAL_HEIGHT - TEXT_SIZE * 4.6;
-    p.fill(...GROUND, 216);
-    p.rect(plateLeft, plateTop, TEXT_SIZE * 13, TEXT_SIZE * 4.6);
     p.fill(...READOUT_INK);
+    p.textFont("monospace");
     p.textSize(TEXT_SIZE);
-    p.text(`radian: ${centreAngle.toFixed(4)}`, plateLeft + TEXT_SIZE, plateTop + TEXT_SIZE * 1.6);
-    p.text(`degree: ${p.degrees(centreAngle).toFixed(2)}`, plateLeft + TEXT_SIZE, plateTop + TEXT_SIZE * 3.0);
-    p.text(`(${Math.trunc(probe.x)}, ${Math.trunc(probe.y)})`, plateLeft + TEXT_SIZE, plateTop + TEXT_SIZE * 4.4);
+    p.textAlign(p.CENTER, p.BASELINE);
+    p.text(
+      `(x, y) = (${signedPixels(probe.x)}, ${signedPixels(probe.y)})`,
+      LOGICAL_WIDTH / 2,
+      TEXT_SIZE * 1.9
+    );
+    p.text(
+      `atan2(y, x) = ${signedFixed(centreAngle, 3, 1)} rad = ${signedFixed(p.degrees(centreAngle), 1, 3)}°`,
+      LOGICAL_WIDTH / 2,
+      TEXT_SIZE * 3.5
+    );
     p.pop();
 
     if (HINT.shown) {
