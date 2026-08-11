@@ -270,6 +270,36 @@
       "year": 1858,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/gesammeltewerkeh02mbuoft/page/520"
+    },
+    {
+      "id": "hilbert-stetige-abbildung",
+      "text": "Es kann sich ein Punkt stetig derart bewegen, dass er während einer endlichen Zeit sämmtliche Punkte eines Flächenstückes trifft.",
+      "lang": "de",
+      "author": "David Hilbert",
+      "source": "Mathematische Annalen 38",
+      "year": 1891,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/sim_mathematische-annalen_1891_38/page/460"
+    },
+    {
+      "id": "lucretius-oculi-naturam",
+      "text": "nec possunt oculi naturam noscere rerum.",
+      "lang": "la",
+      "author": "Lucretius",
+      "source": "De rerum natura IV.385",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://scaife.perseus.org/reader/urn:cts:latinLit:phi0550.phi001.perseus-lat1:4.385/"
+    },
+    {
+      "id": "kepler-cur-sexangula",
+      "text": "cur non æquè quinquangula cadunt, aut septangula, cur semper sexangula…",
+      "lang": "la",
+      "author": "Johannes Kepler",
+      "source": "Strena seu De niue sexangula",
+      "year": 1611,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/ioanniskepleriss00kepl"
     }
   ]
 }

@@ -47,6 +47,9 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Strange Attractor](p5js/artworks/strange-attractor/) | A de Jong orbit accumulated into a luminous cloud, rendered as a static PNG |
 | [Möbius Band](p5js/artworks/moebius-band/) | A half-twisted band a traveller must lap twice to come home, rendered as an MP4 |
 | [Ulam Spiral](p5js/artworks/ulam-spiral/) | The primes alone on a square spiral of the counting numbers, rendered as a static PNG |
+| [Hilbert Curve](p5js/artworks/hilbert-curve/) | One unbroken line eased through six degrees of filling a square, rendered as an MP4 |
+| [Café Wall](p5js/artworks/cafe-wall/) | Horizontal courses bowed into wedges by an offset and a grey, rendered as an MP4 |
+| [DLA Frost](p5js/artworks/dla-frost/) | Walkers frozen where they first touched a growing crystal, rendered as a static PNG |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 

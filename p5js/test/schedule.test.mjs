@@ -25,7 +25,13 @@ test("the committed schedule names artworks the manifest has, once each", async 
  * its line here. Kept as an explicit roster so that no artwork can be in neither place:
  * finished work missing from both would be work nobody will ever post, silently.
  */
-const AWAITING_SCHEDULE = ["moebius-band", "ulam-spiral"];
+const AWAITING_SCHEDULE = [
+  "moebius-band",
+  "ulam-spiral",
+  "hilbert-curve",
+  "cafe-wall",
+  "dla-frost"
+];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
   const schedule = await loadSchedule(catalog.manifest);

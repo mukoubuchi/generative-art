@@ -548,6 +548,71 @@
         "artifact": "exports/p5js/UlamSpiral.png",
         "scale": 2
       }
+    },
+    {
+      "id": "hilbert-curve",
+      "title": "Hilbert Curve",
+      "entry": "p5js/artworks/hilbert-curve/index.html",
+      "interactivePath": "hilbert-curve/",
+      "description": "One unbroken line eased through six degrees of filling a square.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "hilbert-stetige-abbildung"
+      ],
+      "thumbnail": {
+        "frame": 170
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/HilbertCurve.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
+    },
+    {
+      "id": "cafe-wall",
+      "title": "Café Wall",
+      "entry": "p5js/artworks/cafe-wall/index.html",
+      "interactivePath": "cafe-wall/",
+      "description": "Horizontal courses bowed into wedges by an offset and a grey.",
+      "canvas": {
+        "width": 960,
+        "height": 640
+      },
+      "quoteIds": [
+        "lucretius-oculi-naturam"
+      ],
+      "thumbnail": {
+        "frame": 85
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/CafeWall.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
+    },
+    {
+      "id": "dla-frost",
+      "title": "DLA Frost",
+      "entry": "p5js/artworks/dla-frost/index.html",
+      "interactivePath": "dla-frost/",
+      "description": "Six thousand walkers frozen where they first touched, wearing their age as light.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "kepler-cur-sexangula"
+      ],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/DlaFrost.png",
+        "scale": 2
+      }
     }
   ]
 }
