@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { growCluster, mulberry32 } from "../artworks/dla-frost/cluster.js";
+import { growCluster } from "../artworks/dla-frost/cluster.js";
+import { mulberry32 } from "../artworks/shared/random.js";
 
 /**
  * A grown structure cannot be pinned coordinate by coordinate the way a constructed one

@@ -10,16 +10,7 @@
  * the same crystal in a test as on the page.
  */
 
-/** Mulberry32: a tiny seeded generator, uniform on [0, 1). */
-export function mulberry32(seed) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6D2B79F5) >>> 0;
-    let mixed = Math.imul(state ^ (state >>> 15), 1 | state);
-    mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
-    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { mulberry32 } from "../shared/random.js";
 
 const STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
