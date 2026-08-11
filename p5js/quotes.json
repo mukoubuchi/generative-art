@@ -300,6 +300,36 @@
       "year": 1611,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/ioanniskepleriss00kepl"
+    },
+    {
+      "id": "descartes-theoreme-plus-beau",
+      "text": "cela rend le Theoreme plus beau & plus court…",
+      "lang": "fr",
+      "author": "René Descartes",
+      "source": "Lettre à Élisabeth, novembre 1643",
+      "year": 1643,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/oeuvresdedesca04desc/page/47"
+    },
+    {
+      "id": "huygens-endroit-centre",
+      "text": "chaque petit endroit d'un corps lumineux, comme le Soleil, une chandelle, ou un charbon ardent, engendre ses ondes, dont cet endroit est le centre.",
+      "lang": "fr",
+      "author": "Christiaan Huygens",
+      "source": "Traité de la lumière",
+      "year": 1690,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/bub_gb_X9PKaZlChggC/page/n26"
+    },
+    {
+      "id": "poincare-conditions-initiales",
+      "text": "il peut arriver que de petites différences dans les conditions initiales en engendrent de très grandes dans les phénomènes finaux…",
+      "lang": "fr",
+      "author": "Henri Poincaré",
+      "source": "Science et méthode",
+      "year": 1908,
+      "publicDomain": true,
+      "sourceUrl": "https://fr.wikisource.org/wiki/Science_et_m%C3%A9thode/Livre_premier,_%C2%A7_IV"
     }
   ]
 }

@@ -613,6 +613,68 @@
         "artifact": "exports/p5js/DlaFrost.png",
         "scale": 2
       }
+    },
+    {
+      "id": "circle-packing",
+      "title": "Circle Packing",
+      "entry": "p5js/artworks/circle-packing/index.html",
+      "interactivePath": "circle-packing/",
+      "description": "Each dart grows the largest circle its landing allows; arrival reads as size.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "descartes-theoreme-plus-beau"
+      ],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/CirclePacking.png",
+        "scale": 2
+      }
+    },
+    {
+      "id": "moire-rings",
+      "title": "Moiré Rings",
+      "entry": "p5js/artworks/moire-rings/index.html",
+      "interactivePath": "moire-rings/",
+      "description": "Two families of rings, beating into hyperbolas.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "huygens-endroit-centre"
+      ],
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/MoireRings.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
+    },
+    {
+      "id": "lorenz-ribbon",
+      "title": "Lorenz Ribbons",
+      "entry": "p5js/artworks/lorenz-ribbon/index.html",
+      "interactivePath": "lorenz-ribbon/",
+      "description": "Two orbits a breath apart, run until they part for good.",
+      "canvas": {
+        "width": 800,
+        "height": 600
+      },
+      "quoteIds": [
+        "poincare-conditions-initiales"
+      ],
+      "thumbnail": {
+        "frame": 285
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/LorenzRibbons.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }

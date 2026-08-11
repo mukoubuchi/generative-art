@@ -50,6 +50,9 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Hilbert Curve](p5js/artworks/hilbert-curve/) | One unbroken line eased through six degrees of filling a square, rendered as an MP4 |
 | [Café Wall](p5js/artworks/cafe-wall/) | Horizontal courses bowed into wedges by an offset and a grey, rendered as an MP4 |
 | [DLA Frost](p5js/artworks/dla-frost/) | Walkers frozen where they first touched a growing crystal, rendered as a static PNG |
+| [Circle Packing](p5js/artworks/circle-packing/) | Darts kept greedy-first, each grown into the largest circle that fits, rendered as a static PNG |
+| [Moiré Rings](p5js/artworks/moire-rings/) | Two families of rings beating into hyperbolas around the pointer, rendered as an MP4 |
+| [Lorenz Ribbons](p5js/artworks/lorenz-ribbon/) | Two orbits a breath apart parting onto different wings, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 

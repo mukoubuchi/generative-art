@@ -30,7 +30,10 @@ const AWAITING_SCHEDULE = [
   "ulam-spiral",
   "hilbert-curve",
   "cafe-wall",
-  "dla-frost"
+  "dla-frost",
+  "circle-packing",
+  "moire-rings",
+  "lorenz-ribbon"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
