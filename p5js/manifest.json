@@ -22,9 +22,13 @@
         "emerson-repetition-laws"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/KochCurves.png",
+        "kind": "video",
+        "artifact": "exports/p5js/KochCurves.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 254
       }
     },
     {
@@ -55,7 +59,7 @@
       "title": "Sierpinski Gasket",
       "entry": "p5js/artworks/sierpinski-gasket/index.html",
       "interactivePath": "sierpinski-gasket/",
-      "description": "Three half-size triangles ring every parent, seven generations deep.",
+      "description": "Three triangles ring every parent; random rain lands nowhere else.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -64,9 +68,13 @@
         "swift-fleas-ad-infinitum"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/SierpinskiGasket.png",
+        "kind": "video",
+        "artifact": "exports/p5js/SierpinskiGasket.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 262
       }
     },
     {
@@ -414,7 +422,7 @@
       "title": "Harriss Spiral",
       "entry": "p5js/artworks/harriss-spiral/index.html",
       "interactivePath": "harriss-spiral/",
-      "description": "Every branch is the whole figure again, 405 times over.",
+      "description": "Every branch is the whole figure again; watch it happen.",
       "canvas": {
         "width": 795,
         "height": 600
@@ -423,9 +431,13 @@
         "leibniz-chaque-rameau"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/HarrissSpiral.png",
+        "kind": "video",
+        "artifact": "exports/p5js/HarrissSpiral.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 270
       }
     },
     {

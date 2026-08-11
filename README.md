@@ -20,9 +20,9 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 
 | Artwork | Description |
 | --- | --- |
-| [Koch Curves](p5js/artworks/koch-curves/) | An 85-degree Koch substitution rendered as a static PNG |
+| [Koch Curves](p5js/artworks/koch-curves/) | One angled substitution erupting along every side of a square, faster each generation, rendered as an MP4 |
 | [Recursive Pentagram](p5js/artworks/recursive-pentagram/) | Recursive inward and synchronized outward pentagrams rendered as an MP4 |
-| [Sierpinski Gasket](p5js/artworks/sierpinski-gasket/) | Seven generations of half-size triangles ringing each parent, rendered as a static PNG |
+| [Sierpinski Gasket](p5js/artworks/sierpinski-gasket/) | A built triangle lace and a random rain that lands nowhere else, rendered as an MP4 |
 | [Fibonacci Spiral](p5js/artworks/fibonacci-spiral/) | Golden rectangles and quarter arcs taken down and rebuilt with the arrow keys, rendered as an MP4 |
 | [Bounding Spots](p5js/artworks/bounding-spots/) | Twenty dots sweeping nested half circles at speeds set by their radius, rendered as an MP4 |
 | [Loader](p5js/artworks/loader/) | A spinning arc that relays the same ring forever over its own fading track, rendered as an MP4 |
@@ -39,7 +39,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Kanizsa Square](p5js/artworks/kanizsa-square/) | An illusory square broken by turning its inducers and then made real, rendered as an MP4 |
 | [Eyes Pattern](p5js/artworks/eyes-pattern/) | Two circle lattices on indigo; the eyes open only when the second family arrives, rendered as an MP4 |
 | [Necker Cube](p5js/artworks/necker-cube/) | A reversible wireframe cube turned by the pointer, rendered as an MP4 |
-| [Harriss Spiral](p5js/artworks/harriss-spiral/) | A branching spiral on recursively subdivided plastic rectangles, rendered as a static PNG |
+| [Harriss Spiral](p5js/artworks/harriss-spiral/) | The plastic-ratio cascade drawn wave by wave in garden greens, rendered as an MP4 |
 | [Reaction Diffusion Coral](p5js/artworks/reaction-diffusion-coral/) | A Gray-Scott colony grown from seeded specks, rendered as a static PNG |
 | [Truchet Tides](p5js/artworks/truchet-tides/) | Noise-turned Truchet tiles joining into tidal currents, rendered as a static PNG |
 | [Voronoi Bloom](p5js/artworks/voronoi-bloom/) | Voronoi boundaries lit from golden-angle sites, rendered as a static PNG |

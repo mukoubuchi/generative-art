@@ -168,3 +168,50 @@ export function arcPoints(arc, vertexSpacing) {
     );
   });
 }
+
+/**
+ * Which generation of the cascade a cell belongs to, read off its own size: the large
+ * branch shrinks a rectangle by one power of the plastic ratio and the small branch by
+ * three, so every cell's short side is the root's divided by an exact integer power.
+ * That the measured logarithm lands on an integer is a theorem of the construction,
+ * and the tests hold it to nine decimal places.
+ */
+export function generationOf(root, cell) {
+  const exact = Math.log(root.shortSide / cell.rectangle.shortSide) / Math.log(PLASTIC_RATIO);
+  return Math.round(exact);
+}
+
+/**
+ * The cascade's schedule: one wave per generation, each wave taking a settled share
+ * less time than the one before, whole frames dealt by largest remainder so the build
+ * lands exactly on its budget.
+ */
+export const WAVE_RATIO = 0.82;
+export const BUILD_FRAMES = 252;
+export const HOLD_FRAMES = 48;
+export const TOTAL_FRAMES = BUILD_FRAMES + HOLD_FRAMES;
+
+export function wavePlan(generationCount) {
+  const weights = Array.from({ length: generationCount }, (unused, index) =>
+    WAVE_RATIO ** index);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  const exact = weights.map((weight) => (weight / total) * BUILD_FRAMES);
+  const floored = exact.map(Math.floor);
+  let leftover = BUILD_FRAMES - floored.reduce((sum, frames) => sum + frames, 0);
+  const order = exact
+    .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
+    .sort((a, b) => b.remainder - a.remainder);
+  for (const { index } of order) {
+    if (leftover === 0) {
+      break;
+    }
+    floored[index] += 1;
+    leftover -= 1;
+  }
+  let cursor = 0;
+  return floored.map((frames, generation) => {
+    const wave = { generation, start: cursor, frames };
+    cursor += frames;
+    return wave;
+  });
+}

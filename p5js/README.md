@@ -8,9 +8,9 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 
 | ID | Logical canvas | Export | Timing |
 | --- | --- | --- | --- |
-| `koch-curves` | 680×680 | 1360×1360 PNG | Static |
+| `koch-curves` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, five eruptions, each faster |
 | `recursive-pentagram` | 680×680 | 1360×1360 MP4 at 30 fps | 12 seconds drawing plus 1.5 seconds hold |
-| `sierpinski-gasket` | 680×680 | 1360×1360 PNG | Static |
+| `sierpinski-gasket` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, the skeleton, then the rain |
 | `fibonacci-spiral` | 1010×640 | 2020×1280 MP4 at 30 fps | 10 seconds, taken down by ← and rebuilt by →; interactive page |
 | `bounding-spots` | 960×480 | 1920×960 MP4 at 30 fps | 10 seconds, one revolution of the outermost dot |
 | `loader` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, five relayings of the one ring |
@@ -27,7 +27,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `kanizsa-square` | 680×680 | 1360×1360 MP4 at 30 fps | 8.1 seconds, three rounds of the four states |
 | `eyes-pattern` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one lattice, then the eyes |
 | `necker-cube` | 680×680 | 1360×1360 MP4 at 30 fps | 6 seconds, one turn; interactive page |
-| `harriss-spiral` | 795×600 | 1590×1200 PNG | Static |
+| `harriss-spiral` | 795×600 | 1590×1200 MP4 at 30 fps | 10 seconds, fifteen waves of the cascade |
 | `reaction-diffusion-coral` | 680×680 | 1360×1360 PNG | Static |
 | `truchet-tides` | 960×640 | 1920×1280 PNG | Static |
 | `voronoi-bloom` | 800×640 | 1600×1280 PNG | Static |
@@ -44,9 +44,11 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 
 Koch Curves, Recursive Pentagram and Sierpinski Gasket are inherently radial or square constructions, so square logical canvases preserve their symmetry. The 680 px display size follows the laptop-sized square established by the earlier artworks. A per-artwork export scale produces higher-resolution media without enlarging the interactive canvas.
 
+Koch Curves is recreated around its own law: one angled substitution — four equal children over a peak of eighty-five degrees, joining the parent's endpoints exactly — repeated along every side of a square. At this angle each generation multiplies the rim by about 1.84, more than twentyfold over the clip, and the pacing makes the divergence felt: each generation's eruption takes six tenths of the time the last one took, an accelerando pinned geometric to within a frame. An eruption starts with every peak lying flat on its parent, at exactly the old perimeter, and raises them all at once to exactly the new one, each rising pair carrying a warm spark that cools into the standing ice. It is deliberately the opposite grammar to Hilbert Curve's: where that curve refines in stillness — held degrees, samples sliding along an unbroken arc, even pacing — this one folds outward, all its corners at once, in less and less time.
+
 Recursive Pentagram preserves the Processing sketch's 60 draw steps and 200 line segments. Self-similar geometry construction is recursive, while list counting and rendering are iterative. Each outward step contains all five rotational branches so they appear simultaneously.
 
-Sierpinski Gasket keeps the Processing sketch's seven generations and 1093 triangles. Its root radius and recursion cutoff are ratios of the canvas, so the generation count is independent of canvas size. The Processing sketch anchored the figure on its circumcentre, which left a much wider margin on the left than on the right; the port shifts the anchor left by a quarter radius so the bounding box is centred. The geometry is otherwise a translation of the original.
+Sierpinski Gasket keeps its seven generations and 1093 triangles, and its recreation stages two constructions that never mention each other. First the skeleton is built level by level, three half-size triangles ringing every parent; then the chaos game rains — a wanderer jumping halfway to a random corner, its trail drawn where it lands — and the ember rain fills exactly the steel lace, because it cannot land anywhere else. The agreement is pinned, not narrated: five hundred seeded raindrops each follow the tree to its bottom level (or within one, on a shared edge), while uniform rain over the box is orphaned by the third level more often than not. The dimension is measured from the construction — triangles triple as the radius halves — and the figure's envelope is centred as the shells' are.
 
 Fibonacci Spiral keeps the golden ratio in floating-point composition rather than in the integer canvas. The Processing sketch used an 806×500 canvas as the root rectangle and divided by the literal 1.618, so neither the root nor the ratio was exactly golden. Here the canvas is only a display frame, and the largest exact golden rectangle that fits inside the margins is centred within it. Because the root is exact, each quarter arc's radii land precisely on the boundaries the neighbouring rectangles already draw.
 
@@ -112,7 +114,7 @@ The original relied on `QUAD_STRIP`; the port builds the four quads from the str
 
 The Processing sketch was called SpinCube. What it draws is the classical reversible figure, so the port takes its established name.
 
-Harriss Spiral keeps the Processing sketch's construction unchanged: a rectangle in the plastic ratio splits into one square and two smaller rectangles of the same proportion, and both children recurse. That the three pieces tile the parent exactly is the identity rho^3 = rho + 1, and a test checks it on all 405 subdivisions rather than on the ratio alone. Construction is recursive because the figure is self-similar; the drawing walks the finished list iteratively.
+Harriss Spiral keeps its construction unchanged — a rectangle in the plastic ratio splits into one square and two smaller rectangles of the same proportion, both children recursing, the identity rho^3 = rho + 1 checked on all 405 subdivisions — and is recreated as the cascade watched happening. One wave per generation: a cell's partition lines appear, then its arc sweeps through the square just cut, the waves arriving a settled share faster each time and landing exactly on the build's frame budget. Generation is read off each cell's own size — the large branch divides by one power of rho and the small by three, so every cell's short side is the root's over an exact integer power, a theorem the tests hold to nine decimals — and each generation wears its own step of a garden gradient, deep moss at the root to pale spring at the leaves, which is the artwork's sentence from Leibniz made visible.
 
 The canvas is a display frame and the proportion belongs to the construction, as with Fibonacci Spiral: the largest exact plastic rectangle that fits inside the margins is centred in it. Every length the sketch set against its 600 px height — the margin, the recursion cutoff, the arc sampling and both stroke weights — is kept as a fraction of the height.
 

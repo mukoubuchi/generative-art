@@ -6,6 +6,15 @@ import {
   countTriangles,
   flattenTriangles,
   gasketDepth
+,
+  BUILD_FRAMES,
+  HOLD_FRAMES,
+  RAIN_FRAMES,
+  RAIN_POINTS,
+  RAIN_SEED,
+  TOTAL_FRAMES,
+  chaosPoints,
+  deepestContainment
 } from "../artworks/sierpinski-gasket/geometry.js";
 
 // The Processing sketch: an 800 px canvas, radius 800 * 0.48 and a cutoff of 10.
@@ -69,4 +78,57 @@ test("the gasket stays inside the logical canvas with equal side margins", () =>
   assert.ok(bounds.top >= 0 && bounds.bottom <= 680);
   assert.ok(Math.abs(bounds.left - (680 - bounds.right)) < 1e-9);
   assert.ok(Math.abs(bounds.top - (680 - bounds.bottom)) < 1e-9);
+});
+
+test("the chaos game agrees with the built skeleton without ever consulting it", async () => {
+  const { mulberry32 } = await import("../artworks/shared/random.js");
+  const gasket = buildGasket({ x: 0, y: 0 }, 1, 1 / 64);
+  const depth = gasketDepth(gasket);
+  const rain = chaosPoints({ x: 0, y: 0 }, 1, 500, mulberry32(RAIN_SEED));
+
+  // Every raindrop can be followed to the bottom of the tree, or within one level of
+  // it when it falls on a boundary edge shared between children.
+  for (const point of rain) {
+    assert.ok(deepestContainment(gasket, point) >= depth - 1);
+  }
+  // Negative control: uniform rain over the box is orphaned early and often.
+  const random = mulberry32(99);
+  let orphaned = 0;
+  for (let index = 0; index < 500; index += 1) {
+    const point = { x: random() * 2 - 1, y: random() * 2 - 1 };
+    if (deepestContainment(gasket, point) < 3) {
+      orphaned += 1;
+    }
+  }
+  assert.ok(orphaned > 350);
+});
+
+test("the dimension is measured from the construction: triangles triple as the radius halves", () => {
+  const gasket = buildGasket({ x: 0, y: 0 }, 1, 1 / 64);
+  const perLevel = [];
+  (function tally(node, depth) {
+    perLevel[depth] = (perLevel[depth] ?? 0) + 1;
+    for (const child of node.children) {
+      tally(child, depth + 1);
+    }
+  })(gasket, 0);
+
+  for (let level = 1; level < perLevel.length; level += 1) {
+    assert.equal(perLevel[level] / perLevel[level - 1], 3);
+  }
+  const dimension = Math.log(3) / Math.log(2);
+  assert.ok(Math.abs(dimension - 1.585) < 0.001);
+});
+
+test("the clip's plan lands on three hundred frames and the manifest agrees", async () => {
+  assert.equal(BUILD_FRAMES + RAIN_FRAMES + HOLD_FRAMES, TOTAL_FRAMES);
+  assert.equal(TOTAL_FRAMES, 300);
+  assert.ok(RAIN_POINTS >= 3000);
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const artwork = manifest.artworks.find((entry) => entry.id === "sierpinski-gasket");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.durationSeconds * 30, TOTAL_FRAMES);
 });

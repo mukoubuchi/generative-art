@@ -7,6 +7,12 @@ import {
   partitionLines,
   rectangleCorners,
   rootRectangle
+,
+  BUILD_FRAMES,
+  HOLD_FRAMES,
+  TOTAL_FRAMES,
+  generationOf,
+  wavePlan
 } from "../artworks/harriss-spiral/spiral.js";
 
 const WIDTH = 795;
@@ -97,4 +103,48 @@ test("each cell contributes one rectangle outline's worth of cuts", () => {
       assert.ok(Math.hypot(end.x - start.x, end.y - start.y) > 0);
     }
   }
+});
+
+test("every cell's size is the root's divided by an exact integer power of rho", () => {
+  const root = rootRectangle(795, 600, 20);
+  const cells = buildCells(root, 5);
+
+  assert.equal(cells.length, 405);
+  for (const cell of cells) {
+    const exact = Math.log(root.shortSide / cell.rectangle.shortSide)
+      / Math.log(PLASTIC_RATIO);
+    assert.ok(Math.abs(exact - Math.round(exact)) < 1e-9);
+    assert.ok(Math.round(exact) >= 0);
+  }
+});
+
+test("the cascade's waves accelerate and land exactly on the build budget", () => {
+  const root = rootRectangle(795, 600, 20);
+  const cells = buildCells(root, 5);
+  const generations = Math.max(...cells.map((cell) => generationOf(root, cell))) + 1;
+  const plan = wavePlan(generations);
+
+  assert.equal(plan.length, generations);
+  assert.ok(generations >= 12);
+  for (let index = 1; index < plan.length; index += 1) {
+    assert.ok(plan[index].frames <= plan[index - 1].frames);
+    assert.equal(plan[index].start, plan[index - 1].start + plan[index - 1].frames);
+  }
+  assert.ok(plan[0].frames > 3 * plan.at(-1).frames);
+  assert.equal(
+    plan.reduce((sum, wave) => sum + wave.frames, 0),
+    BUILD_FRAMES
+  );
+});
+
+test("the clip's plan lands on three hundred frames and the manifest agrees", async () => {
+  assert.equal(BUILD_FRAMES + HOLD_FRAMES, TOTAL_FRAMES);
+  assert.equal(TOTAL_FRAMES, 300);
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const artwork = manifest.artworks.find((entry) => entry.id === "harriss-spiral");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.durationSeconds * 30, TOTAL_FRAMES);
 });
