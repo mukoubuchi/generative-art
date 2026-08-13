@@ -124,8 +124,16 @@ new P5((p) => {
   }
 
   p.setup = () => {
-    p.pixelDensity(1);
     p.createCanvas(OUTPUT_WIDTH, OUTPUT_HEIGHT).parent("artwork");
+    // Pinned only while capturing, and only after the canvas exists. Before it, p5 has
+    // nothing to set the density on and the call is quietly ignored; on a Retina screen
+    // the backing store then comes out twice the size asked for. Left alone in the
+    // browser, so a reader on such a screen gets the picture drawn at their own
+    // resolution -- and pinned here, so an export is the size the manifest says
+    // rather than whatever density the machine doing the rendering happens to have.
+    if (CAPTURE_MODE) {
+      p.pixelDensity(1);
+    }
     p.noLoop();
     if (CAPTURE_MODE) {
       // Every frame is a pure function of its index — the scenario lives in capture.js —

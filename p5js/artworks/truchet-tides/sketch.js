@@ -39,12 +39,23 @@ new P5((p) => {
     const halfHeight = LOGICAL_HEIGHT * 0.5;
     const maximumDistance = Math.hypot(halfWidth, halfHeight);
     const innerRadius = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT) * 0.2;
-    for (let outputY = 0; outputY < OUTPUT_HEIGHT; outputY += 1) {
+    // The canvas is as many pixels across as the export scale asks for, times whatever the
+    // display puts on top of that: on a Retina screen the backing store is twice the size
+    // again. Writing a logical grid into a denser buffer fills one corner of it and leaves
+    // the rest untouched, which is what put two copies of this picture in the top quarter
+    // of the canvas on such a screen. So the density is read and the backing store is what
+    // gets walked. At a density of one this is the loop it has always been, byte for byte;
+    // above one the picture is computed at the resolution it is actually shown at.
+    const density = p.pixelDensity();
+    const backingWidth = OUTPUT_WIDTH * density;
+    const backingHeight = OUTPUT_HEIGHT * density;
+    const perLogical = RENDER_SCALE * density;
+    for (let backingY = 0; backingY < backingHeight; backingY += 1) {
       // Read in logical coordinates so the export scale changes the resolution without
       // changing the size of the paper's texture.
-      const logicalY = outputY / RENDER_SCALE;
-      for (let outputX = 0; outputX < OUTPUT_WIDTH; outputX += 1) {
-        const logicalX = outputX / RENDER_SCALE;
+      const logicalY = backingY / perLogical;
+      for (let backingX = 0; backingX < backingWidth; backingX += 1) {
+        const logicalX = backingX / perLogical;
         const broad = p.noise(logicalX * PAPER_NOISE_X, logicalY * PAPER_NOISE_Y);
         const grain = p.random(-1.35, 1.35);
         const distance = Math.hypot(logicalX - halfWidth, logicalY - halfHeight);
@@ -57,7 +68,7 @@ new P5((p) => {
           10 + broad * 5,
           Math.max(0, Math.min(100, 97 - edgeShade + grain))
         );
-        const offset = (outputX + outputY * OUTPUT_WIDTH) * 4;
+        const offset = (backingX + backingY * backingWidth) * 4;
         pixels[offset] = red;
         pixels[offset + 1] = green;
         pixels[offset + 2] = blue;
@@ -98,8 +109,16 @@ new P5((p) => {
   }
 
   p.setup = () => {
-    p.pixelDensity(1);
     p.createCanvas(OUTPUT_WIDTH, OUTPUT_HEIGHT).parent("artwork");
+    // Pinned only while capturing, and only after the canvas exists. Before it, p5 has
+    // nothing to set the density on and the call is quietly ignored; on a Retina screen
+    // the backing store then comes out twice the size asked for. Left alone in the
+    // browser, so a reader on such a screen gets the picture drawn at their own
+    // resolution -- and pinned here, so an export is the size the manifest says
+    // rather than whatever density the machine doing the rendering happens to have.
+    if (CAPTURE_MODE) {
+      p.pixelDensity(1);
+    }
     p.noLoop();
   };
 
