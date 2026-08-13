@@ -44,6 +44,13 @@ export function quoteYearSuffix(quote) {
   return quote.year == null ? "" : ` (${quote.year})`;
 }
 
+/**
+ * What stands between the attribution and the link. It was a sentence about the artwork
+ * once; a post is not the place for one, and the picture is a click away. Exported so that
+ * the tests and the README's layout can read the one string rather than keep copies of it.
+ */
+export const POST_HASHTAGS = "#generativeart";
+
 export function buildPostBody(artwork, quote, interactiveBaseUrl) {
   const normalizedBaseUrl = interactiveBaseUrl.endsWith("/")
     ? interactiveBaseUrl
@@ -53,7 +60,7 @@ export function buildPostBody(artwork, quote, interactiveBaseUrl) {
     quote.text,
     `— ${quote.author}, ${quote.source}${quoteYearSuffix(quote)}`,
     "",
-    artwork.description,
+    POST_HASHTAGS,
     "",
     interactiveUrl
   ].join("\n");

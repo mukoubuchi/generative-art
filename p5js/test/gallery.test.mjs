@@ -68,14 +68,21 @@ test("text from the catalog cannot escape into markup", () => {
       title: 'Tom & Jerry <script>alert("x")</script>',
       entry: "p5js/artworks/x/index.html",
       interactivePath: "x/",
-      description: "a < b && b > c",
       canvas: { width: 10, height: 10 },
       quoteIds: ["q"],
       render: { kind: "image", scale: 1 }
     }]
   };
   const quoteCatalog = {
-    quotes: [{ id: "q", text: "\"quoted\" & <angled>", lang: "en", author: "O'Hara", source: "s" }]
+    quotes: [{
+      id: "q",
+      // Carries what the artwork description used to: angle brackets and a double
+      // ampersand in one string, so the three kinds still covered here are < & and '.
+      text: "\"quoted\" & <angled>, a < b && b > c",
+      lang: "en",
+      author: "O'Hara",
+      source: "s"
+    }]
   };
   const html = renderIndexPage(manifest, quoteCatalog);
 

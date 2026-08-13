@@ -170,7 +170,6 @@ function renderCard(manifest, artwork, quote, index) {
             </figure>
             <div class="card__label">
               <h2 class="card__title">${escapeHtml(artwork.title)}</h2>
-              <p class="card__description">${escapeHtml(artwork.description)}</p>
               ${quote ? `<blockquote class="card__quote" lang="${escapeHtml(quote.lang)}">
                 <p class="card__quote-text">${QUOTE_MARK}${escapeHtml(quote.text)}</p>
                 <cite class="card__cite">—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(quote.source)}${escapeHtml(quoteYearSuffix(quote))}</cite>

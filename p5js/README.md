@@ -338,7 +338,7 @@ Post text follows this layout:
 <original quotation>
 — <author>, <source>
 
-<short artwork description>
+#generativeart
 
 <interactive URL>
 ```

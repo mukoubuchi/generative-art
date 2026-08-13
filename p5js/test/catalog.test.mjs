@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadCatalog } from "../lib/catalog.mjs";
+import { loadCatalog, validateManifest } from "../lib/catalog.mjs";
 import { eligibleArtworks } from "../lib/selection.mjs";
 
 test("every registered artwork is publishable", async () => {
@@ -43,4 +43,22 @@ test("an artwork without a verified quote is excluded with a warning", async () 
 
   assert.equal(eligible.length, manifest.artworks.length - 1);
   assert.match(warnings[0], /no verified public-domain quote/);
+});
+
+test("a description is rejected rather than quietly ignored", async () => {
+  // The field used to sit in the post between the attribution and the link, and on the
+  // card under the title; both now carry the quotation alone. A manifest entry that still
+  // declares one has a sentence somebody wrote and nobody will ever see, so the build stops
+  // instead of dropping it silently — the same reasoning as a still declaring a thumbnail.
+  const { manifest } = await loadCatalog();
+  const withOne = {
+    ...manifest,
+    artworks: manifest.artworks.map((artwork, index) => (
+      index === 0 ? { ...artwork, description: "a sentence nothing shows" } : artwork
+    ))
+  };
+  assert.throws(() => validateManifest(withOne), /carries a description/);
+  // And the manifest as it stands has none, so the check is not passing on an empty field.
+  assert.doesNotThrow(() => validateManifest(manifest));
+  assert.equal(manifest.artworks.filter((artwork) => "description" in artwork).length, 0);
 });

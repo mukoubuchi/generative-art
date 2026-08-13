@@ -13,7 +13,6 @@
       "title": "Koch Curves",
       "entry": "p5js/artworks/koch-curves/index.html",
       "interactivePath": "koch-curves/",
-      "description": "One angled substitution repeats along every side of a square.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -36,7 +35,6 @@
       "title": "Recursive Pentagram",
       "entry": "p5js/artworks/recursive-pentagram/index.html",
       "interactivePath": "recursive-pentagram/",
-      "description": "Nested pentagrams turn one center into a field of recurring centers.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -59,7 +57,6 @@
       "title": "Sierpinski Gasket",
       "entry": "p5js/artworks/sierpinski-gasket/index.html",
       "interactivePath": "sierpinski-gasket/",
-      "description": "Three triangles ring every parent; random rain lands nowhere else.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -82,7 +79,6 @@
       "title": "Fibonacci Spiral",
       "entry": "p5js/artworks/fibonacci-spiral/index.html",
       "interactivePath": "fibonacci-spiral/",
-      "description": "Every quarter turn hands its short side to the next rectangle's long side.",
       "canvas": {
         "width": 1010,
         "height": 640
@@ -105,7 +101,6 @@
       "title": "Bounding Spots",
       "entry": "p5js/artworks/bounding-spots/index.html",
       "interactivePath": "bounding-spots/",
-      "description": "Twenty cadences, one apart, and the wave nobody arranged.",
       "canvas": {
         "width": 960,
         "height": 480
@@ -128,7 +123,6 @@
       "title": "Loader",
       "entry": "p5js/artworks/loader/index.html",
       "interactivePath": "loader/",
-      "description": "The arc grows, closes, and spins forever, and never paints anything new.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -151,7 +145,6 @@
       "title": "Windmill",
       "entry": "p5js/artworks/windmill/index.html",
       "interactivePath": "windmill/",
-      "description": "Nothing turns the wheel but the wind, and not until the wind is worth it.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -171,7 +164,6 @@
       "title": "Atan2",
       "entry": "p5js/artworks/atan2/index.html",
       "interactivePath": "atan2/",
-      "description": "One question, asked everywhere.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -194,7 +186,6 @@
       "title": "Toggle Color Ball",
       "entry": "p5js/artworks/toggle-color-ball/index.html",
       "interactivePath": "toggle-color-ball/",
-      "description": "One yin, one yang: whichever disc is nearest comes forward.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -217,7 +208,6 @@
       "title": "Temple Bell",
       "entry": "p5js/artworks/pulse-button/index.html",
       "interactivePath": "pulse-button/",
-      "description": "One strike; the sound crosses the dark and dies away.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -240,7 +230,6 @@
       "title": "Spring Polygon",
       "entry": "p5js/artworks/spring-polygon/index.html",
       "interactivePath": "spring-polygon/",
-      "description": "Stir one star, and the whole ring answers before it settles.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -263,7 +252,6 @@
       "title": "Nautilus",
       "entry": "p5js/artworks/nautilus/index.html",
       "interactivePath": "nautilus/",
-      "description": "Each chamber outgrows the last, and the shell carries them all.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -282,7 +270,6 @@
       "title": "Ammonite",
       "entry": "p5js/artworks/ammonite/index.html",
       "interactivePath": "ammonite/",
-      "description": "Every turn doubles the radius, so the shell grows without changing shape.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -302,7 +289,6 @@
       "title": "Herringbone",
       "entry": "p5js/artworks/herringbone/index.html",
       "interactivePath": "herringbone/",
-      "description": "Two directions, laid together; neither alone is a weave.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -325,7 +311,6 @@
       "title": "Pinwheel",
       "entry": "p5js/artworks/pinwheel/index.html",
       "interactivePath": "pinwheel/",
-      "description": "The walls go up, and squares of two sizes take the places left for them.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -348,7 +333,6 @@
       "title": "Hex Triangle",
       "entry": "p5js/artworks/hex-triangle/index.html",
       "interactivePath": "hex-triangle/",
-      "description": "Six triangles walking, and the one hexagon they close into.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -371,7 +355,6 @@
       "title": "Kanizsa Square",
       "entry": "p5js/artworks/kanizsa-square/index.html",
       "interactivePath": "kanizsa-square/",
-      "description": "Nothing draws the square. Turn the mouths off its sides and it goes.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -394,7 +377,6 @@
       "title": "Eyes Pattern",
       "entry": "p5js/artworks/eyes-pattern/index.html",
       "interactivePath": "eyes-pattern/",
-      "description": "One family of circles is sealed; the eyes open when the second arrives.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -417,7 +399,6 @@
       "title": "Necker Cube",
       "entry": "p5js/artworks/necker-cube/index.html",
       "interactivePath": "necker-cube/",
-      "description": "One shadow, two worlds: the same cube turning either way.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -440,7 +421,6 @@
       "title": "Harriss Spiral",
       "entry": "p5js/artworks/harriss-spiral/index.html",
       "interactivePath": "harriss-spiral/",
-      "description": "Every branch is the whole figure again; watch it happen.",
       "canvas": {
         "width": 795,
         "height": 600
@@ -463,7 +443,6 @@
       "title": "Reaction Diffusion Coral",
       "entry": "p5js/artworks/reaction-diffusion-coral/index.html",
       "interactivePath": "reaction-diffusion-coral/",
-      "description": "Two chemicals on a 420-square grid, 1200 steps, one seed.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -482,7 +461,6 @@
       "title": "Truchet Tides",
       "entry": "p5js/artworks/truchet-tides/index.html",
       "interactivePath": "truchet-tides/",
-      "description": "Every tile is one of two quarter-turns. The currents are what they add up to.",
       "canvas": {
         "width": 960,
         "height": 640
@@ -501,7 +479,6 @@
       "title": "Voronoi Bloom",
       "entry": "p5js/artworks/voronoi-bloom/index.html",
       "interactivePath": "voronoi-bloom/",
-      "description": "Forty-two sites. Every boundary is where two of them agree.",
       "canvas": {
         "width": 800,
         "height": 640
@@ -520,7 +497,6 @@
       "title": "Flow Field",
       "entry": "p5js/artworks/flow-field/index.html",
       "interactivePath": "flow-field/",
-      "description": "Eighteen hundred particles, one noise field, and nine hundred steps of drift.",
       "canvas": {
         "width": 960,
         "height": 640
@@ -539,7 +515,6 @@
       "title": "Strange Attractor",
       "entry": "p5js/artworks/strange-attractor/index.html",
       "interactivePath": "strange-attractor/",
-      "description": "One orbit of a de Jong map, plotted a third of a million times.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -558,7 +533,6 @@
       "title": "Möbius Band",
       "entry": "p5js/artworks/moebius-band/index.html",
       "interactivePath": "moebius-band/",
-      "description": "A half-twisted band a traveller must lap twice to come home.",
       "canvas": {
         "width": 800,
         "height": 600
@@ -581,7 +555,6 @@
       "title": "Ulam Spiral",
       "entry": "p5js/artworks/ulam-spiral/index.html",
       "interactivePath": "ulam-spiral/",
-      "description": "The primes alone on a number spiral, crowding onto diagonals.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -600,7 +573,6 @@
       "title": "Hilbert Curve",
       "entry": "p5js/artworks/hilbert-curve/index.html",
       "interactivePath": "hilbert-curve/",
-      "description": "One unbroken line eased through six degrees of filling a square.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -623,7 +595,6 @@
       "title": "Café Wall",
       "entry": "p5js/artworks/cafe-wall/index.html",
       "interactivePath": "cafe-wall/",
-      "description": "Horizontal courses bowed into wedges by an offset and a grey.",
       "canvas": {
         "width": 960,
         "height": 640
@@ -646,7 +617,6 @@
       "title": "DLA Frost",
       "entry": "p5js/artworks/dla-frost/index.html",
       "interactivePath": "dla-frost/",
-      "description": "Six thousand walkers frozen where they first touched, wearing their age as light.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -665,7 +635,6 @@
       "title": "Circle Packing",
       "entry": "p5js/artworks/circle-packing/index.html",
       "interactivePath": "circle-packing/",
-      "description": "Each dart grows the largest circle its landing allows; arrival reads as size.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -684,7 +653,6 @@
       "title": "Moiré Rings",
       "entry": "p5js/artworks/moire-rings/index.html",
       "interactivePath": "moire-rings/",
-      "description": "Two families of rings, beating into hyperbolas.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -704,7 +672,6 @@
       "title": "Lorenz Ribbons",
       "entry": "p5js/artworks/lorenz-ribbon/index.html",
       "interactivePath": "lorenz-ribbon/",
-      "description": "Two orbits a breath apart, run until they part for good.",
       "canvas": {
         "width": 800,
         "height": 600
@@ -727,7 +694,6 @@
       "title": "Platonic Duals",
       "entry": "p5js/artworks/platonic-duals/index.html",
       "interactivePath": "platonic-duals/",
-      "description": "Each solid's face centres are already the next solid's corners.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -750,7 +716,6 @@
       "title": "Thirty Spokes",
       "entry": "p5js/artworks/thirty-spokes/index.html",
       "interactivePath": "thirty-spokes/",
-      "description": "Loops stirred past recognition, each still caught the same number of times.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -773,7 +738,6 @@
       "title": "No Common Measure",
       "entry": "p5js/artworks/no-common-measure/index.html",
       "interactivePath": "no-common-measure/",
-      "description": "Curves strung with whole numbers crowd towards the one that stays bare.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -792,7 +756,6 @@
       "title": "Turn It and Turn It",
       "entry": "p5js/artworks/turn-it-and-turn-it/index.html",
       "interactivePath": "turn-it-and-turn-it/",
-      "description": "Every ring is one more turn, and the gaps are only ever three lengths.",
       "canvas": {
         "width": 680,
         "height": 680

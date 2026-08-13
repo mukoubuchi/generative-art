@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -33,7 +34,20 @@ import {
  * numbers, and a fourth length could not hide inside a rounding error.
  */
 
-const STAGES = 96n;
+/**
+ * How many rings the drawing carries, read out of the sketch rather than copied here. The
+ * sketch cannot be imported for it — loading it starts p5 — so it is read as source, the
+ * way the capture contract reads these files. A copy would be a second number to keep in
+ * step, and the claim below about how much of the sequence the picture holds happens to be
+ * true for anything from 96 rings to 151, so a copy could sit here being wrong and green.
+ */
+const SKETCH = readFileSync(
+  resolve(P5JS_DIRECTORY, "artworks/turn-it-and-turn-it/sketch.js"),
+  "utf8"
+);
+const DECLARED_STAGES = SKETCH.match(/^const STAGES = (?<count>\d+);$/mu);
+assert.ok(DECLARED_STAGES, "the sketch no longer says how many rings it draws");
+const STAGES = BigInt(DECLARED_STAGES.groups.count);
 const RINGS = Array.from({ length: Number(STAGES) }, (unused, index) => ringAt(BigInt(index + 1)));
 
 test("however many marks there are, the arcs come in at most three lengths", () => {

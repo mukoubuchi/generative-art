@@ -629,13 +629,6 @@ body {
   }
 }
 
-.card__description {
-  margin: 0.25rem 0 0;
-  color: var(--ink-dim);
-  font-size: 0.92rem;
-  text-wrap: pretty;
-}
-
 /*
  * Adapted from yui540's scroll, where a roller travels along and the paper appears behind
  * it — two things moving in step, one leaving the other. The paper arrives by sliding in

@@ -62,8 +62,16 @@ export function validateManifest(manifest) {
     if (!Array.isArray(artwork.quoteIds) || artwork.quoteIds.length === 0) {
       throw new Error(`${artwork.id} must declare at least one quote candidate.`);
     }
-    if (!artwork.description || !artwork.interactivePath) {
-      throw new Error(`${artwork.id} is missing a description or interactive path.`);
+    if (!artwork.interactivePath) {
+      throw new Error(`${artwork.id} is missing an interactive path.`);
+    }
+    // A description used to sit in the post between the attribution and the link, and on
+    // the gallery card under the title. Both now show the quotation and nothing else, so
+    // the field has nowhere left to go. Rejected rather than ignored, on the same reasoning
+    // as a still artwork declaring a thumbnail frame: a field that is quietly dropped is a
+    // sentence somebody wrote and nobody will ever see.
+    if ("description" in artwork) {
+      throw new Error(`${artwork.id} carries a description, which nothing displays any more.`);
     }
     if (
       !Number.isInteger(artwork.canvas?.width)
