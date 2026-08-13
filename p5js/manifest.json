@@ -105,7 +105,7 @@
       "title": "Bounding Spots",
       "entry": "p5js/artworks/bounding-spots/index.html",
       "interactivePath": "bounding-spots/",
-      "description": "Twenty dots sweep the same half circle, each faster than the one outside it.",
+      "description": "Twenty cadences, one apart, and the wave nobody arranged.",
       "canvas": {
         "width": 960,
         "height": 480
@@ -113,6 +113,9 @@
       "quoteIds": [
         "dante-amor-che-move"
       ],
+      "thumbnail": {
+        "frame": 12
+      },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/BoundingSpots.mp4",
