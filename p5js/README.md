@@ -564,6 +564,30 @@ Opens all 37 artworks at 390 by 664 at three times density and at 1440 by 900 at
 
 It then opens the gallery itself, for [the head in the masthead](#the-head-in-the-masthead): that a phone is sent the model and that the head wanders, and that a reader who has asked for no motion and a connection that reports `Save-Data` are sent nothing. Restoring the scripts as they shipped fails four of those assertions and none of the ones about a laptop, which is the shape the fault had.
 
+### Measuring the site a reader actually gets
+
+All of the above measures the site this repository builds. On 2026-08-13 that turned out not to be the same thing as the site being served, and the gap was six hours wide: the fit was written, committed, and green on every push, while a reader opening the gallery got the version from before it. Publishing is a separate decision here and nobody had made it. Nothing was wrong with the build. The build was simply not what anyone was looking at.
+
+So the same check can be pointed at an origin instead of at a temporary directory:
+
+```bash
+npm run smoke:phone -- --base https://example.github.io/generative-art --sha <commit>
+```
+
+It waits before it measures. Finishing a deployment is not the same event as a reader receiving it — the site is answered by a content network that declares `cache-control: max-age=600`, and a request comes back with an `age` saying how far through that it is — so a check that started as soon as the deployment step went green could measure the *previous* deployment, find it correct, and report that this one is. To make the waiting possible at all, every page now carries the commit it was built from:
+
+```html
+<meta name="build" content="…">
+```
+
+On every page, and not in a file of its own beside them, because each address is cached separately: a marker kept in one file would say that *that file* is current and say nothing whatever about the page being measured next. Each page is therefore checked against the commit under test at the moment that page is measured. A build with no commit behind it stamps `development` rather than borrowing the working tree's `HEAD`, which may have uncommitted changes in it; and since the published check requires a forty-digit match, `development` is a marker that cannot satisfy it.
+
+The wait is ten minutes, which is not a chosen number but the `max-age` the site declares: below it a build would fail for a cache behaving exactly as documented, and above it the staleness is no longer explained by the policy. If that policy ever changes so that pages may be held longer than the check is willing to wait, the check says so and fails rather than quietly waiting too little. When the wait runs out, it fails. It does not measure anyway — measuring the wrong copy is indistinguishable from success, which is the whole reason the marker exists.
+
+The negative controls for all of this run on every push, not only when something is deployed. `npm run smoke:phone` finishes by building three sites in temporary directories and pointing the published assertions at them: one carrying [the artwork stylesheet as it stood before the fit](test/fixtures/unfitted-artwork-page/), one carrying [the masthead scripts as they stood before a touch screen was given the head](test/fixtures/head-withheld-from-touch/), and one serving a commit other than the one asked for. All three have to be rejected. The published check runs only on a deployment, so a fault in it would otherwise sit undiscovered until the next one — and a check nobody checks is the thing this entire section is a repair for.
+
+What a green here means is worth stating exactly: **the most recent deployment is correct.** It does not mean that what is on `main` has been deployed. That is a different question, publishing is deliberately manual, and this check cannot see it.
+
 ### Telling the reader what there is to do
 
 Eight artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
@@ -697,6 +721,8 @@ The gallery's motion is adapted from yui540's css-animations, as described above
 The site is uploaded as a Pages artifact rather than committed to a branch, because everything in it is generated: an index built from the manifest, thumbnails, and a copy of the library. Committing that output would put rendered images in the history and leave the gallery able to disagree with the manifest it claims to come from.
 
 GitHub Pages is enabled and served from this workflow, and the repository is public. Publishing is still a separate decision from committing: the deploy job is gated on an input, and an input exists only when the workflow is started by hand, so a push builds the site and checks it without putting anything in front of a reader.
+
+When a deployment does happen, a further job measures the result — see [measuring the site a reader actually gets](#measuring-the-site-a-reader-actually-gets). It takes the address from the deployment's own output rather than having one written into it, waits for the deployed commit's marker to appear on the live pages, and is allowed twenty-five minutes so that it outlasts its own ten-minute wait: a job cut off at the moment its wait expired would report that it was cancelled rather than what it had been waiting for. It runs on a deployment and nowhere else. On a push there is nothing new being served, so the same check would measure the previous deployment and pass every time.
 
 ### What the gallery does without JavaScript, and without motion
 

@@ -1,0 +1,99 @@
+/*
+ * The artwork stylesheet as it stood at 53a55e5^, the commit before the fit was written.
+ * Frozen on purpose: this is the fault a reader on a phone actually saw, kept as a specimen
+ * for the published check to be aimed at.
+ *
+ * What is wrong with it is what is absent from it. There is no rule that lets a canvas
+ * shrink, and `overflow: hidden` below means the part that does not fit is not reachable by
+ * scrolling either. Every canvas is created at a size taken from a laptop, so a 390-pixel
+ * screen was shown the top-left corner of a full-sized picture and nothing else: 38.6 per
+ * cent of Fibonacci Spiral, 40.6 of Bounding Spots, 56.0 of any square work.
+ *
+ * Nothing here is to be followed or repaired. It is not part of the site: it sits outside
+ * `artworks/`, and the build never copies it. A copy is usually a liability, because it
+ * drifts away from the thing it was taken from; here not drifting is the entire point. The
+ * check that is pointed at a site built with this file is asking whether it can still see a
+ * fault that was really made, rather than one somebody imagined afterwards, and the answer
+ * stops meaning anything the moment this file is brought up to date.
+ */
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+main,
+canvas {
+  display: block;
+}
+
+/*
+ * The way back to the gallery and on to the source. The markup is added to each page by the
+ * site build, so it is absent when a page is opened straight out of the repository — the
+ * addresses come from the manifest, and inventing them a second time here is how two links
+ * come to point at different places.
+ *
+ * Fixed, so it cannot push a canvas that is drawn at its own size. On a plate for the same
+ * reason the artworks' legends have one: these pages are white, black, and most values
+ * between, and type without a plate is legible on only some of them.
+ */
+/*
+ * One plate, two doors, no words: the grid icon leads back to the gallery — which is that
+ * picture, a grid of cards — and the code icon leads to the artwork's source. Each link
+ * names its destination in `title` and `aria-label`, since there is no visible text left
+ * to do it. Always on screen, so a touch reader who can never hover still has both doors.
+ */
+.page-nav {
+  position: fixed;
+  inset-block-start: 0.7rem;
+  inset-inline-start: 0.7rem;
+  z-index: 1;
+  display: flex;
+  padding: 0.18rem;
+  border-radius: 0.6rem;
+  background: rgb(255 255 255 / 84%);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+}
+
+.page-nav__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* A finger-sized door: the icon is small, the link is not. */
+  width: 1.9rem;
+  height: 1.65rem;
+  border-radius: 0.45rem;
+  color: rgb(17 24 34 / 88%);
+}
+
+/* Sized by height so each glyph keeps its own proportions: the two boxes are not the same. */
+.page-nav__icon {
+  width: auto;
+  height: 0.95rem;
+  opacity: 0.72;
+}
+
+/*
+ * The hover has to carry the whole "this is a link" message now that there is no wording
+ * or underline to carry it: the door lights up, and the glyph comes to full ink. The
+ * pointer becomes a hand by the browser's own rule, and the `title` tooltip names the
+ * destination for anyone who waits on it.
+ */
+@media (hover: hover) {
+  .page-nav__link:hover {
+    background: rgb(17 24 34 / 10%);
+  }
+
+  .page-nav__link:hover .page-nav__icon {
+    opacity: 1;
+  }
+}
+
+.page-nav__link:focus-visible {
+  outline: 2px solid rgb(17 24 34 / 70%);
+  outline-offset: 1px;
+}

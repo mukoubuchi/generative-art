@@ -95,7 +95,57 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    # Where the site ended up, so the check below can be pointed at it rather than told it.
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # What a reader gets, as opposed to what was built. Everything above this job measures the
+  # site this repository produces, and on 2026-08-13 that turned out not to be the same thing
+  # for six hours: the fit for small screens was written, committed, and green on every push,
+  # while the site being served was the one from before it, because publishing is a separate
+  # decision and nobody had made it. The build was never wrong. It was never the thing anyone
+  # was looking at.
+  #
+  # Note what a green here does and does not say. It says the most recent deployment is
+  # correct. It does not say that what is on `main` has been deployed -- that is a different
+  # question, publishing is deliberately manual, and this job cannot see it.
+  #
+  # It runs only when a deployment actually happened. `needs: deploy` is what enforces that,
+  # since a skipped job skips what needs it; the condition is repeated for the reader.
+  verify-published:
+    needs: deploy
+    if: inputs.deploy
+    runs-on: ubuntu-latest
+    # Not the ten minutes the deploy job uses. The check is willing to wait ten minutes on its
+    # own account -- that being how long the site says it may be cached for -- so a ten-minute
+    # job would be cancelled at the very moment the wait reached its limit, and a cancellation
+    # says nothing about why. This has to outlast the wait and everything around it: ten
+    # minutes of waiting, a few for Node and Chromium, and a few more for thirty-seven pages.
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: p5js/package-lock.json
+
+      - name: Install JavaScript dependencies
+        run: npm ci --prefix p5js
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: p5js
+
+      - name: Check the published gallery on a phone
+        run: >-
+          npm run smoke:phone --prefix p5js --
+          --base ${{ needs.deploy.outputs.page_url }}
+          --sha ${{ github.sha }}
