@@ -11,8 +11,10 @@ import {
   RELEASE_STEP,
   STEPS_PER_SECOND,
   TOTAL_STEPS,
+  BLADE_COUNT,
   accelerationAt,
   advanceMill,
+  bladeTriangles,
   captureWindAt,
   createMill,
   envelopeAt,
@@ -21,13 +23,6 @@ import {
   integrateStep,
   millAfter
 } from "../artworks/windmill/mill.js";
-import {
-  RUNG_COUNT,
-  SAIL_COUNT,
-  sailFrame,
-  sailSegments,
-  towerShape
-} from "../artworks/windmill/silhouette.js";
 
 const PLAYBACK_FPS = 30;
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
@@ -168,57 +163,29 @@ test("a sampled video frame turns less than the sails' quarter-turn symmetry", (
     "frames this far apart could read as stalling or running backwards");
 });
 
-test("four sails of ten members each, reaching exactly the sail length", () => {
-  const length = 232;
-  const sails = sailSegments(length);
-  assert.equal(sails.length, SAIL_COUNT);
-  for (const sail of sails) {
-    assert.equal(sail.filter((segment) => segment.role === "spar").length, 1);
-    assert.equal(sail.filter((segment) => segment.role === "stringer").length, 2);
-    assert.equal(sail.filter((segment) => segment.role === "rung").length, RUNG_COUNT);
-    const reach = Math.max(...sail.flatMap((s) => [Math.hypot(s.x1, s.y1), Math.hypot(s.x2, s.y2)]));
-    assert.ok(Math.abs(reach - length) < 1e-9, `a sail reached ${reach}, not ${length}`);
-  }
-});
-
-test("each sail is the previous one turned a quarter, which is what seals the loop", () => {
-  const sails = sailSegments(232);
+test("four blades, each the previous one turned a quarter, which is what seals the loop", () => {
+  // The clip closes because the wheel comes to rest three whole revolutions on, and a
+  // wheel with four-fold symmetry is back on its own silhouette a quarter turn sooner
+  // than that. This is the symmetry that claim leans on, taken straight from the figure.
+  const radius = 272;
+  const blades = bladeTriangles(radius);
+  assert.equal(blades.length, BLADE_COUNT);
   const cosine = Math.cos(QUARTER_TURN);
   const sine = Math.sin(QUARTER_TURN);
-  for (let sail = 0; sail < SAIL_COUNT; sail += 1) {
-    const next = sails[(sail + 1) % SAIL_COUNT];
-    sails[sail].forEach((segment, index) => {
-      for (const end of ["1", "2"]) {
-        const x = segment[`x${end}`] * cosine - segment[`y${end}`] * sine;
-        const y = segment[`x${end}`] * sine + segment[`y${end}`] * cosine;
-        assert.ok(Math.abs(x - next[index][`x${end}`]) < 1e-9);
-        assert.ok(Math.abs(y - next[index][`y${end}`]) < 1e-9);
-      }
+  for (let blade = 0; blade < BLADE_COUNT; blade += 1) {
+    const next = blades[(blade + 1) % BLADE_COUNT];
+    blades[blade].forEach((point, index) => {
+      const x = point.x * cosine - point.y * sine;
+      const y = point.x * sine + point.y * cosine;
+      assert.ok(Math.abs(x - next[index].x) < 1e-9);
+      assert.ok(Math.abs(y - next[index].y) < 1e-9);
     });
   }
-});
-
-test("the tower stands symmetric about the hub and wider at the foot", () => {
-  const tower = towerShape({
-    hubX: 340, crownY: 278, baseY: 620, crownWidth: 52, baseWidth: 98, capOverhang: 9, capHeight: 42
-  });
-  for (const shape of [tower.body, tower.cap]) {
-    for (const point of shape) {
-      const mirrored = shape.some(
-        (other) => Math.abs(other.x - (2 * 340 - point.x)) < 1e-9 && Math.abs(other.y - point.y) < 1e-9
-      );
-      assert.ok(mirrored, `no mirror for ${point.x}, ${point.y}`);
-    }
-  }
-  const crown = Math.abs(tower.body[0].x - tower.body[1].x);
-  const base = Math.abs(tower.body[2].x - tower.body[3].x);
-  assert.ok(base > crown, "the tower does not stand wider at the foot");
-  assert.ok(tower.cap[2].y < tower.body[0].y, "the cap does not rise above the crown");
-});
-
-test("the sail frame keeps its lattice beside the spar, not across it", () => {
-  const frame = sailFrame(232);
-  for (const segment of frame) {
-    assert.ok(segment.y1 >= 0 && segment.y2 >= 0, "the lattice crossed the spar");
+  // Each blade runs from the hub to the rim and back to a shorter vertex, so the wheel
+  // reaches exactly the radius it is given and reads as turning rather than as a disc.
+  for (const blade of blades) {
+    const reaches = blade.map((point) => Math.hypot(point.x, point.y));
+    assert.ok(Math.abs(Math.max(...reaches) - radius) < 1e-9);
+    assert.equal(Math.min(...reaches), 0);
   }
 });

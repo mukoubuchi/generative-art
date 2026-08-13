@@ -41,6 +41,32 @@ export const INERTIA = 6;
 /** The wind below which thrust on a resting mill cannot beat the dry friction. */
 export const BREAKAWAY_WIND = Math.sqrt(BREAKAWAY_TORQUE / THRUST);
 
+export const BLADE_COUNT = 4;
+const EIGHTH_TURN = Math.PI / 4;
+const INNER_RADIUS_RATIO = 1 / Math.SQRT2;
+
+/**
+ * Four blades, each a triangle from the hub out to a long vertex and back to the short
+ * vertex an eighth of a turn later. The Processing sketch built this as a TRIANGLE_FAN
+ * over eight alternating vertices and toggled the fill between them, which left the
+ * filled triangles implicit; naming the four blades directly says the same thing.
+ *
+ * This is the whole figure. Turning one blade a quarter gives the next, so the wheel
+ * carries the four-fold symmetry the clip's loop closes on.
+ */
+export function bladeTriangles(outerRadius) {
+  const innerRadius = outerRadius * INNER_RADIUS_RATIO;
+  return Array.from({ length: BLADE_COUNT }, (unused, index) => {
+    const longAngle = 2 * index * EIGHTH_TURN;
+    const shortAngle = longAngle + EIGHTH_TURN;
+    return [
+      { x: 0, y: 0 },
+      { x: outerRadius * Math.cos(longAngle), y: outerRadius * Math.sin(longAngle) },
+      { x: innerRadius * Math.cos(shortAngle), y: innerRadius * Math.sin(shortAngle) }
+    ];
+  });
+}
+
 /** The capture scenario: calm, the wind raised and held, released, and the rest. */
 export const CALM_STEPS = 36;
 export const ATTACK_STEPS = 60;
