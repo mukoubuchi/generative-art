@@ -340,6 +340,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/euclidisoperaom02unkngoog/page/n124"
+    },
+    {
+      "id": "laozi-thirty-spokes",
+      "text": "三十輻共一轂，當其無，有車之用。",
+      "lang": "lzh",
+      "author": "老子",
+      "source": "道德經 十一",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://zh.wikisource.org/wiki/%E9%81%93%E5%BE%B7%E7%B6%93_(%E7%8E%8B%E5%BC%BC%E6%9C%AC)"
     }
   ]
 }

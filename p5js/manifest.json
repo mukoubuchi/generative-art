@@ -744,6 +744,29 @@
         "durationSeconds": 10,
         "scale": 2
       }
+    },
+    {
+      "id": "thirty-spokes",
+      "title": "Thirty Spokes",
+      "entry": "p5js/artworks/thirty-spokes/index.html",
+      "interactivePath": "thirty-spokes/",
+      "description": "Loops stirred past recognition, each still caught the same number of times.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "laozi-thirty-spokes"
+      ],
+      "thumbnail": {
+        "frame": 75
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/ThirtySpokes.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }
