@@ -1,9 +1,14 @@
 import {
+  CYCLES,
+  PATH_COUNT,
   PATH_RADIUS_RATIO,
   STEPS_PER_CYCLE,
   STEPS_PER_SECOND,
+  TOTAL_STEPS,
   TRIANGLE_COUNT,
   TRIANGLE_RADIUS_RATIO,
+  gatheringAt,
+  pathCorners,
   trianglesAt,
   triangleShape
 } from "./orbit.js";
@@ -11,7 +16,6 @@ import {
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
 const PLAYBACK_FPS = 30;
-const CYCLES = 4;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
@@ -26,25 +30,63 @@ const HEXAGON_RADIUS = BASE_DIMENSION / 3;
 const PATH_RADIUS = HEXAGON_RADIUS * PATH_RADIUS_RATIO;
 const TRIANGLE_RADIUS = PATH_RADIUS * TRIANGLE_RADIUS_RATIO;
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
-const TOTAL_FRAMES = CYCLES * STEPS_PER_CYCLE / STEPS_PER_FRAME;
+const TOTAL_FRAMES = TOTAL_STEPS / STEPS_PER_FRAME;
+
+/**
+ * Two families for the two paths, each with a cold end and a warm one. Which end a
+ * triangle wears is not its number in a list: it is how gathered the six are at that
+ * moment, which is a distance the module measures. They are dark and apart at the
+ * corners and lit as they close, so the figure's colour is its own convergence.
+ */
+const GROUND = [10, 12, 20];
+const RISING = [[74, 58, 96], [232, 176, 92]];
+const FALLING = [[46, 74, 92], [130, 216, 214]];
+const GUIDE = [120, 130, 160];
+
+function mix(from, to, amount) {
+  return [
+    from[0] + (to[0] - from[0]) * amount,
+    from[1] + (to[1] - from[1]) * amount,
+    from[2] + (to[2] - from[2]) * amount
+  ];
+}
 
 const P5 = window.p5;
 
 new P5((p) => {
+  /** The two triangles the six walk around, which together are the hexagram. */
+  function drawGuides() {
+    p.noFill();
+    p.stroke(GUIDE[0], GUIDE[1], GUIDE[2], 42);
+    p.strokeWeight(1);
+    for (let pathIndex = 0; pathIndex < PATH_COUNT; pathIndex += 1) {
+      p.beginShape();
+      for (const point of pathCorners(pathIndex, PATH_RADIUS)) {
+        p.vertex(point.x, point.y);
+      }
+      p.endShape(p.CLOSE);
+    }
+    p.noStroke();
+  }
+
   function drawStep(step) {
+    const gathering = gatheringAt(step);
+
     p.push();
     p.scale(RENDER_SCALE);
-    p.background(255);
+    p.background(...GROUND);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-    p.noStroke();
-    p.fill(0);
-    for (const placed of trianglesAt(step, PATH_RADIUS)) {
+    drawGuides();
+    trianglesAt(step, PATH_RADIUS).forEach((placed, index) => {
+      const family = index < TRIANGLE_COUNT / PATH_COUNT ? RISING : FALLING;
+      const [red, green, blue] = mix(family[0], family[1], gathering);
+      p.fill(red, green, blue);
       p.beginShape();
       for (const vertex of triangleShape(TRIANGLE_RADIUS, placed.rotation)) {
         p.vertex(placed.x + vertex.x, placed.y + vertex.y);
       }
       p.endShape(p.CLOSE);
-    }
+    });
     p.pop();
   }
 
@@ -55,6 +97,8 @@ new P5((p) => {
       totalFrames: TOTAL_FRAMES,
       step,
       cycleSteps: STEPS_PER_CYCLE,
+      cycles: CYCLES,
+      gathering: gatheringAt(step),
       triangleCount: TRIANGLE_COUNT,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }

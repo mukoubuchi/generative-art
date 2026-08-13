@@ -4,11 +4,14 @@ export const TRIANGLE_COUNT = PATH_COUNT * TRIANGLES_PER_PATH;
 /** Processing's default frame rate, which is the rate the original's step was tuned to. */
 export const STEPS_PER_SECOND = 60;
 /**
- * The original advanced its angle by 0.05 radians per frame, so a turn took 125.66 steps
- * and never closed exactly. Rounding to a whole 126 steps makes the clip loop seamlessly
- * and changes the speed by a third of a per cent.
+ * The original advanced its angle by 0.05 radians per frame, so a walk took 125.66 steps
+ * and never closed exactly. A whole 120 makes the clip loop seamlessly and lets five
+ * walks fill exactly ten seconds, at a twentieth more speed than the original ran.
  */
-export const STEPS_PER_CYCLE = 126;
+export const STEPS_PER_CYCLE = 120;
+/** Five gatherings and five partings, which is the clip. */
+export const CYCLES = 5;
+export const TOTAL_STEPS = CYCLES * STEPS_PER_CYCLE;
 
 const FULL_TURN = Math.PI * 2;
 const CORNER_STEP = FULL_TURN / TRIANGLES_PER_PATH;
@@ -67,4 +70,44 @@ export function triangleShape(triangleRadius, rotation) {
     const angle = rotation + index * CORNER_STEP;
     return { x: triangleRadius * Math.cos(angle), y: triangleRadius * Math.sin(angle) };
   });
+}
+
+/** The three corners a path is walked around, which the sketch draws as its guide. */
+export function pathCorners(pathIndex, pathRadius) {
+  return Array.from({ length: TRIANGLES_PER_PATH }, (unused, cornerIndex) =>
+    corner(pathIndex, cornerIndex, pathRadius));
+}
+
+/**
+ * How far the six stand from the centre at a given step, in units of the path radius.
+ * Walking an edge of an equilateral path carries a triangle from a corner, at the full
+ * radius, to the edge's midpoint, at exactly half of it — the inradius of an
+ * equilateral triangle being half its circumradius — and back out to the next corner.
+ * All six share this distance at every step, because both paths are the same triangle
+ * and all six walk in step, so it is a property of the moment rather than of a triangle.
+ */
+export function radiusAt(step) {
+  const progress = (((step % STEPS_PER_CYCLE) + STEPS_PER_CYCLE) % STEPS_PER_CYCLE)
+    / STEPS_PER_CYCLE;
+  // The point on a chord nearest the centre is its midpoint, so the distance is the
+  // straight interpolation of the two corners, measured.
+  const corners = pathCorners(0, 1);
+  const from = corners[0];
+  const to = corners[1];
+  return Math.hypot(
+    from.x + (to.x - from.x) * progress,
+    from.y + (to.y - from.y) * progress
+  );
+}
+
+/**
+ * The same thing as a share of the journey, for the drawing to key colour to: nought
+ * with the six standing furthest apart, at the corners, and one at the moment they are
+ * closest, halfway along their edges. This is the artwork's own geometry and not an
+ * index into a list of triangles — the six are identical, and what changes is how
+ * gathered they are.
+ */
+export function gatheringAt(step) {
+  const nearest = 0.5;
+  return (1 - radiusAt(step)) / (1 - nearest);
 }

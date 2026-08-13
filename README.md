@@ -35,7 +35,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Ammonite](p5js/artworks/ammonite/) | A radius-doubling spiral that grows forever without changing shape, looping one doubling per clip, rendered as an MP4 |
 | [Herringbone](p5js/artworks/herringbone/) | Two families of planks laid together into a diagonal weave, ochre one way and slate the other, rendered as an MP4 |
 | [Pinwheel](p5js/artworks/pinwheel/) | Walls go up and squares of two sizes take the places left for them, terracotta and gold, rendered as an MP4 |
-| [Hex Triangle](p5js/artworks/hex-triangle/) | Six triangles orbiting a hexagon, closing on the centre and opening out, rendered as an MP4 |
+| [Hex Triangle](p5js/artworks/hex-triangle/) | Six walking triangles that close into one exact hexagon and open out again, rendered as an MP4 |
 | [Kanizsa Square](p5js/artworks/kanizsa-square/) | An illusory square broken by turning its inducers and then made real, rendered as an MP4 |
 | [Eyes Pattern](p5js/artworks/eyes-pattern/) | Two circle lattices on indigo; the eyes open only when the second family arrives, rendered as an MP4 |
 | [Necker Cube](p5js/artworks/necker-cube/) | A reversible wireframe cube turned by the pointer, rendered as an MP4 |
