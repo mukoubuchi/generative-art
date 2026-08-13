@@ -1,5 +1,5 @@
 /**
- * The face in the masthead looks towards the pointer.
+ * The face in the masthead looks towards the pointer, and looks about it when there is none.
  *
  * This is a flat drawing standing in for a real three-dimensional head, and it is meant to
  * be replaced by one. The interface it presents is deliberately small, so that replacing it
@@ -30,13 +30,19 @@
   // because a browser can be stopped from showing what it has downloaded.
   root.addEventListener("contextmenu", (event) => event.preventDefault());
 
-  // A fine pointer only. On a touch screen `pointermove` fires while dragging the page,
-  // which would make the figure lurch at the moment the reader is trying to scroll past it.
-  const hasPointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  // Motion is the gate that stops everything, and the only one: a reader who has asked for
+  // no motion is asking about the figure as much as about the cards.
   const wantsMotion = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!hasPointer || !wantsMotion) {
+  if (!wantsMotion) {
     return;
   }
+
+  // A fine pointer gates the following, and nothing else. On a touch screen `pointermove`
+  // fires while the page is being dragged, which would make the figure lurch at the moment
+  // the reader is trying to scroll past it — so a touch screen gets what a fine pointer gets
+  // when it has been still, which is the wandering below. That was always the behaviour
+  // waiting behind this test; it is only that nobody without a mouse could reach it.
+  const followsPointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
   /** How far the pointer travels before the look is at full extent. */
   const REACH_RATIO = 0.42;
@@ -73,13 +79,20 @@
     root.style.setProperty("--look-x-abs", Math.abs(Math.cos(angle) * DRIFT_REACH).toFixed(3));
   }
 
-  function waitForStillness() {
+  function stopWaiting() {
     window.clearTimeout(idleTimer);
     window.clearInterval(driftTimer);
-    idleTimer = window.setTimeout(() => {
-      drift();
-      driftTimer = window.setInterval(drift, DRIFT_EVERY);
-    }, IDLE_AFTER);
+  }
+
+  function beginDrifting() {
+    stopWaiting();
+    drift();
+    driftTimer = window.setInterval(drift, DRIFT_EVERY);
+  }
+
+  function waitForStillness() {
+    stopWaiting();
+    idleTimer = window.setTimeout(beginDrifting, IDLE_AFTER);
   }
 
   function apply() {
@@ -100,14 +113,26 @@
     root.style.setProperty("--look-x-abs", Math.abs(x).toFixed(3));
   }
 
-  window.addEventListener("pointermove", (event) => {
+  function attend(event) {
     waitForStillness();
     const queued = pending !== null;
     pending = event;
     if (!queued) {
       requestAnimationFrame(apply);
     }
-  }, { passive: true });
+  }
 
-  waitForStillness();
+  if (followsPointer) {
+    window.addEventListener("pointermove", attend, { passive: true });
+    // Waiting rather than wandering: there is a pointer to attend to, and the head only
+    // gives up on it after it has been still for a while.
+    waitForStillness();
+    return;
+  }
+
+  // A tap is the one thing a touch screen says about where the reader is, and it says it
+  // once rather than all the way through a scroll, so it cannot fight one. After it, the
+  // head goes back to wandering by the same nine-second rule a still mouse gets.
+  window.addEventListener("pointerdown", attend, { passive: true });
+  beginDrifting();
 }());

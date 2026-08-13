@@ -30,6 +30,13 @@
  * second because a rule that asks for two numbers and gets one must do nothing at all
  * rather than fall back to the element's natural size, which on a dense display is the
  * artwork at two or three times the size it was drawn.
+ *
+ * Then the gallery's own page, for the figure in its masthead. That was withheld from a
+ * touch screen altogether, so a phone was shown a photograph that never moved; it is now
+ * withheld only from a reader who has asked for no motion, or whose connection has said it
+ * is metered. Both refusals are checked by the request rather than by the picture, since
+ * nothing on screen would tell a reader that two and a half megabytes had been spent on a
+ * decoration.
  */
 
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -68,6 +75,21 @@ const POINTER_ARTWORK = "atan2";
 
 /** Half a pixel of slack: a box fitted to a viewport lands on fractions of one. */
 const SLACK = 0.5;
+
+/** The head in the masthead: what is fetched for it, and what it becomes once it arrives. */
+const MODEL_FILE = "head.glb";
+const MODEL_CANVAS = "canvas.character__model";
+/** Long enough for a model and a renderer to be fetched from a server on this machine. */
+const MODEL_WITHIN = 30_000;
+/** The head holds a direction for 2.6 seconds; this is room for one change and a little. */
+const DRIFT_EVERY = 2600;
+const DRIFT_WITHIN = 8000;
+/**
+ * How long a refusal is watched before it is believed. Proving that a request was not made
+ * means waiting for the moment it would have been made and finding nothing: the fetch is
+ * deferred until the page has loaded, and the page here is served from this machine.
+ */
+const REFUSAL_GRACE = 2500;
 
 const measureCanvas = () => {
   const canvas = document.querySelector("canvas");
@@ -327,6 +349,140 @@ try {
   }
 
   await writeFile(controlPage, original, "utf8");
+
+  // The figure in the masthead. It used to be withheld from a touch screen entirely -- both
+  // the model and the turning of the drawing were behind one test for a fine pointer -- so a
+  // phone was shown a photograph that never moved. The pointer now gates only the following
+  // of a pointer, which is the part a touch screen genuinely cannot do, and the wandering
+  // that a still mouse already fell back to is what a phone gets from the start.
+  //
+  // Both refusals are checked as well as the arrival, and by the request rather than by the
+  // picture: a reader who has asked for no motion, and a reader whose connection has said it
+  // is metered, must not be sent two and a half megabytes of model and renderer for a
+  // decoration. Nothing on screen would tell them it had been.
+  const gallery = `${server.baseUrl}/index.html`;
+  const lookOf = (page) => page.evaluate(
+    () => document.querySelector("[data-character]").style.getPropertyValue("--look-x")
+  );
+  const openGallery = async (context, prepare) => {
+    const page = await context.newPage();
+    const askedFor = [];
+    page.on("request", (request) => {
+      if (request.url().includes(MODEL_FILE)) {
+        askedFor.push(request.url());
+      }
+    });
+    if (prepare) {
+      await prepare(page);
+    }
+    await page.goto(gallery, { waitUntil: "load" });
+    return { page, askedFor };
+  };
+  const modelArrived = async (page) => {
+    try {
+      await page.waitForSelector(`.character--model ${MODEL_CANVAS}`, { timeout: MODEL_WITHIN });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const touched = await openGallery(phone);
+  const arrivedOnPhone = await modelArrived(touched.page);
+  const firstLook = await lookOf(touched.page);
+  let secondLook = firstLook;
+  try {
+    await touched.page.waitForFunction(
+      (was) => document.querySelector("[data-character]").style.getPropertyValue("--look-x") !== was,
+      firstLook,
+      { timeout: DRIFT_WITHIN }
+    );
+    secondLook = await lookOf(touched.page);
+  } catch { /* left equal to the first, and reported as such below */ }
+  note(
+    `\n${"masthead on a phone".padEnd(26)} model: ${arrivedOnPhone ? "yes" : "NO"}`
+    + `   asked for the model ${touched.askedFor.length} time(s)`
+    + `   look: ${firstLook || "never written"} then ${secondLook || "never written"}`
+  );
+  if (!arrivedOnPhone) {
+    failures.push("a phone is shown no model, which is what it was shown before any of this");
+  }
+  if (firstLook === "") {
+    failures.push("nothing turns the head on a phone, so the model would face front for ever");
+  }
+  if (secondLook === firstLook) {
+    failures.push(
+      `the head on a phone holds one direction: it read ${firstLook || "nothing"} throughout`
+      + ` ${DRIFT_WITHIN / 1000} seconds, where it should wander every ${DRIFT_EVERY / 1000}`
+    );
+  }
+  await touched.page.close();
+
+  const stilled = await openGallery(phone, (page) => page.emulateMedia({ reducedMotion: "reduce" }));
+  await stilled.page.waitForTimeout(REFUSAL_GRACE);
+  const stillModel = await stilled.page.$(MODEL_CANVAS);
+  const stillLook = await lookOf(stilled.page);
+  note(
+    `${"asked for no motion".padEnd(26)} model: ${stillModel ? "YES" : "no"}`
+    + `   asked for the model ${stilled.askedFor.length} time(s)`
+    + `   look: ${stillLook || "never written"}`
+  );
+  if (stillModel || stilled.askedFor.length > 0 || stillLook !== "") {
+    failures.push(
+      "a reader who asked for no motion is sent the model anyway"
+      + ` (${stilled.askedFor.length} request(s), canvas: ${Boolean(stillModel)}, look: ${stillLook || "none"})`
+    );
+  }
+  await stilled.page.close();
+
+  const metered = await openGallery(phone, (page) => page.addInitScript(() => {
+    Object.defineProperty(navigator, "connection", {
+      configurable: true,
+      get: () => ({ saveData: true })
+    });
+  }));
+  await metered.page.waitForTimeout(REFUSAL_GRACE);
+  const meteredModel = await metered.page.$(MODEL_CANVAS);
+  const meteredLook = await lookOf(metered.page);
+  note(
+    `${"on a metered connection".padEnd(26)} model: ${meteredModel ? "YES" : "no"}`
+    + `   asked for the model ${metered.askedFor.length} time(s)`
+    + `   look: ${meteredLook || "never written"}`
+  );
+  if (meteredModel || metered.askedFor.length > 0) {
+    failures.push(
+      `a connection that has said it is metered is sent the model anyway:`
+      + ` ${metered.askedFor.length} request(s)`
+    );
+  }
+  // The drawing is not part of what was refused: it is already on the page and costs
+  // nothing, and refusing the download is meant to leave a head that still moves.
+  if (meteredLook === "") {
+    failures.push("refusing the model on a metered connection also stopped the drawing turning");
+  }
+  await metered.page.close();
+
+  const laptopMasthead = await openGallery(laptop);
+  const arrivedOnLaptop = await modelArrived(laptopMasthead.page);
+  const laptopLook = await lookOf(laptopMasthead.page);
+  note(
+    `${"masthead on a laptop".padEnd(26)} model: ${arrivedOnLaptop ? "yes" : "NO"}`
+    + `   asked for the model ${laptopMasthead.askedFor.length} time(s)`
+    + `   look before the pointer moves: ${laptopLook || "never written"}`
+  );
+  if (!arrivedOnLaptop) {
+    failures.push("a laptop is no longer shown the model, which it was shown before any of this");
+  }
+  // And it waits for the pointer rather than wandering at it: the two branches are supposed
+  // to differ in exactly this, and a laptop that started wandering would mean the fine
+  // pointer had stopped being asked about at all.
+  if (laptopLook !== "") {
+    failures.push(
+      `a laptop starts turning the head before the pointer has moved (${laptopLook}),`
+      + " so it is no longer waiting for one"
+    );
+  }
+  await laptopMasthead.page.close();
 } finally {
   await browser.close();
   await server.close();

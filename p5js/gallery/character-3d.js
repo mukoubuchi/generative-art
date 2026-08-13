@@ -165,11 +165,18 @@ async function start(root) {
 
 const root = document.querySelector("[data-character]");
 
-// The same gate the drawing uses: a fine pointer to aim with, and motion wanted. Neither
-// holds on a touch screen, where a megabyte and a half of model would buy nothing at all.
+// The same gate the drawing uses, split the same way. Motion is the one that stops
+// everything. A fine pointer is not asked for: it gates following a pointer, not having a
+// head, and the sibling script turns this one whether or not there is a pointer to turn it
+// towards — so a touch screen, which used to get a photograph that never moved, gets the
+// head that wanders.
+//
+// Save-Data is the exception. Between the model and the renderer this is some two and a half
+// megabytes, and a decoration is not what a reader on a metered connection asked to spend it
+// on. They keep the drawing, which is already on the page and already turns.
 const wanted = root
-  && window.matchMedia("(hover: hover) and (pointer: fine)").matches
-  && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  && !navigator.connection?.saveData;
 
 if (wanted) {
   const begin = () => {
