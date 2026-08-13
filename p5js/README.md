@@ -43,7 +43,6 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `lorenz-ribbon` | 800×600 | 1600×1200 MP4 at 30 fps | 10 seconds, both orbits grown and held |
 | `platonic-duals` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one dual cycle, ending where it began; interactive page |
 | `thirty-spokes` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one swing of the stirring each way |
-| `no-common-measure` | 680×680 | 1360×1360 PNG | Static capture, static page |
 
 Koch Curves, Recursive Pentagram and Sierpinski Gasket are inherently radial or square constructions, so square logical canvases preserve their symmetry. The 680 px display size follows the laptop-sized square established by the earlier artworks. A per-artwork export scale produces higher-resolution media without enlarging the interactive canvas.
 
@@ -534,14 +533,6 @@ npm run preview
 The index has no hand-written list of artworks. It is generated from `manifest.json` and `quotes.json`, so an artwork that is registered always appears with a link and a quotation, and one that is not registered cannot appear at all. Because the artwork tree keeps its repository path, a card's link is the same URL that `interactiveBaseUrl` and `interactivePath` produce for a post; a test asserts the two agree rather than trusting them to.
 
 Every frame is the same shape whatever its artwork's canvas is, and the picture is fitted inside rather than cropped to it. The canvases run from 2:1 to square, so sizing each frame to its own artwork left the rows visibly ragged, and cropping them to a common shape would cut the apex off a triangle and the ends off an arc. Matting each work on a common mount is what a gallery does with prints of different sizes.
-
-### Saying which works are somebody else's figure
-
-Fifteen of these works draw a figure that was thought of by a named person, and making one of them faithfully is the whole intention: a Koch curve is Koch's, a Möbius band is Möbius's, and the Café Wall illusion was Richard Gregory's before it was anybody's screensaver. A homage is not diminished by being one, but it is diminished by being passed off as an invention, so the manifest carries an optional `homage` for these works and the card prints it twice over — a badge on the head of the frame, opposite the moving badge, which is the mark that survives being read at the size of a grid; and under the title, in the form a gallery uses for a work made after another, the name and the year.
-
-The year is optional and two works go without one. Möbius's band and Peter de Jong's attractor both have dates that depend on whether discovery, paper or publication is being counted, and a year printed with more confidence than it is known would defeat the point of printing one. The name is required, validated on load, and a malformed attribution stops the build rather than reaching a page: an attribution is the one line here that is worse wrong than absent.
-
-Nothing is inferred from a title. A work is marked only where the manifest says so, and the roll is written out in the tests rather than counted, so a work joining it or quietly leaving it has to be looked at. The works with no mark are the ones that are nobody else's figure — the sketches this repository began from, and the works started from an aphorism rather than from a theorem.
 
 ### Telling the reader what there is to do
 

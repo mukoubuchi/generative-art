@@ -107,35 +107,6 @@ function quoteFor(artwork, quoteCatalog) {
 }
 
 /**
- * How a work that pays homage says whose figure it is drawing.
- *
- * Some of these works are not inventions. A Koch curve is Koch's, a Möbius band is
- * Möbius's, and the Café Wall illusion was Gregory's before it was anybody's screensaver;
- * making one of them faithfully is the whole intention, and the finished thing should say
- * so rather than leave a reader to assume the figure was thought of here. So the manifest
- * carries an optional `homage` — a name and, where it is certain, a year — and the card
- * prints it in the form galleries have always used for a work made after another.
- *
- * The year is optional on purpose. Möbius's band and de Jong's attractor both have dates
- * that depend on which of discovery, paper and publication is being counted, and a year
- * printed with more confidence than it deserves is worse than no year: the point of the
- * line is to be trustworthy about provenance. Names are certain; some dates are not.
- *
- * Nothing is inferred. A work is an homage only where the manifest says it is, because the
- * alternative — guessing from a title — would put an attribution under a picture on the
- * strength of a word, and attributions are not the place to be clever.
- */
-export function homageLine(artwork) {
-  if (!artwork.homage) {
-    return null;
-  }
-  const year = artwork.homage.year;
-  return year === undefined || year === null
-    ? `After ${artwork.homage.after}`
-    : `After ${artwork.homage.after}, ${year}`;
-}
-
-/**
  * Font Awesome Free's `quote-left` in the solid style, copied unmodified from the npm
  * distribution and recorded in THIRD_PARTY_LICENSES, which carries the attribution its
  * CC BY 4.0 licence requires. Its box is 448 by 512, not square.
@@ -181,7 +152,6 @@ const QUOTE_MARK = `<svg class="card__quote-mark" aria-hidden="true" focusable="
 function renderCard(manifest, artwork, quote, index) {
   const href = escapeHtml(artworkHref(artwork));
   const moving = artwork.render.kind === "video";
-  const after = homageLine(artwork);
 
   return `        <li class="card" style="--reveal-delay: ${revealDelay(index).toFixed(3)}s">
           <a class="card__link" href="${href}">
@@ -195,19 +165,11 @@ function renderCard(manifest, artwork, quote, index) {
                 loading="lazy"
                 decoding="async">
               ${moving ? '<span class="card__moving"><span class="card__orbit" aria-hidden="true"></span>moving</span>' : ""}
-              <!-- Opposite the moving badge, on the corner the legend at the foot can never
-                   reach. No glyph beside it: the moving badge earns one because a still
-                   picture cannot say by itself that it moves, whereas this is a claim about
-                   where the figure came from, and a claim about provenance should be read
-                   rather than recognised. The name and year are under the title, where
-                   there is room; this is the mark that survives being read at grid size. -->
-              ${after ? '<span class="card__homage">homage</span>' : ""}
               <span class="card__trace" aria-hidden="true"></span>
               <span class="card__ripple" aria-hidden="true"></span>
             </figure>
             <div class="card__label">
               <h2 class="card__title">${escapeHtml(artwork.title)}</h2>
-              ${after ? `<p class="card__after">${escapeHtml(after)}</p>` : ""}
               <p class="card__description">${escapeHtml(artwork.description)}</p>
               ${quote ? `<blockquote class="card__quote" lang="${escapeHtml(quote.lang)}">
                 <p class="card__quote-text">${QUOTE_MARK}${escapeHtml(quote.text)}</p>
