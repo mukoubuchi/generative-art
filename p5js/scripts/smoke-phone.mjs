@@ -29,7 +29,7 @@
 import { mkdtemp, readFile, rm, writeFile, cp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 import { P5JS_DIRECTORY, loadCatalog } from "../lib/catalog.mjs";
 import { artworkHref } from "../lib/gallery.mjs";
 import {
@@ -204,6 +204,33 @@ async function checkLocalBuild() {
     note("");
     failures.push(...await checkMasthead({ phone, origin, note }));
     await checkMeteredAndLaptop(phone, laptop, origin);
+
+    // And again in the engine a phone actually runs. Everything above emulates a phone inside
+    // Chromium, which gets the width and the density and the coarse pointer right and the
+    // drawing engine wrong -- and the drawing engine is where a reader on an iPhone lost a
+    // whole artwork on 2026-08-13, to a call that Chromium paints and WebKit does not. Every
+    // browser on iOS is WebKit, so this is the reading that speaks for those readers.
+    //
+    // The same assertions, not another set of them. The controls are not repeated: they
+    // establish that these assertions can fail, which is a fact about the assertions rather
+    // than about the engine running them.
+    note("\n— the same questions, in the engine a phone runs —\n");
+    const onWebkit = await webkit.launch();
+    try {
+      const webkitPhone = await onWebkit.newContext(PHONE);
+      const onWebkitPhone = await webkitPhone.newPage();
+      failures.push(...await checkArtworksFit({
+        phone: onWebkitPhone,
+        origin,
+        manifest,
+        viewport: PHONE.viewport,
+        note
+      }));
+      note("");
+      failures.push(...await checkMasthead({ phone: webkitPhone, origin, note }));
+    } finally {
+      await onWebkit.close();
+    }
   } finally {
     await server.close();
     await rm(built, { recursive: true, force: true });

@@ -17,7 +17,8 @@
     "x:refresh": "node scripts/x-refresh.mjs",
     "x:check": "node scripts/x-check-media.mjs",
     "smoke": "node scripts/smoke-density.mjs",
-    "smoke:phone": "node scripts/smoke-phone.mjs"
+    "smoke:phone": "node scripts/smoke-phone.mjs",
+    "smoke:engines": "node scripts/smoke-engines.mjs"
   },
   "dependencies": {
     "p5": "2.3.2",

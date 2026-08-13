@@ -588,6 +588,34 @@ The negative controls for all of this run on every push, not only when something
 
 What a green here means is worth stating exactly: **the most recent deployment is correct.** It does not mean that what is on `main` has been deployed. That is a different question, publishing is deliberately manual, and this check cannot see it.
 
+### Drawing the same picture in both engines
+
+Everything above had only ever been opened in Chromium. On 2026-08-13 a reader opened Strange Attractor on a phone and was shown an empty square.
+
+Its points were drawn the way a point is usually drawn on a 2D canvas — a round-capped stroke whose two ends are the same place. Chromium paints that. WebKit paints nothing for it, cap or no cap, and every browser on iOS is WebKit, so the whole of iOS saw a blank page. All 336,000 points went down invisibly. The sketch reported 300 of 300 frames and 336,000 of 336,000 points drawn, raised nothing and logged nothing; only the picture was missing. Nothing that reads state, counts frames, or watches for errors could have caught it, and nothing did.
+
+The repair asks the engine rather than guessing at it. A capability is measured once, on an eight-pixel canvas, and an engine that paints such a stroke goes on making exactly the calls it always made — so its picture is unchanged **by construction** rather than by a lucky match, which matters because the published clip was rendered from it. Only an engine that paints nothing takes the other path, where the dot is given the least length that makes it appear: a tenth of a pixel, applied to both ends so the dot stays centred where the orbit put it. That offset was chosen by sweeping it and comparing the finished cloud against Chromium's, and at 0.05 the picture lands within one per cent on both brightness and lit-pixel count — closer than the two engines' antialiasing agrees anyway.
+
+Three details are worth recording because each was a wrong turn first.
+
+Filling a small circle instead, which looks like the obvious replacement, makes a visibly darker cloud: a third fewer lit pixels. A stroke thinner than a pixel is not drawn as a thin shape — Chromium draws it as a one-pixel line whose alpha is scaled by the width asked for, so its ink goes with the **diameter**, while a filled circle's goes with the area. Measured at widths 0.36, 0.72 and 1.00 the ink comes out in proportion 1 : 2.04 : 2.85, matching the widths and not their squares; the thin stroke is not being rounded up to a whole pixel, or 0.72 and 1.00 would leave the same mark.
+
+A capture taken on an engine that would draw the other picture now refuses to start, rather than quietly writing a clip one per cent different from the published one — a difference that would look exactly like no difference at all.
+
+And where detection fails, the answer is taken to be "does not paint". That path works everywhere, so the worst it costs is a picture one per cent different; falling the other way would show a blank page to any reader whose browser refused the question.
+
+```bash
+npm run smoke:engines
+```
+
+Opens all 37 works in both engines and asks whether each puts down the same ink — the share of pixels that are not the page's own background. Two things about how that is taken matter more than the measure. The pixels are read through a copy of the canvas, because six works are drawn in WebGL and have no 2D context to ask; and the copy is at full size, because a resized one samples away the thin lines of Koch Curves and Pinwheel and reports two perfectly good works as empty. **A work this check cannot see is a failure of the check**, not a pass — an unseen work satisfies "both engines agree" perfectly.
+
+Both engines are asked for the *same numbered frames* rather than watched as they animate, and are compared at whichever of those frames shows the work most fully — there being no single frame that shows every work, since three of them return to their beginnings and are blank at the end while Koch Curves has barely started near it. Asking for a frame by number is what makes the comparison fair. An earlier version watched the two engines animate and compared whatever each had reached when it was looked at; they do not keep step, so works that were drawing perfectly well came out anywhere from 0.97 to 1.35 — near enough the edge of the tolerance to fail on a slow machine for no other reason. Matched frames fall between 0.970 and 1.088, and the run takes a minute instead of seventeen.
+
+The one work that cannot be captured is watched instead, and Strange Attractor is that work: its own refusal to be exported from the wrong engine is what stops the check capturing it there. Watching is the weaker measurement, so it is the exception. Where it is used, "settled" means the picture stopped changing *while its sketch was demonstrably still running* — a picture also stops changing when starved of processor, the two are indistinguishable from outside, and watching too many works at once caused exactly that, reading one half-drawn and reporting a disagreement that was not there.
+
+The check is aimed at [the sketch exactly as it shipped](test/fixtures/invisible-in-webkit/), which it has to reject, and it measures that the lengthened dot still lands where it was asked for rather than a twentieth of a pixel to the side. `npm run smoke:phone` also runs its whole sweep a second time in WebKit, since emulating a phone in Chromium gets the width, the density and the coarse pointer right and the drawing engine wrong — and the drawing engine is where this artwork was lost.
+
 ### Telling the reader what there is to do
 
 Eight artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:

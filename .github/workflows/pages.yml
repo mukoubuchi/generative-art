@@ -60,8 +60,12 @@ jobs:
 
       # The gallery needs Chromium to capture thumbnails, but no ffmpeg: a thumbnail is one
       # frame, so nothing here is encoded into a clip.
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      #
+      # WebKit as well, because Chromium is not what a reader on a phone has. Every browser on
+      # iOS is WebKit, and on 2026-08-13 an artwork that Chromium drew perfectly was a blank
+      # square there — for want of ever having opened it in the engine the reader uses.
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
         working-directory: p5js
 
       - name: Run unit tests
@@ -69,6 +73,9 @@ jobs:
 
       - name: Check the artworks on a dense display
         run: npm run smoke --prefix p5js
+
+      - name: Check that both engines draw the same pictures
+        run: npm run smoke:engines --prefix p5js
 
       # Builds a site of its own into a temporary directory, so it neither depends on the
       # build below nor stands in for it: what it opens has to be a page a reader gets,
