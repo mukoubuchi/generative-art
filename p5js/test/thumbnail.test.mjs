@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import test from "node:test";
-import { loadCatalog, thumbnailFrame, validateManifest } from "../lib/catalog.mjs";
+import { P5JS_DIRECTORY, loadCatalog, thumbnailFrame, validateManifest } from "../lib/catalog.mjs";
+
+/** The number words the prose actually uses, so a count can be read back out of it. */
+const NUMBER_WORDS = [
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+  "eighteen", "nineteen", "twenty"
+];
 
 test("a still artwork has no frame to choose", async () => {
   const { manifest } = await loadCatalog();
@@ -55,6 +64,22 @@ test("a thumbnail frame outside the clip is rejected", async () => {
   const doctored = structuredClone(manifest);
   doctored.artworks[index].thumbnail = { frame: frameCount - 1 };
   validateManifest(doctored);
+});
+
+test("the README's count of overriding artworks is the manifest's own", async () => {
+  // The prose names how many artworks choose their own thumbnail frame. That number
+  // was written once and went stale across seven of them, which is what a number in
+  // prose does; this reads it back and holds it to the manifest.
+  const readme = await readFile(resolve(P5JS_DIRECTORY, "README.md"), "utf8");
+  const claim = readme.match(/sets `thumbnail\.frame` in the manifest, and (?<count>\w+) do/u);
+  assert.ok(claim, "the README no longer states how many artworks override the frame");
+
+  const stated = NUMBER_WORDS.indexOf(claim.groups.count);
+  assert.ok(stated > 0, `"${claim.groups.count}" is not a number word this test can read`);
+
+  const { manifest } = await loadCatalog();
+  const overriding = manifest.artworks.filter((artwork) => artwork.thumbnail !== undefined);
+  assert.equal(stated, overriding.length);
 });
 
 test("a still artwork declaring a thumbnail frame is a mistake, not a silent no-op", async () => {
