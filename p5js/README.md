@@ -508,7 +508,7 @@ Every frame is the same shape whatever its artwork's canvas is, and the picture 
 
 ### Telling the reader what there is to do
 
-Six artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
+Seven artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
 
 | Artwork | Control | The line it prints |
 | --- | --- | --- |

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import test from "node:test";
+import { P5JS_DIRECTORY, loadCatalog } from "../lib/catalog.mjs";
 import { hintMode } from "../artworks/shared/hint-mode.js";
+import { NUMBER_WORDS } from "./number-words.mjs";
 import {
   HINT_INSET_RATIO,
   fitHintSize,
@@ -99,4 +103,36 @@ test("the room a legend has is the canvas less an inset at each end", () => {
   // The plate hangs half a padding outside the inset at both ends, so the padding
   // cancels and the legend itself is what has to fit.
   assert.ok(legendRoom(680, 680 * HINT_INSET_RATIO) < 680);
+});
+
+test("the README's roll of interactive artworks is the sketches' own", async () => {
+  // The same staleness the thumbnail count had: a number written in prose, a table
+  // beside it, and the truth in a third place. All three are held together here. The
+  // truth is which registered artworks actually draw a legend, which is a question
+  // about the sketches rather than about anybody's memory of them.
+  const readme = await readFile(resolve(P5JS_DIRECTORY, "README.md"), "utf8");
+  const claim = readme.match(/(?<count>[\w-]+) artworks answer to the reader/u);
+  assert.ok(claim, "the README no longer says how many artworks answer to the reader");
+  const stated = NUMBER_WORDS.indexOf(claim.groups.count.toLowerCase());
+  assert.ok(stated > 0, `"${claim.groups.count}" is not a number word this test can read`);
+
+  // The table that follows the sentence, one row per artwork.
+  const table = readme.slice(readme.indexOf(claim[0]));
+  const rows = [...table.matchAll(/^\| `(?<id>[a-z0-9-]+)` \| /gmu)].map((row) => row.groups.id);
+  assert.equal(rows.length, stated, `the sentence says ${stated} and the table lists ${rows.length}`);
+
+  // And the artworks that really carry one: registered in the manifest, and drawing a
+  // legend in their own sketch. An artwork in the tree but not in the manifest is not
+  // published, so it is not one of the artworks a reader can answer to yet.
+  const { manifest } = await loadCatalog();
+  const carrying = [];
+  for (const artwork of manifest.artworks) {
+    const sketch = resolve(P5JS_DIRECTORY, "artworks", artwork.id, "sketch.js");
+    const source = await readFile(sketch, "utf8").catch(() => "");
+    if (source.includes("drawKeyHint")) {
+      carrying.push(artwork.id);
+    }
+  }
+  assert.deepEqual(rows.slice().sort(), carrying.slice().sort());
+  assert.equal(carrying.length, stated);
 });

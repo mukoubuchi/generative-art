@@ -3,15 +3,8 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import { P5JS_DIRECTORY, loadCatalog, thumbnailFrame, validateManifest } from "../lib/catalog.mjs";
+import { NUMBER_WORDS } from "./number-words.mjs";
 
-/** The number words the prose actually uses, so a count can be read back out of it. */
-const NUMBER_WORDS = [
-  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
-  "eighteen", "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three",
-  "twenty-four", "twenty-five", "twenty-six", "twenty-seven", "twenty-eight",
-  "twenty-nine", "thirty", "thirty-one", "thirty-two", "thirty-three"
-];
 
 test("a still artwork has no frame to choose", async () => {
   const { manifest } = await loadCatalog();
