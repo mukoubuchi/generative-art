@@ -460,22 +460,43 @@ try {
 
   const laptopMasthead = await openGallery(laptop);
   const arrivedOnLaptop = await modelArrived(laptopMasthead.page);
-  const laptopLook = await lookOf(laptopMasthead.page);
+  // And a laptop still follows its pointer, which is the half of the old gate that was kept.
+  //
+  // Measured by moving the pointer and watching the head turn towards it, rather than by
+  // finding the page untouched before it moves. That second thing looked like the tidier
+  // check and is not a fact: a browser will dispatch a pointer move of its own when a page
+  // loads or reflows beneath a cursor that has not gone anywhere, and it did -- reading
+  // -1.000, which is the far edge of a clamp, from a pointer sitting in the corner at the
+  // origin. Green here and red in CI, which is the worst way to learn it.
+  const box = await laptopMasthead.page.evaluate(() => {
+    const { left, top, width, height } = document.querySelector("[data-character]").getBoundingClientRect();
+    return { left, top, width, height };
+  });
+  const lookAfterMovingTo = async (x, y) => {
+    const before = await lookOf(laptopMasthead.page);
+    await laptopMasthead.page.mouse.move(x, y);
+    await laptopMasthead.page.waitForFunction(
+      (was) => document.querySelector("[data-character]").style.getPropertyValue("--look-x") !== was,
+      before,
+      { timeout: 10_000 }
+    ).catch(() => { /* reported by the reading itself */ });
+    return Number.parseFloat(await lookOf(laptopMasthead.page) || "NaN");
+  };
+  // Its own middle, where the answer is nothing by construction, and then the far left.
+  const atTheFace = await lookAfterMovingTo(box.left + box.width / 2, box.top + box.height / 2);
+  const toTheLeft = await lookAfterMovingTo(1, box.top + box.height / 2);
   note(
     `${"masthead on a laptop".padEnd(26)} model: ${arrivedOnLaptop ? "yes" : "NO"}`
     + `   asked for the model ${laptopMasthead.askedFor.length} time(s)`
-    + `   look before the pointer moves: ${laptopLook || "never written"}`
+    + `   look at the face: ${atTheFace}, at the left edge: ${toTheLeft}`
   );
   if (!arrivedOnLaptop) {
     failures.push("a laptop is no longer shown the model, which it was shown before any of this");
   }
-  // And it waits for the pointer rather than wandering at it: the two branches are supposed
-  // to differ in exactly this, and a laptop that started wandering would mean the fine
-  // pointer had stopped being asked about at all.
-  if (laptopLook !== "") {
+  if (!(Math.abs(atTheFace) < 0.1) || !(toTheLeft < atTheFace - 0.3)) {
     failures.push(
-      `a laptop starts turning the head before the pointer has moved (${laptopLook}),`
-      + " so it is no longer waiting for one"
+      `a laptop no longer follows its pointer: the head read ${atTheFace} with the pointer on its`
+      + ` own face and ${toTheLeft} with the pointer at the left edge of the window`
     );
   }
   await laptopMasthead.page.close();
