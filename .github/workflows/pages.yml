@@ -1,9 +1,15 @@
 name: Gallery site
 
-# The site is generated, so it is built here rather than committed. Deployment is manual
-# for now: Pages has not been enabled on the repository, and enabling it is the owner's
-# decision. Until then this workflow still runs the build, which is what catches a broken
-# gallery before anyone is looking at one.
+# The site is generated, so it is built here rather than committed, and building it is what
+# catches a broken gallery before anyone is looking at one. It runs on a push to main as well
+# as on a pull request, because the checks that need a browser are all in this workflow --
+# the unit tests are browser-free by design and say so -- and a check that only happens when
+# somebody remembers to ask for it is a check that will one day not happen.
+#
+# Publishing is a separate decision and stays one. Pages is enabled and the deploy job below
+# works, but it is gated on an input, and an input exists only when the workflow is started
+# by hand: a push builds the site and checks it without putting anything in front of a
+# reader. So committing is never by itself an act of publication.
 on:
   workflow_dispatch:
     inputs:
@@ -12,6 +18,14 @@ on:
         required: true
         default: false
         type: boolean
+  push:
+    branches:
+      - main
+    paths:
+      - "p5js/**"
+      - ".github/workflows/pages.yml"
+      - "LICENSE"
+      - "THIRD_PARTY_LICENSES"
   pull_request:
     paths:
       - "p5js/**"
