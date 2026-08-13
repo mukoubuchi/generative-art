@@ -35,6 +35,18 @@ const HIGHLIGHT_WEIGHT = 0.55;
 const HIGHLIGHT_COLOR = [196, 18, 100];
 const HIGHLIGHT_ALPHA = 0.06;
 const START_RANGE = 0.01;
+const PLAYBACK_FPS = 30;
+/**
+ * The clip lays the cloud down over nine seconds and holds it for one. The orbit is not
+ * recomputed as it goes: the whole of it is worked out once and the frame fitted to all of
+ * it, so what grows is how much of the cloud has been laid down and not where the camera
+ * is. Fitting each frame to the points drawn so far would rescale the figure every frame
+ * and make the clip a picture of the fitting rather than of the attractor.
+ */
+const CLIP_SECONDS = 10;
+const REVEAL_SECONDS = 9;
+const TOTAL_FRAMES = CLIP_SECONDS * PLAYBACK_FPS;
+const REVEAL_FRAMES = REVEAL_SECONDS * PLAYBACK_FPS;
 
 const P5 = window.p5;
 
@@ -49,57 +61,84 @@ new P5((p) => {
     context.stroke();
   }
 
+  /** The whole orbit, its framing and its colours: worked out once and never refitted. */
+  let cloud;
+  let bins;
+  let drawn = 0;
+
   /**
-   * Orders the cloud by colour band with a counting sort, so the whole figure is drawn in
-   * 32 passes with one stroke colour each. Additive blending is commutative, so grouping
-   * the points changes the cost and not the image.
+   * How much of the cloud has been laid down by `frameIndex` — a pure function of the
+   * index, so a frame asked for twice is the same frame.
    */
-  function orderByBin(bins) {
-    const counts = new Uint32Array(COLOR_BINS);
-    for (const bin of bins) {
-      counts[bin] += 1;
-    }
-    const starts = new Uint32Array(COLOR_BINS);
-    for (let bin = 1; bin < COLOR_BINS; bin += 1) {
-      starts[bin] = starts[bin - 1] + counts[bin - 1];
-    }
-    const cursor = starts.slice();
-    const order = new Uint32Array(bins.length);
-    for (let index = 0; index < bins.length; index += 1) {
-      order[cursor[bins[index]]] = index;
-      cursor[bins[index]] += 1;
-    }
-    return { order, starts, counts };
+  function pointsBy(frameIndex) {
+    const part = Math.min(frameIndex / REVEAL_FRAMES, 1);
+    return Math.min(POINT_COUNT, Math.round(POINT_COUNT * part));
   }
 
-  function drawBands(cloud, bins) {
-    const { order, starts, counts } = orderByBin(bins);
+  /**
+   * Lays down the points from `from` to `to`, grouped by colour band so that a run of them
+   * costs one stroke colour rather than one each. The layer is added rather than blended
+   * and addition does not care about order, so laying the cloud down in instalments builds
+   * the same figure as laying it down at once.
+   */
+  function drawRange(from, to) {
+    const buckets = Array.from({ length: COLOR_BINS }, () => []);
+    for (let index = from; index < to; index += 1) {
+      buckets[bins[index]].push(index);
+    }
+    p.push();
+    p.scale(RENDER_SCALE);
+    p.blendMode(p.ADD);
     context.lineWidth = POINT_WEIGHT;
     context.lineCap = "round";
-
     for (let bin = 0; bin < COLOR_BINS; bin += 1) {
+      if (buckets[bin].length === 0) {
+        continue;
+      }
       const [red, green, blue] = hsbToRgb(binHue(bin), POINT_SATURATION, POINT_BRIGHTNESS);
       context.strokeStyle = `rgba(${red},${green},${blue},${POINT_ALPHA})`;
-      const end = starts[bin] + counts[bin];
-      for (let slot = starts[bin]; slot < end; slot += 1) {
-        const index = order[slot];
+      for (const index of buckets[bin]) {
         dot(cloud.xs[index], cloud.ys[index]);
       }
     }
-  }
-
-  /**
-   * A thinner, paler layer over every third point, shifted by a fraction of a pixel. The
-   * offset is what makes it visible: it lands beside the layer beneath rather than on top
-   * of it, so only the densest contours accumulate enough to show.
-   */
-  function drawHighlight(cloud) {
+    // The thinner, paler layer over every third point, shifted by a fraction of a pixel so
+    // it lands beside the layer beneath and only the densest contours accumulate.
     const [red, green, blue] = hsbToRgb(...HIGHLIGHT_COLOR);
     context.lineWidth = HIGHLIGHT_WEIGHT;
     context.strokeStyle = `rgba(${red},${green},${blue},${HIGHLIGHT_ALPHA})`;
-    for (let index = 0; index < POINT_COUNT; index += HIGHLIGHT_STRIDE) {
+    const first = from + ((HIGHLIGHT_STRIDE - (from % HIGHLIGHT_STRIDE)) % HIGHLIGHT_STRIDE);
+    for (let index = first; index < to; index += HIGHLIGHT_STRIDE) {
       dot(cloud.xs[index] + HIGHLIGHT_OFFSET_X, cloud.ys[index] + HIGHLIGHT_OFFSET_Y);
     }
+    p.blendMode(p.BLEND);
+    p.pop();
+  }
+
+  /** Lays the cloud down as far as `target`, starting again if asked to go back. */
+  function layUpTo(target) {
+    if (target < drawn) {
+      p.background(...BACKGROUND);
+      drawn = 0;
+    }
+    drawRange(drawn, target);
+    drawn = target;
+  }
+
+  function publishState(frameIndex) {
+    const state = {
+      kind: "video",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
+      seed: ART_SEED,
+      pointCount: POINT_COUNT,
+      pointsDrawn: drawn,
+      colorBins: COLOR_BINS,
+      logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
+      outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
+    };
+    window.__ARTWORK_STATE__ = state;
+    window.__ARTWORK_READY__ = true;
+    return state;
   }
 
   p.setup = () => {
@@ -114,12 +153,9 @@ new P5((p) => {
       p.pixelDensity(1);
     }
     context = p.drawingContext;
-    p.noLoop();
-  };
-
-  p.draw = () => {
     p.colorMode(p.HSB, 360, 100, 100, 100);
-    // Seeded here rather than in setup, so the image is a function of the seed alone.
+    p.frameRate(PLAYBACK_FPS);
+    // Seeded here, so the figure is a function of the seed alone.
     p.randomSeed(ART_SEED);
     p.background(...BACKGROUND);
 
@@ -127,27 +163,28 @@ new P5((p) => {
       p.random(-START_RANGE, START_RANGE),
       p.random(-START_RANGE, START_RANGE)
     );
-    const cloud = fitToCanvas(orbit, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-    const bins = colorBins(orbit.ys);
+    cloud = fitToCanvas(orbit, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    bins = colorBins(orbit.ys);
 
-    p.push();
-    // The cloud is fitted to the logical canvas, so the export scale is a transform and a
-    // larger export is the same figure at a higher resolution.
-    p.scale(RENDER_SCALE);
-    p.blendMode(p.ADD);
-    drawBands(cloud, bins);
-    drawHighlight(cloud);
-    p.blendMode(p.BLEND);
-    p.pop();
+    if (CAPTURE_MODE) {
+      p.noLoop();
+      window.__renderFrame = (frameIndex) => {
+        layUpTo(pointsBy(frameIndex));
+        return Promise.resolve(publishState(frameIndex));
+      };
+    }
+    publishState(0);
+  };
 
-    window.__ARTWORK_STATE__ = {
-      kind: "image",
-      seed: ART_SEED,
-      pointCount: POINT_COUNT,
-      colorBins: COLOR_BINS,
-      logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
-      outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
-    };
-    window.__ARTWORK_READY__ = true;
+  p.draw = () => {
+    if (CAPTURE_MODE) {
+      return;
+    }
+    if (p.frameCount > TOTAL_FRAMES) {
+      p.noLoop();
+      return;
+    }
+    layUpTo(pointsBy(p.frameCount));
+    publishState(p.frameCount);
   };
 });
