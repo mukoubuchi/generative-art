@@ -31,6 +31,13 @@ const DOT_RADIUS = CELL_SIZE * 0.38;
 // How long the live page spends laying the numbers down, centre to rim.
 const REVEAL_SECONDS = 9;
 const REVEAL_FRAMES = REVEAL_SECONDS * PLAYBACK_FPS;
+/**
+ * The clip winds the spiral for those nine seconds and holds the finished field for one, so
+ * a card looping it shows the primes standing on their diagonals rather than cutting from
+ * the last ring straight back to bare ground.
+ */
+const CLIP_SECONDS = 10;
+const TOTAL_FRAMES = CLIP_SECONDS * PLAYBACK_FPS;
 
 const BACKGROUND = [13, 18, 27];
 const DOT_COLOR = [235, 224, 200, 240];
@@ -66,16 +73,45 @@ new P5((p) => {
     p.pop();
   }
 
-  function publishState(revealedCells) {
-    window.__ARTWORK_STATE__ = {
-      kind: "image",
+  /**
+   * How much of the walk has been laid down by `frameIndex`. Cubic in the time, so the
+   * first seconds go slowly enough to watch the winding rule and the outer rings, which
+   * only repeat the lesson, sweep past. A pure function of the index, which is what lets
+   * any frame be asked for and answered the same way twice.
+   */
+  function revealedBy(frameIndex) {
+    const part = Math.min(frameIndex / REVEAL_FRAMES, 1);
+    return Math.min(Math.round(CELL_COUNT * part * part * part), CELL_COUNT);
+  }
+
+  /**
+   * Winds the spiral forward until `target` cells are down. The dots accumulate and the
+   * ground is never cleared, so this only goes forward; asked for an earlier frame than the
+   * one already drawn, it lays the ground again and starts the walk over.
+   */
+  function windUpTo(target) {
+    if (target < revealed) {
+      p.background(...BACKGROUND);
+      revealed = 0;
+    }
+    drawCells(revealed, target);
+    revealed = target;
+  }
+
+  function publishState(frameIndex, revealedCells) {
+    const state = {
+      kind: "video",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
       cellsAcross: CELLS_ACROSS,
       cellCount: CELL_COUNT,
       revealedCells,
       logicalSize: { width: LOGICAL_SIZE, height: LOGICAL_SIZE },
       outputSize: { width: OUTPUT_SIZE, height: OUTPUT_SIZE }
     };
+    window.__ARTWORK_STATE__ = state;
     window.__ARTWORK_READY__ = true;
+    return state;
   }
 
   p.setup = () => {
@@ -93,28 +129,32 @@ new P5((p) => {
     p.background(...BACKGROUND);
     if (CAPTURE_MODE) {
       p.noLoop();
-      drawCells(0, CELL_COUNT);
-      publishState(CELL_COUNT);
-      return;
+      // The dots accumulate and are never cleared, so a frame is wound up to rather than
+      // drawn on its own. The renderer asks in order and the thumbnail asks for one from a
+      // fresh page; winding forward from wherever the walk stands serves both.
+      window.__renderFrame = (frameIndex) => {
+        windUpTo(revealedBy(frameIndex));
+        return Promise.resolve(publishState(frameIndex, revealed));
+      };
     }
-    publishState(0);
+    publishState(0, 0);
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
       return;
     }
-    if (revealed >= CELL_COUNT) {
+    if (p.frameCount > TOTAL_FRAMES) {
+      // The walk finished at nine seconds and the last second held it; there is nothing
+      // further to lay down, and stopping keeps the page from spinning on a done picture.
+      p.noLoop();
       return;
     }
     // The background never clears: each frame adds the next stretch of the walk, so what
     // accumulates on screen is the spiral itself being wound. The pace is cubic in time —
     // the first seconds walk the innermost rings slowly enough to watch the winding rule,
     // and the outer rings, which only repeat the lesson, sweep past.
-    const t = Math.min(p.frameCount / REVEAL_FRAMES, 1);
-    const next = Math.min(Math.round(CELL_COUNT * t * t * t), CELL_COUNT);
-    drawCells(revealed, next);
-    revealed = next;
-    publishState(revealed);
+    windUpTo(revealedBy(p.frameCount));
+    publishState(p.frameCount, revealed);
   };
 });

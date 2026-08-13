@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { loadCatalog } from "../lib/catalog.mjs";
 import test from "node:test";
 
 /**
@@ -49,4 +50,83 @@ test("every capture sketch resolves __renderFrame to the state publishState retu
       assert.ok(deferred, `${artwork}: neither publishState nor a deferred resolver found`);
     }
   }
+});
+
+/**
+ * The body of `p.setup`, and whether it stops the sketch for everybody or only for the
+ * renderer. A sketch that calls `noLoop` inside its capture guard still runs its draw loop
+ * on the page: that is an animation, whatever the manifest calls it.
+ */
+function setupBody(source) {
+  const from = source.indexOf("p.setup = () =>");
+  const draw = source.indexOf("p.draw = () =>");
+  return draw === -1 ? source.slice(from) : source.slice(from, draw);
+}
+
+function stopsForEverybody(body) {
+  let depth = 0;
+  const guards = [];
+  for (let at = 0; at < body.length; at += 1) {
+    if (body.startsWith("if (CAPTURE_MODE)", at)) {
+      guards.push(depth + 1);
+    }
+    if (body[at] === "{") {
+      depth += 1;
+    }
+    if (body[at] === "}") {
+      if (guards.at(-1) === depth) {
+        guards.pop();
+      }
+      depth -= 1;
+    }
+    if (body.startsWith("p.noLoop();", at) && guards.length === 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Artworks whose page animates while the manifest registers them as stills. The user
+ * reported two of these -- Flow Field and Ulam Spiral -- and those are now clips. These
+ * three have exactly the same shape and nobody has decided about them yet, so they are
+ * named here rather than quietly passing: an artwork can be a still, or a clip, or on this
+ * list, and not in none of the three.
+ */
+const UNDECIDED = ["circle-packing", "dla-frost", "nautilus"];
+
+test("an artwork registered as a still does not go on drawing on the page", async () => {
+  // What the manifest says an artwork is, held against what its sketch does. Flow Field and
+  // Ulam Spiral were registered as stills while their pages ran an animation, so the gallery
+  // gave them no moving mark and the export kept only the last frame. A reader could see
+  // them move; nothing in the build could. The difference is legible in the source: a still
+  // stops its draw loop for everybody, an animation stops it only for the renderer.
+  const { manifest } = await loadCatalog();
+  const stills = manifest.artworks.filter((artwork) => artwork.render.kind === "image");
+  const moving = manifest.artworks.filter((artwork) => artwork.render.kind === "video");
+  assert.ok(stills.length >= 8, `only ${stills.length} artworks are registered as stills`);
+  assert.ok(moving.length >= 20, `only ${moving.length} artworks are registered as moving`);
+
+  const animating = [];
+  for (const artwork of stills) {
+    const source = readFileSync(new URL(`${artwork.id}/sketch.js`, ARTWORKS_ROOT), "utf8");
+    const body = setupBody(source);
+    const hasDraw = source.includes("p.draw = () =>");
+    if (hasDraw && !stopsForEverybody(body)) {
+      animating.push(artwork.id);
+    }
+  }
+  assert.deepEqual(animating.sort(), UNDECIDED,
+    "a still's page animates, and it is not one of the ones already known about");
+
+  // Not vacuous: the rule tells the two kinds apart rather than calling everything still.
+  const settled = stills.filter((artwork) => !UNDECIDED.includes(artwork.id));
+  assert.ok(settled.length >= 5, `only ${settled.length} stills are settled`);
+
+  // The negative control, and the shape this exists to catch: stopping only for the
+  // renderer leaves the page animating, and is not the same as stopping.
+  const onlyForCapture = "p.setup = () => {\n  if (CAPTURE_MODE) {\n    p.noLoop();\n  }\n};\n";
+  const forEverybody = "p.setup = () => {\n  if (CAPTURE_MODE) {\n    p.pixelDensity(1);\n  }\n  p.noLoop();\n};\n";
+  assert.equal(stopsForEverybody(onlyForCapture), false);
+  assert.equal(stopsForEverybody(forEverybody), true);
 });

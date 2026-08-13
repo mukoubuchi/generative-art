@@ -505,9 +505,13 @@
         "lucretius-declinare"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/FlowField.png",
+        "kind": "video",
+        "artifact": "exports/p5js/FlowField.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 299
       }
     },
     {
@@ -563,9 +567,13 @@
         "euclid-primes-beyond"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/UlamSpiral.png",
+        "kind": "video",
+        "artifact": "exports/p5js/UlamSpiral.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 299
       }
     },
     {

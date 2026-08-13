@@ -15,6 +15,17 @@ const RENDER_SCALE = CAPTURE_MODE
   : 1;
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
+const PLAYBACK_FPS = 30;
+/**
+ * The clip lays the field down over nine seconds and holds the finished image for one, so
+ * that a card looping it shows what was made rather than cutting from the last stroke back
+ * to bare ground. The page follows the same schedule, so what a reader watches forming is
+ * the clip they would have seen.
+ */
+const CLIP_SECONDS = 10;
+const REVEAL_SECONDS = 9;
+const TOTAL_FRAMES = CLIP_SECONDS * PLAYBACK_FPS;
+const REVEAL_FRAMES = REVEAL_SECONDS * PLAYBACK_FPS;
 const TRAIL_WEIGHT = 1.1;
 const TRAIL_SATURATION = 55;
 const TRAIL_BRIGHTNESS = 95;
@@ -54,6 +65,28 @@ new P5((p) => {
     context.stroke();
   }
 
+  /**
+   * How many of the field's steps have been walked by `frameIndex`. A pure function of the
+   * index, which is what lets the renderer ask for a frame and get the same picture every
+   * time — and what lets the thumbnail jump straight to one from a fresh page.
+   */
+  function stepsBy(frameIndex) {
+    const part = Math.min(frameIndex / REVEAL_FRAMES, 1);
+    return Math.min(TOTAL_STEPS, Math.round(TOTAL_STEPS * part));
+  }
+
+  /**
+   * Walks the field forward until `target` steps have been laid down. The trails accumulate
+   * on the canvas rather than being redrawn, so this only ever goes forward; asked for an
+   * earlier frame than the one already drawn, it starts the field again from its seed.
+   */
+  function paintUpTo(target) {
+    if (target < stepsDrawn) {
+      reset();
+    }
+    paintSteps(target - stepsDrawn);
+  }
+
   /** Runs at most `requested` steps, stopping at the total the finished image is made of. */
   function paintSteps(requested) {
     const noise = (x, y) => p.noise(x, y);
@@ -73,15 +106,29 @@ new P5((p) => {
     stepsDrawn += steps;
   }
 
-  function publishState() {
-    window.__ARTWORK_STATE__ = {
-      kind: "image",
+  function publishState(frameIndex) {
+    const state = {
+      kind: "video",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
       seed: ART_SEED,
       particleCount: particles.length,
       stepsDrawn,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
+    window.__ARTWORK_STATE__ = state;
+    window.__ARTWORK_READY__ = true;
+    return state;
+  }
+
+  /** Back to bare ground with the same seed, which is where every frame is counted from. */
+  function reset() {
+    p.randomSeed(ART_SEED);
+    p.noiseSeed(ART_SEED);
+    p.background(...BACKGROUND);
+    particles = createParticles(LOGICAL_WIDTH, LOGICAL_HEIGHT, (low, high) => p.random(low, high));
+    stepsDrawn = 0;
   }
 
   p.setup = () => {
@@ -97,30 +144,35 @@ new P5((p) => {
     }
     context = p.drawingContext;
     p.colorMode(p.HSB, 360, 100, 100, 100);
-    // Seeded here rather than in draw, because the trails accumulate across every step and
-    // the image is a function of the seed and the step count alone.
-    p.randomSeed(ART_SEED);
-    p.noiseSeed(ART_SEED);
-    p.background(...BACKGROUND);
+    p.frameRate(PLAYBACK_FPS);
+    // Seeded in reset rather than in draw, because the trails accumulate across every step
+    // and the image is a function of the seed and the step count alone.
+    reset();
 
-    particles = createParticles(LOGICAL_WIDTH, LOGICAL_HEIGHT, (low, high) => p.random(low, high));
+    if (CAPTURE_MODE) {
+      p.noLoop();
+      // The trails are laid on top of one another and never cleared, so a frame is not
+      // drawn on its own: it is walked up to. The renderer asks for frames in order and the
+      // thumbnail asks for one from a fresh page, and both are served by walking forward
+      // from wherever the field has got to.
+      window.__renderFrame = (frameIndex) => {
+        paintUpTo(stepsBy(frameIndex));
+        return Promise.resolve(publishState(frameIndex));
+      };
+    }
+    publishState(0);
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
-      paintSteps(TOTAL_STEPS);
-      publishState();
-      window.__ARTWORK_READY__ = true;
-      p.noLoop();
       return;
     }
 
-    // On the page the field fills in one step per frame, so the trails are watched forming
-    // over the same 900 steps the capture runs all at once.
-    paintSteps(1);
-    publishState();
-    if (stepsDrawn >= TOTAL_STEPS) {
-      window.__ARTWORK_READY__ = true;
+    // On the page the field fills to the same schedule the clip follows, so what is watched
+    // forming here is what the clip shows.
+    paintUpTo(stepsBy(p.frameCount));
+    publishState(p.frameCount);
+    if (p.frameCount >= TOTAL_FRAMES) {
       p.noLoop();
     }
   };
