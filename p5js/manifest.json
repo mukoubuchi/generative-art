@@ -825,6 +825,25 @@
         "durationSeconds": 10,
         "scale": 2
       }
+    },
+    {
+      "id": "no-common-measure",
+      "title": "No Common Measure",
+      "entry": "p5js/artworks/no-common-measure/index.html",
+      "interactivePath": "no-common-measure/",
+      "description": "Curves strung with whole numbers crowd towards the one that stays bare.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "gita-nasato-vidyate"
+      ],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/NoCommonMeasure.png",
+        "scale": 2
+      }
     }
   ]
 }

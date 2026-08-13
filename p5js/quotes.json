@@ -350,6 +350,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://zh.wikisource.org/wiki/%E9%81%93%E5%BE%B7%E7%B6%93_(%E7%8E%8B%E5%BC%BC%E6%9C%AC)"
+    },
+    {
+      "id": "gita-nasato-vidyate",
+      "text": "नासतो विद्यते भावो नाभावो विद्यते सतः।",
+      "lang": "sa",
+      "author": "भगवद्गीता",
+      "source": "साङ्ख्ययोगः 2.16",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://sa.wikisource.org/wiki/%E0%A4%AD%E0%A4%97%E0%A4%B5%E0%A4%A6%E0%A5%8D%E0%A4%97%E0%A5%80%E0%A4%A4%E0%A4%BE/%E0%A4%B8%E0%A4%BE%E0%A4%99%E0%A5%8D%E0%A4%96%E0%A5%8D%E0%A4%AF%E0%A4%AF%E0%A5%8B%E0%A4%97%E0%A4%83"
     }
   ]
 }

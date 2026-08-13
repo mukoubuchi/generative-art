@@ -35,7 +35,8 @@ const AWAITING_SCHEDULE = [
   "moire-rings",
   "lorenz-ribbon",
   "platonic-duals",
-  "thirty-spokes"
+  "thirty-spokes",
+  "no-common-measure"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
