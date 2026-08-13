@@ -148,7 +148,7 @@
       "title": "Windmill",
       "entry": "p5js/artworks/windmill/index.html",
       "interactivePath": "windmill/",
-      "description": "Four blades wind up to a speed limit, then coast back to a standstill.",
+      "description": "The wind is raised, and the giant that is only a mill turns.",
       "canvas": {
         "width": 680,
         "height": 680
