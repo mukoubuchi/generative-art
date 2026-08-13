@@ -3,7 +3,6 @@ import test from "node:test";
 import {
   CYCLES,
   PATH_COUNT,
-  PATH_RADIUS_RATIO,
   STEPS_PER_CYCLE,
   STEPS_PER_SECOND,
   TOTAL_STEPS,
@@ -70,12 +69,17 @@ test("halfway along the walk the six close into one exact regular hexagon", () =
 
   // Every vertex is either the centre or a corner of one hexagon: six meet in the
   // middle, one from each triangle, and the other twelve stand on a circle of exactly
-  // sin sixty — the classical dissection of a hexagon into six equilateral triangles.
+  // sin sixty of the path radius — the classical dissection of a hexagon into six
+  // equilateral triangles. The expected distance is written from this figure's own
+  // geometry rather than borrowed from PATH_RADIUS_RATIO, which happens to be the same
+  // number for an unrelated reason: that one is the path radius as a share of the
+  // hexagon the artwork is built on.
   const atCentre = vertices.filter((vertex) => Math.hypot(vertex.x, vertex.y) < 1e-12);
   assert.equal(atCentre.length, TRIANGLE_COUNT);
+  const cornerRadius = Math.sin(Math.PI / 3) * PATH_RADIUS;
   const outer = vertices.filter((vertex) => Math.hypot(vertex.x, vertex.y) >= 1e-12);
   for (const vertex of outer) {
-    assert.ok(Math.abs(Math.hypot(vertex.x, vertex.y) - PATH_RADIUS_RATIO) < 1e-12);
+    assert.ok(Math.abs(Math.hypot(vertex.x, vertex.y) - cornerRadius) < 1e-12);
   }
 
   // And they stand on exactly six bearings, sixty degrees apart, each corner shared by
