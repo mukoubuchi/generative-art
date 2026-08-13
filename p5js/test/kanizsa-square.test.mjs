@@ -1,113 +1,264 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  CYCLE_STEPS,
+  FULL_SPIN,
+  FULL_SUPPORT,
   INDUCER_COUNT,
-  REVEAL_STATE,
-  SPIN_STATE,
-  STATE_COUNT,
-  STATE_STEPS,
+  PLAN,
+  SPARSE_SUPPORT,
   STEPS_PER_SECOND,
-  angleStep,
-  inducerCorners,
-  isResting,
-  rotationsAt,
-  stateAfter
+  TOTAL_STEPS,
+  inducerRadius,
+  leverAt,
+  marksAt,
+  revealAt,
+  sideLength,
+  spinAt,
+  squareCorners,
+  supportRatioAt
 } from "../artworks/kanizsa-square/illusion.js";
 
 const PLAYBACK_FPS = 30;
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
-const MAX_ANGLE = Math.PI / 2;
+const SQUARE_HALF = 170;
+const FULL_TURN = Math.PI * 2;
 
-test("the cycle is four states, two of them long and two of them brief", () => {
-  assert.equal(STATE_STEPS.length, STATE_COUNT);
-  assert.deepEqual(STATE_STEPS, [69, 12, 69, 12]);
-  assert.equal(CYCLE_STEPS, 162);
-  assert.equal(STATE_STEPS.reduce((total, steps) => total + steps, 0), CYCLE_STEPS);
-});
-
-test("the states begin where the Processing sketch's did", () => {
-  const boundaries = [0, 69, 81, 150].map((step) => stateAfter(step));
-
-  assert.deepEqual(boundaries.map((state) => state.index), [0, 1, 2, 3]);
-  for (const state of boundaries) {
-    assert.equal(state.angle, 0);
+/**
+ * Is a point inside a wedge? Written here rather than imported, so that the claim the
+ * artwork rests on — that the square's sides are painted by nothing — is checked
+ * against an implementation the artwork does not own.
+ */
+function insideWedge(mark, x, y) {
+  const dx = x - mark.x;
+  const dy = y - mark.y;
+  if (Math.hypot(dx, dy) > mark.radius) {
+    return false;
   }
-  assert.equal(stateAfter(CYCLE_STEPS).index, SPIN_STATE);
-  assert.equal(stateAfter(CYCLE_STEPS).angle, 0);
+  const swept = ((mark.to - mark.from) % FULL_TURN + FULL_TURN) % FULL_TURN;
+  const bearing = ((Math.atan2(dy, dx) - mark.from) % FULL_TURN + FULL_TURN) % FULL_TURN;
+  return bearing <= swept;
+}
+
+function inkAt(marks, x, y) {
+  return marks.some((mark) => mark.kind === "wedge" && insideWedge(mark, x, y));
+}
+
+/**
+ * Walk the square's sides and ask, at each point, whether there is ink on one side of
+ * the line, on both, or on neither. A real contour is where exactly one side is inked;
+ * that is what an eye could actually see. Returns the share of the perimeter in each
+ * condition.
+ */
+function surveyPerimeter(step, samples = 1200) {
+  const marks = marksAt(step, SQUARE_HALF);
+  const corners = squareCorners(SQUARE_HALF);
+  const offset = 0.6;
+  let edge = 0;
+  let blank = 0;
+  let buried = 0;
+  for (let index = 0; index < INDUCER_COUNT; index += 1) {
+    const from = corners[index];
+    const to = corners[(index + 1) % INDUCER_COUNT];
+    const length = Math.hypot(to.x - from.x, to.y - from.y);
+    const normalX = -(to.y - from.y) / length;
+    const normalY = (to.x - from.x) / length;
+    for (let sample = 0; sample < samples; sample += 1) {
+      const along = (sample + 0.5) / samples;
+      const x = from.x + (to.x - from.x) * along;
+      const y = from.y + (to.y - from.y) * along;
+      const oneSide = inkAt(marks, x + offset * normalX, y + offset * normalY);
+      const otherSide = inkAt(marks, x - offset * normalX, y - offset * normalY);
+      if (oneSide !== otherSide) {
+        edge += 1;
+      } else if (oneSide) {
+        buried += 1;
+      } else {
+        blank += 1;
+      }
+    }
+  }
+  const total = INDUCER_COUNT * samples;
+  return { edge: edge / total, blank: blank / total, buried: buried / total };
+}
+
+/** Every step of the clip that is not part of the reveal, thinned for speed. */
+function implyingSteps(stride = 7) {
+  const steps = [];
+  for (let step = 0; step < TOTAL_STEPS; step += stride) {
+    if (revealAt(step) === 0) {
+      steps.push(step);
+    }
+  }
+  return steps;
+}
+
+/**
+ * The artwork's claim is not that the square is faint. It is that the square is not
+ * there: nothing in the picture draws it, and what a viewer sees along its sides is
+ * their own. These tests hold that structurally — the module's whole vocabulary is
+ * wedges, so there is nothing an edge could be drawn with — and then measure the
+ * picture to show the sides really are blank between the corners, with the share that
+ * is genuinely inked coming out at exactly the support ratio the artwork names.
+ */
+
+test("the only thing the figure can draw is a wedge, except when it owns up", () => {
+  const kinds = new Set();
+  let plates = 0;
+  for (let step = 0; step < TOTAL_STEPS; step += 1) {
+    const marks = marksAt(step, SQUARE_HALF);
+    for (const mark of marks) {
+      kinds.add(mark.kind);
+      plates += mark.kind === "plate" ? 1 : 0;
+    }
+    // Outside the reveal there is nothing but the four inducers. No line, no polygon,
+    // nothing that has an end and another end.
+    if (revealAt(step) === 0) {
+      assert.equal(marks.length, INDUCER_COUNT);
+      assert.ok(marks.every((mark) => mark.kind === "wedge"), `step ${step} drew something else`);
+    } else {
+      assert.equal(marks.filter((mark) => mark.kind === "plate").length, 1);
+    }
+  }
+  assert.deepEqual([...kinds].sort(), ["plate", "wedge"]);
+  assert.ok(plates > 0, "the figure never owned up");
 });
 
-test("the angle eases in and out over each state", () => {
-  const midpoint = angleStep(MAX_ANGLE / 2);
-
-  assert.ok(angleStep(0) < midpoint);
-  assert.ok(angleStep(MAX_ANGLE) < midpoint);
-  assert.ok(Math.abs(angleStep(0) - angleStep(MAX_ANGLE)) < 1e-12);
-  // Continuous across the halfway point, where the two branches meet.
-  assert.ok(Math.abs(angleStep(MAX_ANGLE / 2 - 1e-9) - midpoint) < 1e-6);
-});
-
-test("the resting states hold the figure exactly where it starts", () => {
-  assert.ok(isResting(1) && isResting(3));
-  assert.ok(!isResting(SPIN_STATE) && !isResting(REVEAL_STATE));
-  for (const step of [70, 75, 80, 151, 155, 161]) {
-    const rotations = rotationsAt(stateAfter(step));
-    assert.equal(rotations.inducers, 0);
-    assert.equal(rotations.spin, 0);
-    assert.equal(rotations.quadrilateral, null);
+test("between the corners the sides are blank on both sides of the line", () => {
+  // The heart of it. Away from the corners, where the bites' straight edges end, there
+  // is no ink within reach of the square's sides at all — so the contour a viewer
+  // reports seeing there is not a faint mark, it is nothing.
+  for (const step of implyingSteps()) {
+    const marks = marksAt(step, SQUARE_HALF);
+    const corners = squareCorners(SQUARE_HALF);
+    const radius = inducerRadius(supportRatioAt(step), SQUARE_HALF);
+    for (let index = 0; index < INDUCER_COUNT; index += 1) {
+      const from = corners[index];
+      const to = corners[(index + 1) % INDUCER_COUNT];
+      const length = Math.hypot(to.x - from.x, to.y - from.y);
+      for (let sample = 0; sample <= 40; sample += 1) {
+        const along = sample / 40;
+        const x = from.x + (to.x - from.x) * along;
+        const y = from.y + (to.y - from.y) * along;
+        const clearOfCorners = along * length > radius + 1 && (1 - along) * length > radius + 1;
+        if (!clearOfCorners) {
+          continue;
+        }
+        for (const nudge of [-1.5, -0.5, 0, 0.5, 1.5]) {
+          const normalX = -(to.y - from.y) / length;
+          const normalY = (to.x - from.x) / length;
+          assert.ok(
+            !inkAt(marks, x + nudge * normalX, y + nudge * normalY),
+            `there is ink on the square's side at step ${step}`
+          );
+        }
+      }
+    }
   }
 });
 
-test("the spinning state turns each inducer four times faster than the group", () => {
-  for (const step of [10, 30, 50, 68]) {
-    const state = stateAfter(step);
-    const rotations = rotationsAt(state);
-
-    assert.equal(state.index, SPIN_STATE);
-    assert.equal(rotations.inducers, state.angle);
-    assert.ok(Math.abs(rotations.spin + 4 * state.angle) < 1e-12);
-    assert.equal(rotations.quadrilateral, null);
+test("the support ratio is what a survey of the picture says it is", () => {
+  // The artwork names the share of its perimeter that is really drawn. That name is
+  // checked against the picture rather than trusted: walk the sides, count where an
+  // eye would find an edge, and the two agree to three decimals. This holds while the
+  // bites face the square; what the spin does to it is the next test's business.
+  for (const step of [0, 100, 130, 160, 200, 420, 590]) {
+    assert.equal(spinAt(step), 0, `step ${step} is not a square-facing moment`);
+    const survey = surveyPerimeter(step);
+    assert.ok(
+      Math.abs(survey.edge - supportRatioAt(step)) < 2e-3,
+      `at step ${step} the picture shows ${survey.edge}, the artwork claims ${supportRatioAt(step)}`
+    );
+    // And a side never runs through ink: it either bounds a bite or lies in the blank.
+    assert.equal(survey.buried, 0, `a side ran through ink at step ${step}`);
   }
 });
 
-test("the revealing state pulls the square away at twice either rotation", () => {
-  for (const step of [90, 110, 140]) {
-    const state = stateAfter(step);
-    const rotations = rotationsAt(state);
+test("the support lever really empties the sides, and fills them again", () => {
+  const supports = [];
+  for (let step = 0; step < TOTAL_STEPS; step += 1) {
+    supports.push(supportRatioAt(step));
+  }
+  assert.ok(Math.abs(Math.max(...supports) - FULL_SUPPORT) < 1e-12);
+  assert.ok(Math.abs(Math.min(...supports) - SPARSE_SUPPORT) < 1e-12);
+  // At its poorest the picture is mostly blank along the sides, which is the point:
+  // the same four inducers, the same square, and no square to be seen.
+  const poorest = supports.indexOf(Math.min(...supports));
+  const survey = surveyPerimeter(poorest);
+  assert.ok(survey.blank > 0.85, `only ${survey.blank} of the perimeter was blank`);
+  assert.ok(survey.edge < 0.15);
+});
 
-    assert.equal(state.index, REVEAL_STATE);
-    assert.ok(Math.abs(rotations.inducers + state.angle) < 1e-12);
-    assert.ok(Math.abs(rotations.quadrilateral - state.angle) < 1e-12);
-    assert.ok(Math.abs(rotations.quadrilateral - rotations.inducers - 2 * state.angle) < 1e-12);
+test("the spin lever takes the bites off the sides without moving anything else", () => {
+  const spun = [...Array(TOTAL_STEPS).keys()]
+    .reduce((best, step) => (spinAt(step) > spinAt(best) ? step : best), 0);
+  const restingMarks = marksAt(0, SQUARE_HALF);
+  const spunMarks = marksAt(spun, SQUARE_HALF);
+  assert.ok(Math.abs(spinAt(spun) - FULL_SPIN) < 1e-9, `the spin only reached ${spinAt(spun)}`);
+  // The inducers stand where they stood and are the size they were; only their bites
+  // have turned, and the square goes with them.
+  spunMarks.forEach((mark, index) => {
+    assert.ok(Math.abs(mark.x - restingMarks[index].x) < 1e-12);
+    assert.ok(Math.abs(mark.y - restingMarks[index].y) < 1e-12);
+    assert.ok(Math.abs(mark.radius - restingMarks[index].radius) < 1e-12);
+    assert.ok(Math.abs(mark.from - restingMarks[index].from) > 0.1);
+  });
+  // Nothing has been added or taken away: the same ink, the same discs, the same
+  // square. Only the bites face elsewhere, and the contour along the sides is gone —
+  // while the support ratio, which counts ink rather than where it points, has not
+  // moved at all. That gap between the two is the illusion's whole dependence on
+  // alignment, and it is measured here rather than described.
+  assert.equal(supportRatioAt(spun), supportRatioAt(0));
+  const survey = surveyPerimeter(spun);
+  assert.ok(survey.edge < 0.02, `the sides still carried ${survey.edge} of real contour`);
+  assert.ok(surveyPerimeter(0).edge > 0.6, "the resting figure had no contour to lose");
+});
+
+test("the levers take turns, and each one is pulled and put back", () => {
+  assert.equal(PLAN.reduce((sum, phase) => sum + phase.steps, 0), TOTAL_STEPS);
+  for (let step = 0; step < TOTAL_STEPS; step += 1) {
+    const pulling = [
+      supportRatioAt(step) !== FULL_SUPPORT,
+      spinAt(step) !== 0,
+      revealAt(step) !== 0
+    ].filter(Boolean).length;
+    assert.ok(pulling <= 1, `two levers moved at once at step ${step}`);
+    const lever = leverAt(step);
+    assert.ok(lever.amount >= 0 && lever.amount <= 1);
+  }
+  // Each lever returns to where it started, which is what lets the clip loop.
+  for (const reading of [supportRatioAt, spinAt, revealAt]) {
+    assert.ok(Math.abs(reading(TOTAL_STEPS) - reading(0)) < 1e-12);
   }
 });
 
-test("four inducers sit a quarter turn apart, each mouth aimed along its own radius", () => {
-  const corners = inducerCorners(170);
-
-  assert.equal(corners.length, INDUCER_COUNT);
-  for (const corner of corners) {
-    assert.ok(Math.abs(Math.hypot(corner.x, corner.y) - 170) < 1e-9);
-    assert.ok(Math.abs(corner.x - 170 * Math.cos(corner.theta)) < 1e-9);
-    assert.ok(Math.abs(corner.y - 170 * Math.sin(corner.theta)) < 1e-9);
-  }
-  for (let index = 1; index < corners.length; index += 1) {
-    assert.ok(Math.abs(corners[index].theta - corners[index - 1].theta - MAX_ANGLE) < 1e-12);
-  }
+test("the plate rises only in the reveal, and reaches exactly the square", () => {
+  const peak = [...Array(TOTAL_STEPS).keys()]
+    .reduce((best, step) => (revealAt(step) > revealAt(best) ? step : best), 0);
+  assert.ok(revealAt(peak) > 0.999, `the plate only reached ${revealAt(peak)}`);
+  const plate = marksAt(peak, SQUARE_HALF).find((mark) => mark.kind === "plate");
+  assert.ok(plate, "no plate at the peak of the reveal");
+  const corners = squareCorners(SQUARE_HALF);
+  plate.corners.forEach((corner, index) => {
+    assert.ok(Math.abs(corner.x - corners[index].x) < 1e-9);
+    assert.ok(Math.abs(corner.y - corners[index].y) < 1e-9);
+  });
+  // It is the same square the bites imply, so at its full size it covers each bite.
+  assert.equal(plate.corners.length, INDUCER_COUNT);
 });
 
-test("the clip is a whole number of frames and cycles", () => {
-  assert.equal(CYCLE_STEPS % STEPS_PER_FRAME, 0);
-  assert.equal(CYCLE_STEPS / STEPS_PER_FRAME, 81);
-  assert.equal(3 * CYCLE_STEPS / STEPS_PER_FRAME, 243);
+test("the clip is a whole number of frames, ten seconds, and closes", () => {
+  assert.equal(TOTAL_STEPS % STEPS_PER_FRAME, 0);
+  assert.equal(TOTAL_STEPS / STEPS_PER_FRAME, 300);
+  assert.equal(TOTAL_STEPS / STEPS_PER_SECOND, 10);
+  assert.deepEqual(marksAt(TOTAL_STEPS, SQUARE_HALF), marksAt(0, SQUARE_HALF));
 });
 
-test("the clip opens and closes on the resting figure", () => {
-  const first = stateAfter(0);
-  const last = stateAfter((243 - 1) * STEPS_PER_FRAME);
-
-  assert.equal(first.index, SPIN_STATE);
-  assert.equal(first.angle, 0);
-  // The final frame lands in a resting state, which draws the same figure as step 0.
-  assert.ok(isResting(last.index));
+test("the square's side is what the support ratio is a share of", () => {
+  // The radius the artwork asks for is the one that makes the named share true: each
+  // side carries one bite edge from each of its two corners.
+  const side = sideLength(SQUARE_HALF);
+  assert.ok(Math.abs(side - Math.SQRT2 * SQUARE_HALF) < 1e-12);
+  for (const ratio of [0.2, 0.5, FULL_SUPPORT]) {
+    assert.ok(Math.abs((2 * inducerRadius(ratio, SQUARE_HALF)) / side - ratio) < 1e-12);
+  }
 });

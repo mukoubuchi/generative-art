@@ -371,7 +371,7 @@
       "title": "Kanizsa Square",
       "entry": "p5js/artworks/kanizsa-square/index.html",
       "interactivePath": "kanizsa-square/",
-      "description": "Nothing draws the square. Turn the four discs and it disappears.",
+      "description": "Nothing draws the square. Starve it of support, or turn the discs, and it goes.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -379,10 +379,13 @@
       "quoteIds": [
         "goethe-sinne-truegen-nicht"
       ],
+      "thumbnail": {
+        "frame": 15
+      },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/KanizsaSquare.mp4",
-        "durationSeconds": 8.1,
+        "durationSeconds": 10,
         "scale": 2
       }
     },
