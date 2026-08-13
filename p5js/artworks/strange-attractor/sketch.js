@@ -48,16 +48,94 @@ const REVEAL_SECONDS = 9;
 const TOTAL_FRAMES = CLIP_SECONDS * PLAYBACK_FPS;
 const REVEAL_FRAMES = REVEAL_SECONDS * PLAYBACK_FPS;
 
+/**
+ * Half the length given to a dot on an engine that will not paint one of no length. Chosen
+ * by sweeping the offset and comparing the finished cloud against what Chromium draws:
+ *
+ *     half   0.0005   0.005   0.0125   0.025   0.05    0.075   0.1
+ *     mean   -4.27%   -3.83%  -2.82%   -1.57%  +0.95%  +3.79%  +6.42%
+ *     lit    -6.52%   -5.84%  -4.64%   -2.82%  +0.67%  +3.93%  +6.96%
+ *
+ * At 0.05 the picture is within one per cent of Chromium's on both measures, which is closer
+ * than the two engines' antialiasing agrees on anyway. The offset is applied to both ends, so
+ * the dot's centre stays exactly where the orbit put it; that is measured rather than assumed.
+ */
+const DOT_HALF_LENGTH = 0.05;
+
+/**
+ * Whether this engine paints a subpath whose two ends are the same point.
+ *
+ * Asked of the engine rather than inferred from what it calls itself: a user-agent string is
+ * a claim about identity, and what matters here is a capability. Every browser on iOS is
+ * WebKit whatever its name, and WebKit paints nothing for such a subpath -- round cap or not.
+ * All 336,000 points of this orbit are such a subpath, so on an iPhone the whole figure went
+ * down invisibly and a reader was shown the background alone.
+ *
+ * A failure to find out counts as "no". The path taken when the answer is no is painted by
+ * every engine, so the worst it costs an engine that would have managed the other one is a
+ * picture one per cent different; falling the other way would show a blank page to any reader
+ * whose browser refused the question.
+ */
+function paintsZeroLengthSubpaths() {
+  try {
+    const probe = document.createElement("canvas");
+    probe.width = 8;
+    probe.height = 8;
+    const ink = probe.getContext("2d");
+    ink.lineCap = "round";
+    ink.lineWidth = 4;
+    ink.strokeStyle = "#fff";
+    ink.beginPath();
+    ink.moveTo(4, 4);
+    ink.lineTo(4, 4);
+    ink.stroke();
+    const { data } = ink.getImageData(0, 0, probe.width, probe.height);
+    for (let at = 0; at < data.length; at += 4) {
+      if (data[at] > 0) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+const PAINTS_POINTS = paintsZeroLengthSubpaths();
+
 const P5 = window.p5;
 
 new P5((p) => {
   let context;
 
-  /** A dot: a zero-length round-capped stroke, which is what a point is on a 2D canvas. */
+  /**
+   * A dot: a round-capped stroke of no length, which is what a point is on a 2D canvas —
+   * except on an engine that will not paint one, where it is given the least length that
+   * makes it appear.
+   *
+   * The two are not interchangeable, and the difference is not the one it looks like. A
+   * stroke thinner than a pixel is not drawn as a thin shape: Chromium draws it as a
+   * one-pixel line whose alpha is scaled by the width it was asked for, so what it lays down
+   * goes with the diameter. Filling a circle instead lays down something that goes with the
+   * area, and at a radius of 0.36 that is less than half as much ink — a visibly darker
+   * cloud, which is why filling a circle is not what happens here. (Measured: widths 0.36,
+   * 0.72 and 1.00 leave alpha 71, 145 and 202, in proportion to the widths and not to their
+   * squares. The thin stroke is not being rounded up to a whole pixel; if it were, 0.72 and
+   * 1.00 would leave the same mark, and they do not.)
+   *
+   * So an engine that paints the point keeps making exactly the calls it always made. Its
+   * picture is unchanged by construction rather than by measurement, which matters because
+   * the published clip was rendered from it.
+   */
   function dot(x, y) {
     context.beginPath();
-    context.moveTo(x, y);
-    context.lineTo(x, y);
+    if (PAINTS_POINTS) {
+      context.moveTo(x, y);
+      context.lineTo(x, y);
+    } else {
+      context.moveTo(x - DOT_HALF_LENGTH, y);
+      context.lineTo(x + DOT_HALF_LENGTH, y);
+    }
     context.stroke();
   }
 
@@ -142,6 +220,17 @@ new P5((p) => {
   }
 
   p.setup = () => {
+    // An export has to come off the path the published clip came off. The other path draws a
+    // picture one per cent different, which is right for a reader and wrong for an artifact
+    // that is supposed to be the same file as before -- and it would be wrong silently, since
+    // a clip that changed by one per cent looks exactly like a clip that did not. So a
+    // capture on an engine that would take the other path stops instead of writing one.
+    if (CAPTURE_MODE && !PAINTS_POINTS) {
+      throw new Error(
+        "This engine does not paint a zero-length subpath, so a capture taken on it would not"
+        + " be the picture the clip was rendered from. Render with an engine that does."
+      );
+    }
     p.createCanvas(OUTPUT_WIDTH, OUTPUT_HEIGHT).parent("artwork");
     // Pinned only while capturing, and only after the canvas exists. Before it, p5 has
     // nothing to set the density on and the call is quietly ignored; on a Retina screen
