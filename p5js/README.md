@@ -692,11 +692,11 @@ The gallery's motion is adapted from yui540's css-animations, as described above
 
 ### Deploying
 
-`.github/workflows/pages.yml` builds the site and, only when its `deploy` input is explicitly enabled, publishes it with `actions/deploy-pages`. It also builds on any pull request that touches `p5js/`, without deploying, which is what catches a broken gallery before anyone is looking at one.
+`.github/workflows/pages.yml` builds the site and, only when its `deploy` input is explicitly enabled, publishes it with `actions/deploy-pages`. It also builds without deploying on a push to `main` and on a pull request, whenever either touches `p5js/`, which is what catches a broken gallery before anyone is looking at one. Every check that needs a browser runs there — the unit tests are browser-free by design — so a check that only happened when somebody remembered to ask for it would be a check that one day did not happen.
 
 The site is uploaded as a Pages artifact rather than committed to a branch, because everything in it is generated: an index built from the manifest, thumbnails, and a copy of the library. Committing that output would put rendered images in the history and leave the gallery able to disagree with the manifest it claims to come from.
 
-GitHub Pages is not enabled on this repository, and the workflow cannot enable it. Turning it on, and making the repository public, are the owner's decisions.
+GitHub Pages is enabled and served from this workflow, and the repository is public. Publishing is still a separate decision from committing: the deploy job is gated on an input, and an input exists only when the workflow is started by hand, so a push builds the site and checks it without putting anything in front of a reader.
 
 ### What the gallery does without JavaScript, and without motion
 
