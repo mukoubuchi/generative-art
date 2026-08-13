@@ -60,6 +60,14 @@ function foldScenario(visit) {
  * uniform damping imposes on every mode at once.
  */
 
+test("the fold the tests watch is the scenario the artwork runs", () => {
+  // foldScenario repeats the capture's choreography so the tests can watch it step by
+  // step, which networkAfter cannot show. A second copy of a script is free to drift
+  // from the first: change scenario.js and every test built on this helper would keep
+  // measuring the old choreography, in green. So the copy is held to the original.
+  assert.deepEqual(foldScenario(() => {}), networkAfter(TOTAL_STEPS, OPTIONS));
+});
+
 test("five bobs on a pentagon, staked from three radii out, at a true equilibrium", () => {
   const network = createNetwork(OPTIONS);
   assert.equal(network.bobs.length, BOB_COUNT);
