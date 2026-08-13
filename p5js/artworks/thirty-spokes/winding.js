@@ -15,9 +15,13 @@ import { mulberry32 } from "../shared/random.js";
  * hub, because neither can carry a point inside a radius it started outside of. The curves
  * are stirred until they are unrecognisable and their winding numbers do not move.
  *
- * Nothing here declares which loop winds how often. The loops are seeded noise; the number
- * is measured off each one, twice, by two calculations that share no arithmetic — signed
- * ray crossings, which is integer counting, and the sum of turned angle, which is not.
+ * Nothing here declares which loop winds how often. The seed draws each loop a direction
+ * and a number of laps to make about its own centre, but that centre drifts as the curve
+ * is drawn, so a loop can lay its second lap over ground its first lap missed — and one of
+ * these seven goes round twice while the hub is caught in only one of its laps. Its number
+ * is one, which is neither its lap count nor nought. The number is measured off each curve,
+ * twice, by two calculations that share no arithmetic: signed ray crossings, which is
+ * integer counting, and the sum of turned angle, which is not.
  */
 
 const FULL_TURN = Math.PI * 2;
@@ -42,10 +46,13 @@ export const BREATHE_LOBES = 3;
 /**
  * The seed is a design choice like a palette. It was searched for one that hands back
  * loops of five different winding numbers — minus two through two, the nought among them
- * — while keeping every one of them on the canvas for the whole clip. What the numbers
- * are was not decided here; the search only asked for a spread, and then measured it.
+ * — while keeping every one of them inside the rim for the whole clip, and for one loop
+ * in particular: a curve drawn with two laps whose measured number is one, which is only
+ * possible because the hub falls inside one of its laps and outside the other. What the
+ * numbers are was not decided here; the search asked for a spread and for that one
+ * disagreement, and then measured what it got.
  */
-export const LOOP_SEED = 42;
+export const LOOP_SEED = 389;
 export const LOOP_COUNT = 7;
 
 /**
@@ -115,11 +122,24 @@ export function carry(point, step) {
 }
 
 /**
+ * How far a loop's centre may wander while the curve is drawn, in logical pixels.
+ *
+ * The wander makes exactly one cycle over the whole curve however many laps that is, so a
+ * two-lap loop lays its second lap over different ground from its first. That is what
+ * keeps the winding number out of the generator's hands: with a fixed centre the curve is
+ * a star about that centre, it encircles every interior point exactly once per lap, and
+ * the winding number could only ever be the lap count or nought — the seed would be
+ * declaring the answer. A wandering centre lets the hub fall inside one lap and outside
+ * the other, and then a loop that goes round twice is caught only once.
+ */
+export const WANDER_LIMIT = 130;
+
+/**
  * The loops, as seeded noise. Each is a closed curve traced by a radius that wanders as
- * it goes round, about a centre that is itself off the middle — so how many times a loop
- * encircles the hub is an accident of its seed, not a decision. Loops that touch the hub
- * are discarded rather than repaired, because a loop through the hub has no winding
- * number to be invariant.
+ * it goes round, about a centre that is itself off the middle and drifting — so how many
+ * times a loop encircles the hub is an accident of its seed, not a decision. Loops that
+ * touch the hub are discarded rather than repaired, because a loop through the hub has no
+ * winding number to be invariant.
  */
 export function seededLoops(seed = LOOP_SEED, count = LOOP_COUNT) {
   const random = mulberry32(seed);
@@ -133,11 +153,20 @@ export function seededLoops(seed = LOOP_SEED, count = LOOP_COUNT) {
     const bearing = random() * FULL_TURN;
     const centre = { x: offset * Math.cos(bearing), y: offset * Math.sin(bearing) };
     const base = 74 + random() * 118;
+    // The wobble's harmonics are counted over the whole curve rather than over one lap:
+    // each mode turns a whole number of times between the start and the end, which is what
+    // closes the curve. Per lap that whole number need not be whole, and for a two-lap loop
+    // two of the three are halves — so the second lap sets off with those modes inverted
+    // and takes a different path. Harmonics counted per lap would give the radius a period
+    // of one lap, and a two-lap loop would retrace its first lap exactly: one closed curve
+    // drawn twice, whose winding number could then only ever be its lap count.
     const modes = Array.from({ length: 3 }, (unused, index) => ({
-      order: index + 2,
+      order: (turns + index + 1) / turns,
       size: (random() - 0.5) * base * 0.3,
       phase: random() * FULL_TURN
     }));
+    const wanderSize = random() * WANDER_LIMIT;
+    const wanderPhase = random() * FULL_TURN;
     const samples = 240 * turns;
     const points = Array.from({ length: samples }, (unused, index) => {
       const along = index / samples;
@@ -147,9 +176,15 @@ export function seededLoops(seed = LOOP_SEED, count = LOOP_COUNT) {
         0
       );
       const radius = base + wobble;
-      return { x: centre.x + radius * Math.cos(sweep), y: centre.y + radius * Math.sin(sweep) };
+      // One cycle over the whole curve, so it comes back to where it began and the curve
+      // closes, but a second lap is drawn around a centre that has moved.
+      const wander = FULL_TURN * along + wanderPhase;
+      return {
+        x: centre.x + wanderSize * Math.cos(wander) + radius * Math.cos(sweep),
+        y: centre.y + wanderSize * Math.sin(wander) + radius * Math.sin(sweep)
+      };
     });
-    if (clearsHub(points) && withinReach(points)) {
+    if (clearsHub(points) && withinReach(points) && spansEnough(points)) {
       loops.push(points);
     }
   }
@@ -159,6 +194,31 @@ export function seededLoops(seed = LOOP_SEED, count = LOOP_COUNT) {
 /** Does every point of the loop stand clear of the hub, with room to spare? */
 export function clearsHub(points, margin = 12) {
   return points.every((point) => Math.hypot(point.x, point.y) > HUB_RADIUS + margin);
+}
+
+/**
+ * How wide a loop has to be, corner to corner, to be worth drawing.
+ *
+ * The wander turns at the same rate as a one-lap sweep, so when the two run together they
+ * can cancel: the centre slides forward under the point as fast as the point goes round,
+ * and the curve comes out as a scribble a few tens of pixels across. Such a loop has a
+ * perfectly good winding number and says nothing to anyone, so it is discarded like the
+ * ones that foul the hub.
+ */
+export const SPAN_FLOOR = 150;
+
+function spansEnough(points) {
+  let left = Infinity;
+  let right = -Infinity;
+  let top = Infinity;
+  let bottom = -Infinity;
+  for (const point of points) {
+    left = Math.min(left, point.x);
+    right = Math.max(right, point.x);
+    top = Math.min(top, point.y);
+    bottom = Math.max(bottom, point.y);
+  }
+  return Math.hypot(right - left, bottom - top) > SPAN_FLOOR;
 }
 
 /**

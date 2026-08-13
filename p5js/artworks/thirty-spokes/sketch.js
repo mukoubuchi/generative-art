@@ -19,9 +19,14 @@ import {
  *
  * Every loop is coloured by its own winding number, which is measured rather than
  * assigned. The colours therefore never change, however far the loops are dragged: warm
- * for loops that go round one way, cool for the other, deeper for going round twice, and
- * bare white for the one loop that does not enclose the hub at all — the only one that
- * could be pulled off the wheel, if anything were pulling.
+ * for loops caught one way round, cool for the other, deeper for the ones caught twice,
+ * and bare white for the two that do not enclose the hub at all — the only ones that could
+ * be pulled off the wheel, if anything were pulling.
+ *
+ * Being caught twice is not the same as going round twice, and one loop here shows the
+ * difference: it is drawn as two laps about a centre that drifts, so it crosses itself
+ * once and the hub sits inside one of its lobes and outside the other. It is warm rather
+ * than deep, because what is measured is the hole, not the drawing of the curve.
  */
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
@@ -43,8 +48,8 @@ const RIM = [126, 110, 90];
 
 /**
  * Colour by winding number. Sign chooses the family — warm one way round, cool the other
- * — and going round twice takes the deeper member of that family. Nought is left white,
- * because a loop that encloses nothing is the one the wheel has no hold over.
+ * — and being caught twice takes the deeper member of that family. Nought is left white,
+ * because a loop that encloses nothing is one the wheel has no hold over.
  */
 const WINDINGS = new Map([
   [0, [236, 232, 224]],
