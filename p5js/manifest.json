@@ -14,6 +14,10 @@
       "entry": "p5js/artworks/koch-curves/index.html",
       "interactivePath": "koch-curves/",
       "description": "One angled substitution repeats along every side of a square.",
+      "homage": {
+        "after": "Helge von Koch",
+        "year": 1904
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -60,6 +64,10 @@
       "entry": "p5js/artworks/sierpinski-gasket/index.html",
       "interactivePath": "sierpinski-gasket/",
       "description": "Three triangles ring every parent; random rain lands nowhere else.",
+      "homage": {
+        "after": "Wacław Sierpiński",
+        "year": 1915
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -372,6 +380,10 @@
       "entry": "p5js/artworks/kanizsa-square/index.html",
       "interactivePath": "kanizsa-square/",
       "description": "Nothing draws the square. Turn the mouths off its sides and it goes.",
+      "homage": {
+        "after": "Gaetano Kanizsa",
+        "year": 1955
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -418,6 +430,10 @@
       "entry": "p5js/artworks/necker-cube/index.html",
       "interactivePath": "necker-cube/",
       "description": "One shadow, two worlds: the same cube turning either way.",
+      "homage": {
+        "after": "Louis Albert Necker",
+        "year": 1832
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -441,6 +457,10 @@
       "entry": "p5js/artworks/harriss-spiral/index.html",
       "interactivePath": "harriss-spiral/",
       "description": "Every branch is the whole figure again; watch it happen.",
+      "homage": {
+        "after": "Edmund Harriss",
+        "year": 2015
+      },
       "canvas": {
         "width": 795,
         "height": 600
@@ -464,6 +484,10 @@
       "entry": "p5js/artworks/reaction-diffusion-coral/index.html",
       "interactivePath": "reaction-diffusion-coral/",
       "description": "Two chemicals on a 420-square grid, 1200 steps, one seed.",
+      "homage": {
+        "after": "Alan Turing",
+        "year": 1952
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -483,6 +507,10 @@
       "entry": "p5js/artworks/truchet-tides/index.html",
       "interactivePath": "truchet-tides/",
       "description": "Every tile is one of two quarter-turns. The currents are what they add up to.",
+      "homage": {
+        "after": "Sébastien Truchet",
+        "year": 1704
+      },
       "canvas": {
         "width": 960,
         "height": 640
@@ -502,6 +530,10 @@
       "entry": "p5js/artworks/voronoi-bloom/index.html",
       "interactivePath": "voronoi-bloom/",
       "description": "Forty-two sites. Every boundary is where two of them agree.",
+      "homage": {
+        "after": "Georgy Voronoy",
+        "year": 1908
+      },
       "canvas": {
         "width": 800,
         "height": 640
@@ -540,6 +572,9 @@
       "entry": "p5js/artworks/strange-attractor/index.html",
       "interactivePath": "strange-attractor/",
       "description": "One orbit of a de Jong map, plotted a third of a million times.",
+      "homage": {
+        "after": "Peter de Jong"
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -559,6 +594,9 @@
       "entry": "p5js/artworks/moebius-band/index.html",
       "interactivePath": "moebius-band/",
       "description": "A half-twisted band a traveller must lap twice to come home.",
+      "homage": {
+        "after": "August Ferdinand Möbius"
+      },
       "canvas": {
         "width": 800,
         "height": 600
@@ -582,6 +620,10 @@
       "entry": "p5js/artworks/ulam-spiral/index.html",
       "interactivePath": "ulam-spiral/",
       "description": "The primes alone on a number spiral, crowding onto diagonals.",
+      "homage": {
+        "after": "Stanisław Ulam",
+        "year": 1963
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -601,6 +643,10 @@
       "entry": "p5js/artworks/hilbert-curve/index.html",
       "interactivePath": "hilbert-curve/",
       "description": "One unbroken line eased through six degrees of filling a square.",
+      "homage": {
+        "after": "David Hilbert",
+        "year": 1891
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -624,6 +670,10 @@
       "entry": "p5js/artworks/cafe-wall/index.html",
       "interactivePath": "cafe-wall/",
       "description": "Horizontal courses bowed into wedges by an offset and a grey.",
+      "homage": {
+        "after": "Richard Gregory",
+        "year": 1979
+      },
       "canvas": {
         "width": 960,
         "height": 640
@@ -647,6 +697,10 @@
       "entry": "p5js/artworks/dla-frost/index.html",
       "interactivePath": "dla-frost/",
       "description": "Six thousand walkers frozen where they first touched, wearing their age as light.",
+      "homage": {
+        "after": "Witten and Sander",
+        "year": 1981
+      },
       "canvas": {
         "width": 680,
         "height": 680
@@ -705,6 +759,10 @@
       "entry": "p5js/artworks/lorenz-ribbon/index.html",
       "interactivePath": "lorenz-ribbon/",
       "description": "Two orbits a breath apart, run until they part for good.",
+      "homage": {
+        "after": "Edward Lorenz",
+        "year": 1963
+      },
       "canvas": {
         "width": 800,
         "height": 600

@@ -473,6 +473,29 @@ body {
   text-transform: uppercase;
 }
 
+/*
+ * The homage badge, on the head of the frame opposite the moving badge. Everything about
+ * its box is the moving badge's, down to the same dark plate, because the two are the same
+ * kind of thing — a word about the picture, set on the picture — and giving one of them a
+ * treatment of its own would say they were not.
+ *
+ * Only the corner differs, and it differs for a reason that outlasts any particular card:
+ * the foot of the frame belongs to the legends the interactive works print, and the trailing
+ * head corner is taken. This is the one corner nothing else can grow into.
+ */
+.card__homage {
+  position: absolute;
+  inset-block-start: 0.6rem;
+  inset-inline-start: 0.6rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.3rem;
+  background: rgb(20 21 26 / 72%);
+  color: var(--ink-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .card__orbit {
   position: relative;
   width: 0.86em;
@@ -627,6 +650,24 @@ body {
     transform: scale(1, 1);
     opacity: 1;
   }
+}
+
+/*
+ * Whose figure this is, directly under its name, because that is where a reader looks to
+ * find out what they are looking at — and because the attribution belongs to the title
+ * rather than to the description, which says what the program does and not whose idea it
+ * was.
+ *
+ * Set in the faintest of the three inks and not in italic. Italic on this page means a
+ * quotation: it carries the aphorism in every card, and an attribution wearing the same
+ * face would read as one more thing being quoted. This is a fact about the work, quietly
+ * given.
+ */
+.card__after {
+  margin: 0.2rem 0 0;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
 }
 
 .card__description {

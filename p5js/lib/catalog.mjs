@@ -108,6 +108,25 @@ export function validateManifest(manifest) {
         throw new Error(`${artwork.id} has a thumbnail frame outside its own clip.`);
       }
     }
+    // Optional: whose figure a work is drawing, for the works that are homages rather than
+    // inventions. Validated rather than trusted because it is an attribution — the one kind
+    // of line on this site that is worse wrong than absent. The name is required; the year
+    // is not, since for some of these figures the date depends on whether discovery, paper
+    // or publication is being counted, and a year given more confidently than it is known
+    // would defeat the purpose of printing one.
+    if (artwork.homage !== undefined) {
+      if (typeof artwork.homage.after !== "string" || artwork.homage.after.trim() === "") {
+        throw new Error(`${artwork.id} pays homage to nobody in particular.`);
+      }
+      if (
+        artwork.homage.year !== undefined
+        && (!Number.isInteger(artwork.homage.year)
+          || artwork.homage.year < 0
+          || artwork.homage.year > new Date().getUTCFullYear())
+      ) {
+        throw new Error(`${artwork.id} has an impossible homage year.`);
+      }
+    }
   }
 }
 
