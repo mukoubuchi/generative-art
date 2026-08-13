@@ -89,6 +89,22 @@ export function renderArtworkNav(manifest, artwork) {
     </nav>`;
 }
 
+/**
+ * The size the artwork was drawn at, handed to the page's stylesheet.
+ *
+ * The stylesheet has to know it in order to hold the canvas inside a screen narrower than
+ * the picture without changing its shape, and it cannot read the manifest. It cannot take
+ * the numbers off the canvas either: what a canvas reports as its own size is its backing
+ * store, which is two or three times this on a dense display. So the one place that does
+ * know says so, per page, and `artworks/shared.css` explains what it does with them.
+ *
+ * Both or neither: the stylesheet's rule names both properties in its selector, so a page
+ * that carried one of them would be left alone rather than half fitted.
+ */
+export function canvasSizeProperties(artwork) {
+  return `--art-w: ${artwork.canvas.width}; --art-h: ${artwork.canvas.height}`;
+}
+
 
 const ESCAPES = new Map([
   ["&", "&amp;"],

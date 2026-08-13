@@ -13,6 +13,64 @@ canvas {
 }
 
 /*
+ * A definite height for the canvas to be measured against. A percentage ceiling resolved
+ * against an automatic height is no ceiling at all, so without this the fit below could
+ * hold a canvas inside the width of a phone and let it run off the bottom.
+ *
+ * Nothing moves. The canvas still starts in the top-left corner of the viewport, which is
+ * the corner the fixed plate above is placed over; centring it would take every artwork off
+ * that corner on a desktop, where nothing was wrong.
+ */
+main {
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * The canvas is drawn at the size its manifest entry gives it, and a phone is narrower than
+ * every one of them. Left alone the picture is not merely overflowing but gone: the page
+ * cannot scroll -- `overflow: hidden`, above -- so a reader on a 390-pixel screen was shown
+ * the top-left corner of a 680-pixel work and no way to reach the rest. Measured across
+ * four works, between 39 and 56 per cent of the picture was on screen.
+ *
+ * So the canvas is allowed to shrink, and told what shape to hold while it shrinks. Both
+ * halves are needed, and each is a way of getting this wrong:
+ *
+ *   - A ceiling on the width alone squashes the picture. p5 writes `width` AND `height`
+ *     into the element's own style attribute, so clamping one leaves the other at its full
+ *     number and the artwork comes out stretched. Both axes have to be spoken for.
+ *   - What they fall back to cannot be the element's natural size. A canvas's natural size
+ *     is its backing store, which on a dense display is two or three times the size it was
+ *     drawn at, so `width: auto` by itself shows every artwork at double size on a Retina
+ *     desktop -- a worse fault than the one being fixed, and invisible on the machine most
+ *     likely to be doing the fixing. The shape comes from `aspect-ratio` and the ceiling
+ *     from the logical size, and both are stated in pixels that are nowhere in this file.
+ *   - Fitting the picture inside a box of the wrong shape -- `object-fit` -- would leave
+ *     the box the wrong shape. p5 maps the pointer onto the element's border box, so the
+ *     eighteen artworks that answer to a pointer would answer in the wrong place. The box
+ *     itself has to be right, not just what is painted in it.
+ *
+ * The two numbers arrive on the element, written there by the site build out of the
+ * manifest, which is the one place a canvas's size is stated. Writing them here, or into
+ * the pages, would be a second copy of thirty-seven pairs of numbers.
+ *
+ * Which is why the rule asks for them by name before it applies. A declaration that refers
+ * to a custom property which does not exist is not skipped in favour of the one underneath
+ * it: it is invalid at computed-value time, and the property takes its initial value --
+ * `auto` for a width, `none` for a maximum. That is exactly the doubling described above,
+ * arrived at silently. A page opened straight out of the repository has had no build and
+ * carries no numbers; the selector then matches nothing, all four declarations are absent
+ * together, and the page is what it was before any of this.
+ */
+#artwork[style*="--art-w:"][style*="--art-h:"] canvas {
+  width: auto !important;
+  height: auto !important;
+  aspect-ratio: var(--art-w) / var(--art-h);
+  max-width: min(100%, calc(var(--art-w) * 1px));
+  max-height: min(100%, calc(var(--art-h) * 1px));
+}
+
+/*
  * The way back to the gallery and on to the source. The markup is added to each page by the
  * site build, so it is absent when a page is opened straight out of the repository — the
  * addresses come from the manifest, and inventing them a second time here is how two links

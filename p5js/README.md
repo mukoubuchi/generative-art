@@ -546,6 +546,22 @@ The index has no hand-written list of artworks. It is generated from `manifest.j
 
 Every frame is the same shape whatever its artwork's canvas is, and the picture is fitted inside rather than cropped to it. The canvases run from 2:1 to square, so sizing each frame to its own artwork left the rows visibly ragged, and cropping them to a common shape would cut the apex off a triangle and the ends off an arc. Matting each work on a common mount is what a gallery does with prints of different sizes.
 
+### Fitting an artwork to the screen it is opened on
+
+Every canvas is a laptop's size, the smallest 680 pixels across, and an artwork page cannot scroll — it is one picture, held at `overflow: hidden`. A phone therefore showed not a smaller artwork but the top-left corner of a full-sized one, with no way to reach the rest: measured on a 390-pixel screen, between 39 and 56 per cent of the picture was on it.
+
+The canvas is now allowed to shrink, and told what shape to keep while it shrinks. The shape and the ceiling are the size the artwork is drawn at, so the site build writes that pair onto each page it copies, out of the manifest, in the same pass that adds the navigation. The stylesheet cannot know it otherwise: it cannot read the manifest, and it cannot ask the canvas, because what a canvas reports as its own size is its backing store — two or three times the logical size on a dense display.
+
+That is also why the rule asks for both numbers by name before it applies. A declaration referring to a custom property that does not exist is not skipped in favour of the one beneath it: it is invalid at computed-value time and takes the property's initial value, which for a width is `auto`. An unguarded rule on a page carrying no numbers would therefore size every canvas from its backing store — the artwork at twice its size on a Retina laptop, three times on a phone — which is a worse fault than the one being fixed and invisible on the machine most likely to be doing the fixing. Guarded, a page opened straight out of the repository, where no build has run, is exactly what it was before.
+
+Two shortcuts were measured and rejected. A ceiling on the width alone squashes the picture, because p5 writes both a width and a height onto the element and clamping one leaves the other at its full number. And `object-fit` fixes what is painted without fixing the box it is painted in: p5 maps the pointer onto that box, so the eighteen artworks that answer to a pointer would answer in the wrong place while looking perfectly well. Nothing about a laptop changes — every artwork is the same size in the same corner it has always been.
+
+```bash
+npm run smoke:phone
+```
+
+Opens all 37 artworks at 390 by 664 at three times density and at 1440 by 900 at twice, and asks that each be wholly on screen and its own shape on the first, and unchanged on the second. It puts a pointer on a known part of a shrunk canvas and asks the artwork where it thinks the pointer is. And it makes the measure fail three ways before believing it: a page with its size taken away, a page given half of it back, and a canvas left to take its natural size, which comes back at 1360 pixels where 680 were drawn. It builds a site of its own into a temporary directory, because the size is added to a page when it is built and a page in the repository has not been told one.
+
 ### Telling the reader what there is to do
 
 Eight artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:

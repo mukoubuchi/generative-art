@@ -70,6 +70,12 @@ jobs:
       - name: Check the artworks on a dense display
         run: npm run smoke --prefix p5js
 
+      # Builds a site of its own into a temporary directory, so it neither depends on the
+      # build below nor stands in for it: what it opens has to be a page a reader gets,
+      # and the size a page is fitted to is added to it when it is built.
+      - name: Check the gallery on a phone
+        run: npm run smoke:phone --prefix p5js
+
       - name: Build the site
         run: npm run site --prefix p5js -- --clean
 

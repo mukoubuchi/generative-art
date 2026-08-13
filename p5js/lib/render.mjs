@@ -47,13 +47,16 @@ function serveFile(response, path) {
  */
 const VENDOR_P5_PATH = "/p5js/vendor/p5.min.js";
 
-function resolveRequestPath(requestUrl) {
+function resolveRequestPath(requestUrl, root) {
   const pathname = decodeURIComponent(new URL(requestUrl, "http://localhost").pathname);
-  if (pathname === VENDOR_P5_PATH) {
+  // Only over the repository. A built site carries its own copy of the library at this
+  // path, and serving node_modules in its place would quietly excuse a build that had
+  // failed to put one there.
+  if (root === REPOSITORY_ROOT && pathname === VENDOR_P5_PATH) {
     return resolve(P5JS_DIRECTORY, "node_modules/p5/lib/p5.min.js");
   }
-  const requestPath = resolve(REPOSITORY_ROOT, `.${pathname}`);
-  if (!requestPath.startsWith(`${REPOSITORY_ROOT}${sep}`)) {
+  const requestPath = resolve(root, `.${pathname}`);
+  if (!requestPath.startsWith(`${root}${sep}`)) {
     return undefined;
   }
   return requestPath;
@@ -64,10 +67,14 @@ function resolveRequestPath(requestUrl) {
  * not in the tree, so the vendor path is served out of node_modules. Exported so that a
  * check which has to open real pages can use the same server the renderer does rather than
  * keep a second copy of these rules.
+ *
+ * A root can be given instead, for a check that has to open the pages as a reader gets
+ * them: the site build adds things to the pages it copies, and a page taken from the
+ * repository is a page those additions have not been made to.
  */
-export async function startStaticServer() {
+export async function startStaticServer(root = REPOSITORY_ROOT) {
   const server = createServer((request, response) => {
-    const requestPath = resolveRequestPath(request.url ?? "/");
+    const requestPath = resolveRequestPath(request.url ?? "/", root);
     if (!requestPath) {
       response.statusCode = 403;
       response.end("Forbidden");
