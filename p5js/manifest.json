@@ -786,6 +786,25 @@
         "artifact": "exports/p5js/NoCommonMeasure.png",
         "scale": 2
       }
+    },
+    {
+      "id": "turn-it-and-turn-it",
+      "title": "Turn It and Turn It",
+      "entry": "p5js/artworks/turn-it-and-turn-it/index.html",
+      "interactivePath": "turn-it-and-turn-it/",
+      "description": "Every ring is one more turn, and the gaps are only ever three lengths.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "avot-hafokh-bah"
+      ],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/TurnItAndTurnIt.png",
+        "scale": 2
+      }
     }
   ]
 }

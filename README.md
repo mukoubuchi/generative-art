@@ -56,6 +56,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Platonic Duals](p5js/artworks/platonic-duals/) | Two solids trading places, each one's face centres already the other's corners, rendered as an MP4 |
 | [Thirty Spokes](p5js/artworks/thirty-spokes/) | Loops stirred past recognition, each still caught the same number of times on one hole, rendered as an MP4 |
 | [No Common Measure](p5js/artworks/no-common-measure/) | Curves strung with whole numbers crowding towards the one that stays bare, rendered as a static PNG |
+| [Turn It and Turn It](p5js/artworks/turn-it-and-turn-it/) | Every ring one more turn, and the gaps between the marks only ever three lengths, rendered as a static PNG |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 
