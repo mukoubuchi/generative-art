@@ -194,7 +194,7 @@
       "title": "Toggle Color Ball",
       "entry": "p5js/artworks/toggle-color-ball/index.html",
       "interactivePath": "toggle-color-ball/",
-      "description": "Four discs trade places, and the colour in front changes with them.",
+      "description": "One yin, one yang: whichever disc is nearest comes forward.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -202,10 +202,13 @@
       "quoteIds": [
         "yijing-yin-yang-dao"
       ],
+      "thumbnail": {
+        "frame": 60
+      },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/ToggleColorBall.mp4",
-        "durationSeconds": 6,
+        "durationSeconds": 10,
         "scale": 2
       }
     },
