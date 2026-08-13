@@ -42,6 +42,8 @@ const GROUND = [10, 12, 20];
 const RISING = [[74, 58, 96], [232, 176, 92]];
 const FALLING = [[46, 74, 92], [130, 216, 214]];
 const GUIDE = [120, 130, 160];
+/** Half a pixel of paint, so shapes that meet exactly do not show the ground between. */
+const SEAM_CLOSE = 1 + 0.5 / TRIANGLE_RADIUS;
 
 function mix(from, to, amount) {
   return [
@@ -83,7 +85,12 @@ new P5((p) => {
       p.fill(red, green, blue);
       p.beginShape();
       for (const vertex of triangleShape(TRIANGLE_RADIUS, placed.rotation)) {
-        p.vertex(placed.x + vertex.x, placed.y + vertex.y);
+        // Drawn a whisker larger than it is. The six meet exactly, and two shapes that
+        // meet exactly leave an antialiased hairline between them — six of which meet
+        // at the centre and leave a speck of the ground showing through the middle of
+        // the figure the artwork is about. The geometry is untouched; only the paint
+        // overlaps, by about half a pixel.
+        p.vertex(placed.x + vertex.x * SEAM_CLOSE, placed.y + vertex.y * SEAM_CLOSE);
       }
       p.endShape(p.CLOSE);
     });
