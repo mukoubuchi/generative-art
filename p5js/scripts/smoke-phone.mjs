@@ -406,6 +406,25 @@ try {
   if (firstLook === "") {
     failures.push("nothing turns the head on a phone, so the model would face front for ever");
   }
+  // The gallery's own page is measured while it is open, for the one thing the artwork pages
+  // had wrong. It does not have it wrong -- it is written in clamps and a minimum-width grid,
+  // with no width query anywhere -- so this is a guard on something already true rather than
+  // a repair, and it costs one reading on a page that is loaded regardless.
+  const indexWidth = await touched.page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth
+  }));
+  note(
+    `${"the gallery index".padEnd(26)} ${indexWidth.scroll} wide in ${indexWidth.client}:`
+    + ` ${indexWidth.scroll <= indexWidth.client ? "no sideways overflow" : "OVERFLOWS SIDEWAYS"}`
+  );
+  if (indexWidth.scroll > indexWidth.client) {
+    failures.push(
+      `the gallery index runs ${indexWidth.scroll - indexWidth.client} pixels off the side of a`
+      + ` ${indexWidth.client}-pixel screen, so a reader has to drag it about to read the cards`
+    );
+  }
+
   if (secondLook === firstLook) {
     failures.push(
       `the head on a phone holds one direction: it read ${firstLook || "nothing"} throughout`
