@@ -1,174 +1,220 @@
 /**
  * A Kanizsa square, built so that the square cannot be drawn.
  *
- * Everything this module emits is a wedge — a disc with a bite taken out of it. There
- * is no line in its vocabulary and no polygon, so the sketch upstairs has nothing it
- * could stroke an edge with, and the square a viewer sees is guaranteed to be the
- * viewer's. The only exception is announced: at the end of the clip the figure admits
- * what it has been implying and a real plate is drawn, which is the one mark in the
- * whole artwork that is not a wedge.
+ * Everything this module emits is a wedge — a disc with a bite taken out of it. There is
+ * no line in its vocabulary and no polygon, so the sketch upstairs has nothing it could
+ * stroke an edge with, and the square a viewer sees along the sides is guaranteed to be
+ * the viewer's own. What is genuinely on the canvas can be stated exactly: each bite's
+ * two straight edges lie along the two sides of the square that meet at that corner, so
+ * every side carries a real segment at each end and nothing at all in between.
  *
- * What is genuinely on the canvas can be stated exactly. Each inducer's bite has two
- * straight edges, and they lie along the two sides of the square that meet at that
- * corner, so every side carries a real segment at each end and nothing at all in
- * between. The share that is real is the support ratio, the quantity this figure's
- * strength is known to hang on, and here it is a lever: the discs grow and shrink while
- * the square stays exactly where it is, so the edges a viewer supplies come and go
- * while nothing that could be called an edge is ever added or removed.
+ * The one exception is announced, and it is the original's ending. In the revealing state
+ * the mouths are filled in — the inducers become plain discs, and the square they were
+ * implying is gone unless something draws it — and a real quadrilateral is drawn through
+ * the same four centres, turning away from the discs as it goes. It arrives in its own
+ * kind, so a reader of this module can see that it is the only thing here that is not a
+ * wedge.
+ *
+ * The motion is the original's four-state machine and is not parameterised: a state ends
+ * when its angle passes a quarter turn, the two moving states ease in and out, and the
+ * two resting states pass the same quarter turn four times faster. The clip's length is
+ * therefore measured from the machine rather than chosen.
  */
 
-export const INDUCER_COUNT = 4;
-/** Simulation steps per second; the 30 fps clip samples every second step. */
+export const STATE_COUNT = 4;
+/** Processing's default frame rate, which is what the original's step sizes were tuned to. */
 export const STEPS_PER_SECOND = 60;
-/** The whole clip: ten seconds of the three levers, with a rest between each. */
-export const TOTAL_STEPS = 600;
+export const INDUCER_COUNT = 4;
 
-const QUARTER_TURN = Math.PI / 2;
+export const MAX_ANGLE = Math.PI / 2;
 const FULL_TURN = Math.PI * 2;
+const SLOWEST_STEP = 0.005;
+const FASTEST_STEP = 0.12;
+/** The two resting states add this on top of the eased step, so they pass four times faster. */
+const REST_BOOST = 0.1;
+/** The states that hold the figure still: 1 and 3, either side of each moving state. */
+const RESTING_STATES = [1, 3];
+
+export const SPIN_STATE = 0;
+export const REVEAL_STATE = 2;
+
+/** A mouth is a quarter turn wide, so the drawn wedge is the remaining three quarters. */
+export const WEDGE_SPAN = (Math.PI * 3) / 2;
+/**
+ * The whole figure is turned an eighth of a turn, which puts the four inducers on the
+ * canvas diagonals and leaves the square's own sides running level and upright.
+ */
+export const BASE_ROTATION = Math.PI / 4;
+/** The mouths are cut on the far side of each disc, which is what points them inwards. */
+export const MOUTH_ROTATION = Math.PI / 4 + Math.PI;
 
 /**
- * The clip's three levers, each pulled and put back, with the figure held still
- * between them. The budgets are frames of simulation and they sum to the clip.
+ * How far the angle moves this step. It eases in to FASTEST_STEP at the halfway point and
+ * back out to SLOWEST_STEP at the end, so each state starts and finishes gently.
  */
-export const PLAN = [
-  { name: "hold", steps: 54 },
-  { name: "support", steps: 156 },
-  { name: "hold", steps: 36 },
-  { name: "spin", steps: 156 },
-  { name: "hold", steps: 36 },
-  { name: "reveal", steps: 126 },
-  { name: "hold", steps: 36 }
-];
-
-/** The support ratio the figure rests at, and the poorest it is taken down to. */
-export const FULL_SUPPORT = 0.62;
-export const SPARSE_SUPPORT = 0.12;
-
-function smoothstep(value) {
-  return value * value * (3 - 2 * value);
+export function angleStep(angle) {
+  const progress = angle / MAX_ANGLE;
+  return angle < MAX_ANGLE / 2
+    ? SLOWEST_STEP + (FASTEST_STEP - SLOWEST_STEP) * progress
+    : FASTEST_STEP + (SLOWEST_STEP - FASTEST_STEP) * progress;
 }
 
-/** There and back, eased at both ends: nought, up to one at the middle, back to nought. */
-function pulled(progress) {
-  return smoothstep(1 - Math.abs(2 * progress - 1));
+export function isResting(stateIndex) {
+  return RESTING_STATES.includes(stateIndex);
 }
 
-/** Which lever is being pulled at `step`, and how far, on [0, 1]. */
-export function leverAt(step) {
-  const wrapped = ((step % TOTAL_STEPS) + TOTAL_STEPS) % TOTAL_STEPS;
-  let start = 0;
-  for (const phase of PLAN) {
-    if (wrapped < start + phase.steps) {
-      return { name: phase.name, amount: pulled((wrapped - start) / phase.steps) };
-    }
-    start += phase.steps;
+/** The state one step on. A state ends when its angle passes a quarter turn. */
+export function advance(state) {
+  let angle = state.angle;
+  if (isResting(state.index)) {
+    angle += REST_BOOST;
   }
-  return { name: "hold", amount: 0 };
+  angle += angleStep(angle);
+  return angle > MAX_ANGLE
+    ? { angle: 0, index: (state.index + 1) % STATE_COUNT }
+    : { angle, index: state.index };
 }
 
 /**
- * How much of the square's perimeter is really drawn at `step`. The support lever
- * takes it down towards nothing and brings it back; every other moment holds it at
- * the figure's resting value.
+ * The state a given step draws. The original drew first and advanced afterwards, so step 0
+ * is the initial state. Recomputing from the start keeps every frame a function of its
+ * index alone; a whole clip is a few hundred iterations of arithmetic.
  */
-export function supportRatioAt(step) {
-  const lever = leverAt(step);
-  if (lever.name !== "support") {
-    return FULL_SUPPORT;
+export function stateAfter(step) {
+  const wrapped = ((step % CYCLE_STEPS) + CYCLE_STEPS) % CYCLE_STEPS;
+  let state = { angle: 0, index: SPIN_STATE };
+  for (let count = 0; count < wrapped; count += 1) {
+    state = advance(state);
   }
-  return FULL_SUPPORT + (SPARSE_SUPPORT - FULL_SUPPORT) * lever.amount;
+  return state;
 }
+
+function measure() {
+  const perState = new Array(STATE_COUNT).fill(0);
+  let state = { angle: 0, index: SPIN_STATE };
+  let steps = 0;
+  do {
+    perState[state.index] += 1;
+    state = advance(state);
+    steps += 1;
+  } while (state.index !== SPIN_STATE || state.angle !== 0);
+  return { steps, perState };
+}
+
+const measured = measure();
+/** Measured from the state machine rather than transcribed, as the step sizes decide it. */
+export const CYCLE_STEPS = measured.steps;
+export const STATE_STEPS = measured.perState;
 
 /**
- * How far the spin lever turns the bites, at its full deflection: half a bite's own
- * span, which is as far off the square's sides as a bite can be got. Turning by a
- * whole quarter would be turning too far — a bite's two edges are a quarter apart, so
- * a quarter turn simply lands one of them where the other was, back along a side, and
- * a third of the real contour comes back with it.
+ * The four inducer centres, at the corners of a square. Their angles double as the
+ * direction each mouth opens, which is what aims all four at the middle.
  */
-export const FULL_SPIN = QUARTER_TURN / 2;
-
-/** How far the bites are turned away from the square at `step`, in radians. */
-export function spinAt(step) {
-  const lever = leverAt(step);
-  return lever.name === "spin" ? lever.amount * FULL_SPIN : 0;
-}
-
-/** How far the figure has owned up at `step`: nought implying, one a drawn plate. */
-export function revealAt(step) {
-  const lever = leverAt(step);
-  return lever.name === "reveal" ? lever.amount : 0;
-}
-
-/**
- * The square the viewer supplies: four corners, one per inducer, sitting on its
- * diagonal so its sides run at forty-five degrees. `half` is half its diagonal.
- */
-export function squareCorners(half) {
+export function inducerCorners(distance) {
   return Array.from({ length: INDUCER_COUNT }, (unused, index) => {
-    const theta = index * QUARTER_TURN;
-    return { x: half * Math.cos(theta), y: half * Math.sin(theta) };
-  });
-}
-
-/** The length of one side of that square, which the support ratio is a share of. */
-export function sideLength(half) {
-  return Math.SQRT2 * half;
-}
-
-/**
- * The radius an inducer needs for a given support ratio. Each side carries one bite
- * edge from each of its two corners, so the real share of a side is twice the radius
- * over the side's length — which inverts to this.
- */
-export function inducerRadius(supportRatio, half) {
-  return (supportRatio * sideLength(half)) / 2;
-}
-
-/**
- * Everything the sketch is allowed to paint at `step`, as data. Wedges only, except
- * in the reveal, where the plate the figure has been implying is finally drawn and
- * says so in its own kind. A wedge is given as the arc it keeps: the bite is the rest.
- */
-export function marksAt(step, half) {
-  const radius = inducerRadius(supportRatioAt(step), half);
-  const spin = spinAt(step);
-  const reveal = revealAt(step);
-  const corners = squareCorners(half);
-  const marks = corners.map((corner, index) => {
-    // The bite opens between the two sides of the square that leave this corner, so
-    // its straight edges lie along them. The spin lever turns it off them.
-    const toNext = corners[(index + 1) % INDUCER_COUNT];
-    const toPrevious = corners[(index + INDUCER_COUNT - 1) % INDUCER_COUNT];
-    const towardsNext = Math.atan2(toNext.y - corner.y, toNext.x - corner.x);
-    const towardsPrevious = Math.atan2(toPrevious.y - corner.y, toPrevious.x - corner.x);
-    // The kept arc runs the long way round, from one side to the other.
-    const kept = arcBetween(towardsPrevious, towardsNext);
+    const theta = index * MAX_ANGLE;
     return {
-      kind: "wedge",
-      x: corner.x,
-      y: corner.y,
-      radius,
-      from: towardsPrevious + spin,
-      to: towardsPrevious + spin + kept
+      theta,
+      x: distance * Math.cos(theta),
+      y: distance * Math.sin(theta)
     };
   });
-  if (reveal > 0) {
-    // The plate grows out of the middle to exactly the square the bites imply, and
-    // shrinks away again. It is opaque, because a square faded in over the inducers
-    // would only ever be grey, and the thing being shown is not a grey thing. When it
-    // is full it covers each bite exactly, which is the whole claim made visible: the
-    // figure you were given and the figure you supplied occupy the same ground.
+}
+
+/**
+ * The rotations a step draws at: the group of inducers, and the quadrilateral through
+ * their centres. In the revealing state the original turned the coordinate system back by
+ * the angle for the discs and then forward by twice it before closing the shape, so the
+ * quadrilateral pulls away from the discs at twice the rate either one moves.
+ */
+export function rotationsAt(state) {
+  if (state.index === SPIN_STATE) {
+    return { inducers: state.angle, quadrilateral: null, spin: -4 * state.angle };
+  }
+  if (state.index === REVEAL_STATE) {
+    return { inducers: -state.angle, quadrilateral: state.angle, spin: 0 };
+  }
+  return { inducers: 0, quadrilateral: null, spin: 0 };
+}
+
+/**
+ * The corners of the square at `step`, in the same absolute frame the marks come back in:
+ * the inducer centres, carried round by whatever the group rotation is doing. These are
+ * the corners a viewer's square would have, which is why the survey in the tests walks
+ * between them.
+ */
+export function squareCornersAt(step, distance) {
+  const turn = BASE_ROTATION + rotationsAt(stateAfter(step)).inducers;
+  return inducerCorners(distance).map((corner) => ({
+    x: distance * Math.cos(corner.theta + turn),
+    y: distance * Math.sin(corner.theta + turn)
+  }));
+}
+
+function smoothstep(value) {
+  const held = Math.min(1, Math.max(0, value));
+  return held * held * (3 - 2 * held);
+}
+
+/**
+ * How present the real quadrilateral is, on [0, 1]. It is raised through the whole of the
+ * resting state before the reveal and lowered through the whole of the one after, so it is
+ * never switched on: there is no frame at which it was absent and the next at which it is
+ * there. Both of those resting states hold the figure at the same rotation the reveal
+ * opens and closes at, so it rises and falls exactly on the square the bites imply.
+ */
+export function quadrilateralPresence(state) {
+  if (state.index === REVEAL_STATE) {
+    return 1;
+  }
+  if (state.index === REVEAL_STATE - 1) {
+    return smoothstep(state.angle / MAX_ANGLE);
+  }
+  if (state.index === (REVEAL_STATE + 1) % STATE_COUNT) {
+    return smoothstep(1 - state.angle / MAX_ANGLE);
+  }
+  return 0;
+}
+
+/**
+ * Everything the sketch is allowed to paint at `step`, as data, in absolute coordinates —
+ * the group's rotation is already folded into both the positions and the arcs, so the
+ * sketch has no geometry left to do. Wedges only, except for the quadrilateral the bites
+ * had been implying, which arrives in its own kind and carries how present it is.
+ *
+ * The quadrilateral turns only while the reveal runs. Through the resting states either
+ * side of it there is no rotation to apply, which is what puts it exactly on the illusory
+ * square as it fades up and again as it fades away.
+ */
+export function marksAt(step, distance, diameter) {
+  const state = stateAfter(step);
+  const rotations = rotationsAt(state);
+  const spread = BASE_ROTATION + rotations.inducers;
+  // Filling the mouths in is the same statement as keeping the whole turn, so the reveal
+  // needs no second kind of mark for it: the bite simply goes to nothing.
+  const kept = state.index === REVEAL_STATE ? FULL_TURN : WEDGE_SPAN;
+  const marks = inducerCorners(distance).map((corner) => {
+    const from = spread + MOUTH_ROTATION + rotations.spin + corner.theta;
+    return {
+      kind: "wedge",
+      x: distance * Math.cos(corner.theta + spread),
+      y: distance * Math.sin(corner.theta + spread),
+      radius: diameter / 2,
+      from,
+      to: from + kept
+    };
+  });
+  const presence = quadrilateralPresence(state);
+  if (presence > 0) {
+    const turn = BASE_ROTATION + (rotations.quadrilateral ?? 0);
     marks.push({
-      kind: "plate",
-      corners: corners.map((corner) => ({ x: corner.x * reveal, y: corner.y * reveal }))
+      kind: "quadrilateral",
+      presence,
+      corners: inducerCorners(distance).map((corner) => ({
+        x: distance * Math.cos(corner.theta + turn),
+        y: distance * Math.sin(corner.theta + turn)
+      }))
     });
   }
   return marks;
-}
-
-/** The angle from `from` round to `to`, taken the long way: a bitten disc's arc. */
-function arcBetween(from, to) {
-  const direct = ((to - from) % FULL_TURN + FULL_TURN) % FULL_TURN;
-  return direct;
 }

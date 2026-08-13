@@ -371,7 +371,7 @@
       "title": "Kanizsa Square",
       "entry": "p5js/artworks/kanizsa-square/index.html",
       "interactivePath": "kanizsa-square/",
-      "description": "Nothing draws the square. Starve it of support, or turn the discs, and it goes.",
+      "description": "Nothing draws the square. Turn the mouths off its sides and it goes.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -380,12 +380,12 @@
         "goethe-sinne-truegen-nicht"
       ],
       "thumbnail": {
-        "frame": 15
+        "frame": 0
       },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/KanizsaSquare.mp4",
-        "durationSeconds": 10,
+        "durationSeconds": 8.1,
         "scale": 2
       }
     },
