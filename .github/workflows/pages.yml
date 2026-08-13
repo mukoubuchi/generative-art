@@ -53,6 +53,9 @@ jobs:
       - name: Run unit tests
         run: npm test --prefix p5js
 
+      - name: Check the artworks on a dense display
+        run: npm run smoke --prefix p5js
+
       - name: Build the site
         run: npm run site --prefix p5js -- --clean
 

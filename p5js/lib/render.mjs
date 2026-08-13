@@ -59,7 +59,13 @@ function resolveRequestPath(requestUrl) {
   return requestPath;
 }
 
-async function startStaticServer() {
+/**
+ * A static server over the repository, with the one mapping the artwork pages need: p5 is
+ * not in the tree, so the vendor path is served out of node_modules. Exported so that a
+ * check which has to open real pages can use the same server the renderer does rather than
+ * keep a second copy of these rules.
+ */
+export async function startStaticServer() {
   const server = createServer((request, response) => {
     const requestPath = resolveRequestPath(request.url ?? "/");
     if (!requestPath) {
