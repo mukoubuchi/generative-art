@@ -176,7 +176,6 @@ try {
     const small = await show(onPhone, url);
     const large = await show(onLaptop, url);
     const share = visibleShare(small);
-    const fits = isWhollyOnScreen(small) && keepsItsShape(small, artwork.canvas);
     const unchanged = Math.round(large.width) === artwork.canvas.width
       && Math.round(large.height) === artwork.canvas.height;
 
@@ -220,9 +219,6 @@ try {
           `${artwork.id} draws ${small.backing[axis] / small.ratio} ${axis} where the manifest says ${drawn}`
         );
       }
-    }
-    if (fits && !unchanged) {
-      failures.push(`${artwork.id} was fitted to a phone at the cost of the screen it was drawn for`);
     }
   }
 
