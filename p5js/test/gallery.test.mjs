@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import test from "node:test";
-import { loadCatalog, validateManifest } from "../lib/catalog.mjs";
+import { P5JS_DIRECTORY, loadCatalog, validateManifest } from "../lib/catalog.mjs";
 import {
   REVEAL_WINDOW_SECONDS,
   artworkHref,
@@ -10,6 +12,7 @@ import {
   sourceHref,
   thumbnailHref
 } from "../lib/gallery.mjs";
+import { NUMBER_WORDS } from "./number-words.mjs";
 
 test("every artwork in the manifest reaches the gallery, and nothing else does", async () => {
   const { manifest, quoteCatalog } = await loadCatalog();
@@ -162,4 +165,32 @@ test("the shutter cannot outlive the departure it dressed", async () => {
   assert.match(script, /addEventListener\("pageshow"/u, "no pageshow sweep is registered");
   assert.match(script, /event\.persisted/u, "the pageshow sweep ignores whether the page was restored");
   assert.match(script, /querySelectorAll\("\.shutter"\)/u, "the sweep does not look for shutters");
+});
+
+test("the README's count of the artworks that carry the moving mark is the manifest's own", async () => {
+  // Another number written out in prose, beside a truth kept somewhere else. The mark goes
+  // on the cards of artworks that move, so what it counts is a question about the manifest
+  // and not about anybody's memory of it — and the sentence says the count twice, which is
+  // two chances to go stale rather than one.
+  const readme = await readFile(resolve(P5JS_DIRECTORY, "README.md"), "utf8");
+  const claim = readme.match(
+    /(?<moving>[\w-]+) of the (?<total>[\w-]+) carry it, and (?<again>[\w-]+) things circling/u
+  );
+  assert.ok(claim, "the README no longer says how many artworks carry the moving mark");
+
+  const stated = NUMBER_WORDS.indexOf(claim.groups.moving.toLowerCase());
+  const total = NUMBER_WORDS.indexOf(claim.groups.total.toLowerCase());
+  assert.ok(stated > 0, `"${claim.groups.moving}" is not a number word this test can read`);
+  assert.ok(total > 0, `"${claim.groups.total}" is not a number word this test can read`);
+  assert.equal(claim.groups.again.toLowerCase(), claim.groups.moving.toLowerCase(),
+    "the sentence gives two different counts for the same thing");
+
+  const { manifest } = await loadCatalog();
+  const moving = manifest.artworks.filter((artwork) => artwork.render.kind === "video");
+  assert.equal(total, manifest.artworks.length,
+    `the sentence says ${total} artworks and the manifest has ${manifest.artworks.length}`);
+  assert.equal(stated, moving.length,
+    `the sentence says ${stated} move and ${moving.length} of them do`);
+  // Not vacuous: some artworks are stills, so the mark is telling cards apart.
+  assert.ok(moving.length < manifest.artworks.length, "every artwork moves, so the mark says nothing");
 });

@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import test from "node:test";
+import { P5JS_DIRECTORY } from "../lib/catalog.mjs";
 import {
   LONGEST,
   MIDDLE,
@@ -198,4 +201,26 @@ test("the marks and the gaps are whole-number pairs, so equality is not a near t
     assert.equal(typeof length.a, "bigint");
     assert.ok(asTurn(length) > 0, "a length came out negative or nought");
   }
+});
+
+test("the README's list of rings that lose a colour is the module's own", async () => {
+  // Prose is where a number goes stale: the code and the tests were right about this list
+  // and the sentence was written out by hand with one of them missing. So the sentence is
+  // read back and held against the module, and there is no second copy of the list for
+  // anyone to keep in step.
+  const readme = await readFile(resolve(P5JS_DIRECTORY, "README.md"), "utf8");
+  const claim = readme.match(/they fall at (?<list>[\d, ]+?) — and that is exactly the list/u);
+  assert.ok(claim, "the README no longer says where the rings that lose a colour fall");
+  const stated = claim.groups.list.split(",").map((word) => Number(word.trim()));
+
+  const measured = [];
+  for (let turns = 1n; turns <= BigInt(stated.at(-1)); turns += 1n) {
+    if (lengthsUpTo(turns).length === 2) {
+      measured.push(Number(turns) + 1);
+    }
+  }
+  assert.deepEqual(stated, measured, "the README's list is not the one the rings give");
+  // And it is the same list the other calculation gives, which is the claim the sentence
+  // goes on to make.
+  assert.deepEqual(stated, closestReturns(BigInt(stated.at(-1))).map(Number).filter((k) => k > 1));
 });
