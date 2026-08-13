@@ -4,6 +4,7 @@ import { P5JS_DIRECTORY, REPOSITORY_ROOT } from "./catalog.mjs";
 import {
   VENDOR_THREE,
   artworkHref,
+  buildStamp,
   canvasSizeProperties,
   renderArtworkNav,
   renderIndexPage
@@ -54,6 +55,12 @@ export const VENDOR_THREE_FILES = [
 const ARTWORK_MAIN = '<main id="artwork">';
 
 /**
+ * Where the build's marker goes. The first line of every page's head, which is the one piece
+ * of markup all thirty-seven share and the one no artwork has a reason to move.
+ */
+const HEAD_ANCHOR = '<meta charset="utf-8">';
+
+/**
  * Gives each copied artwork page its way back to the gallery and on to its source, and
  * tells its stylesheet the size the artwork was drawn at.
  *
@@ -69,9 +76,12 @@ const ARTWORK_MAIN = '<main id="artwork">';
  * the screen only once a script has run is a canvas that is cut off until it does.
  *
  * A page that does not carry the element stops the build rather than being passed over. A
- * page silently missing its size is a page a phone shows the corner of.
+ * page silently missing its size is a page a phone shows the corner of. The same is now
+ * true of the head: a page without the build's marker is a page that cannot be told apart
+ * from a copy of itself left over in a cache, and a check that cannot tell those apart is a
+ * check that measures whichever of them it is handed.
  */
-async function prepareArtworkPages(directory, manifest) {
+async function prepareArtworkPages(directory, manifest, build) {
   for (const artwork of manifest.artworks) {
     const page = resolve(directory, artworkHref(artwork), "index.html");
     const html = await readFile(page, "utf8");
@@ -81,7 +91,11 @@ async function prepareArtworkPages(directory, manifest) {
     if (!html.includes(ARTWORK_MAIN)) {
       throw new Error(`${artwork.id} has no ${ARTWORK_MAIN} to hand its canvas size to.`);
     }
-    const sized = html.replace(
+    if (!html.includes(HEAD_ANCHOR)) {
+      throw new Error(`${artwork.id} has no ${HEAD_ANCHOR} to stamp the build onto.`);
+    }
+    const stamped = html.replace(HEAD_ANCHOR, `${HEAD_ANCHOR}\n    ${buildStamp(build)}`);
+    const sized = stamped.replace(
       ARTWORK_MAIN,
       `<main id="artwork" style="${canvasSizeProperties(artwork)}">`
     );
@@ -106,7 +120,7 @@ export async function buildSite(manifest, quoteCatalog, options = {}) {
 
   await writeFile(
     resolve(directory, "index.html"),
-    renderIndexPage(manifest, quoteCatalog),
+    renderIndexPage(manifest, quoteCatalog, options.build),
     "utf8"
   );
 
@@ -116,7 +130,7 @@ export async function buildSite(manifest, quoteCatalog, options = {}) {
     await cp(resolve(REPOSITORY_ROOT, source), target, { recursive: true });
   }
 
-  await prepareArtworkPages(directory, manifest);
+  await prepareArtworkPages(directory, manifest, options.build);
 
   const vendorTarget = resolve(directory, VENDOR_DESTINATION);
   await mkdir(dirname(vendorTarget), { recursive: true });

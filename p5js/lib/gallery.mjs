@@ -202,7 +202,46 @@ function renderCard(manifest, artwork, quote, index) {
         </li>`;
 }
 
-export function renderIndexPage(manifest, quoteCatalog) {
+/**
+ * The commit a page was built from, written into the page itself.
+ *
+ * Not into a file of its own beside it. What is served goes through a content network that
+ * caches each address separately -- the site declares `max-age=600`, and a request for it
+ * comes back with an `age` -- so a marker kept in one file says that *that file* is current
+ * and says nothing whatever about the page a reader, or a check, loads next. A check that
+ * read the marker from one address and then measured another could find the marker new and
+ * the page a quarter of an hour old, and pass. The marker has to be printed on the sheet
+ * being measured.
+ */
+export const BUILD_META_NAME = "build";
+
+/** What a build is stamped with when nothing supplies a commit: see `buildStamp`. */
+export const UNPUBLISHED_BUILD = "development";
+
+/**
+ * A build with no commit behind it says so, rather than borrowing the working tree's HEAD.
+ * The tree may have uncommitted changes, which would make the marker a claim about a commit
+ * whose contents are not what was built. And since the published check demands a forty-digit
+ * match against the commit being deployed, `development` is a marker that cannot satisfy it:
+ * a site built by hand can never be mistaken for one that was published.
+ */
+export function buildStamp(build) {
+  return `<meta name="${BUILD_META_NAME}" content="${escapeHtml(build || UNPUBLISHED_BUILD)}">`;
+}
+
+/**
+ * And the marker read back off a page, kept next to the writing of it so that the one format
+ * is stated once. By regular expression rather than by a parser, because whoever asks this is
+ * asking before opening a browser, and the answer decides whether opening one means anything.
+ */
+export function readBuildStamp(html) {
+  const found = html.match(
+    new RegExp(`<meta\\s+name="${BUILD_META_NAME}"\\s+content="([^"]*)"`, "u")
+  );
+  return found ? found[1] : null;
+}
+
+export function renderIndexPage(manifest, quoteCatalog, build) {
   const cards = manifest.artworks
     .map((artwork, index) => renderCard(manifest, artwork, quoteFor(artwork, quoteCatalog), index))
     .join("\n");
@@ -212,6 +251,7 @@ export function renderIndexPage(manifest, quoteCatalog) {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    ${buildStamp(build)}
     <title>Generative Art</title>
     <meta name="description" content="Generative works in p5.js, each bearing an aphorism kept in its original tongue and verified against a primary source.">
     <link rel="stylesheet" href="assets/gallery.css">
