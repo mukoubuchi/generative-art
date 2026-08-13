@@ -43,7 +43,7 @@ const INK = [22, 20, 26];
  * measurement that settles this number — it is chosen to sit where the eye had already
  * put the surface.
  */
-const SURFACE_LIFT = 0.3;
+const SURFACE_LIFT = 0.15;
 const SURFACE = PAPER.map((channel) => channel + SURFACE_LIFT * (255 - channel));
 /**
  * The quadrilateral's corners sit exactly on the disc centres, so while it lies on the
