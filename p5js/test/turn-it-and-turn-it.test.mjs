@@ -208,19 +208,36 @@ test("the README's list of rings that lose a colour is the module's own", async 
   // and the sentence was written out by hand with one of them missing. So the sentence is
   // read back and held against the module, and there is no second copy of the list for
   // anyone to keep in step.
+  //
+  // The range is a constant here and deliberately not the end of the list being checked.
+  // Taking it from the prose would let the prose set its own examination: drop the last
+  // entry and the measurement would stop one entry earlier and agree, which is exactly the
+  // kind of slip — losing the end of a list while copying it — that this test is for.
+  const REACH = 400n;
   const readme = await readFile(resolve(P5JS_DIRECTORY, "README.md"), "utf8");
-  const claim = readme.match(/they fall at (?<list>[\d, ]+?) — and that is exactly the list/u);
+  const claim = readme.match(
+    /they fall at (?<list>[\d, ]+?) — all of them out to (?<reach>[\w ]+?) turns/u
+  );
   assert.ok(claim, "the README no longer says where the rings that lose a colour fall");
+  assert.equal(claim.groups.reach, "four hundred", "the README states a range this test does not check to");
   const stated = claim.groups.list.split(",").map((word) => Number(word.trim()));
 
+  // Every stage out to the stated range, not merely every stage the sentence reaches.
   const measured = [];
-  for (let turns = 1n; turns <= BigInt(stated.at(-1)); turns += 1n) {
+  for (let turns = 1n; turns <= REACH; turns += 1n) {
     if (lengthsUpTo(turns).length === 2) {
       measured.push(Number(turns) + 1);
     }
   }
-  assert.deepEqual(stated, measured, "the README's list is not the one the rings give");
+  assert.deepEqual(stated, measured, "the README's list is not the complete one the rings give");
+  assert.equal(stated.length, 13, "the number of two-length rings out to four hundred turns changed");
   // And it is the same list the other calculation gives, which is the claim the sentence
-  // goes on to make.
-  assert.deepEqual(stated, closestReturns(BigInt(stated.at(-1))).map(Number).filter((k) => k > 1));
+  // goes on to make. Same range, and again not one the sentence chose.
+  assert.deepEqual(stated, closestReturns(REACH).map(Number).filter((k) => k > 1));
+
+  // The sentence also says how much of the list the drawing shows, which is a fact about
+  // the picture rather than about the sequence.
+  const inside = measured.filter((arcs) => arcs - 1 <= Number(STAGES)).length;
+  assert.equal(inside, 10, `the drawing holds ${inside} of the two-length rings`);
+  assert.ok(readme.includes("the first ten are inside the drawing and the last three lie past its edge"));
 });
