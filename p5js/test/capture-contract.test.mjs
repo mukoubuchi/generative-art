@@ -87,13 +87,20 @@ function stopsForEverybody(body) {
 }
 
 /**
- * Artworks whose page animates while the manifest registers them as stills. The user
- * reported two of these -- Flow Field and Ulam Spiral -- and those are now clips. These
- * three have exactly the same shape and nobody has decided about them yet, so they are
- * named here rather than quietly passing: an artwork can be a still, or a clip, or on this
- * list, and not in none of the three.
+ * Artworks whose page animates while the manifest registers them as stills.
+ *
+ * This started as three and is down to one, and the one that is left is settled rather than
+ * outstanding. Nautilus draws itself in about four tenths of a second -- measured in a
+ * browser, sampling until two readings agreed -- which is real motion but far too brief to
+ * be worth a clip or to make good on what a "moving" mark promises a reader. It keeps the
+ * animation because watching the shell wind is part of it, and it stays a still because
+ * four tenths of a second is not a film. Circle Packing at seven seconds and DLA Frost at
+ * eight and a half were the other two, and both are clips now.
+ *
+ * The list stays because it is what closes the question: an artwork can be a still, or a
+ * clip, or named here with a reason, and not in none of the three.
  */
-const UNDECIDED = ["circle-packing", "dla-frost", "nautilus"];
+const UNDECIDED = ["nautilus"];
 
 test("an artwork registered as a still does not go on drawing on the page", async () => {
   // What the manifest says an artwork is, held against what its sketch does. Flow Field and
@@ -104,8 +111,10 @@ test("an artwork registered as a still does not go on drawing on the page", asyn
   const { manifest } = await loadCatalog();
   const stills = manifest.artworks.filter((artwork) => artwork.render.kind === "image");
   const moving = manifest.artworks.filter((artwork) => artwork.render.kind === "video");
-  assert.ok(stills.length >= 8, `only ${stills.length} artworks are registered as stills`);
-  assert.ok(moving.length >= 20, `only ${moving.length} artworks are registered as moving`);
+  // Both kinds are present, so neither branch is passing for want of examples. The stills
+  // are the minority now that everything which forms on the page is published as a clip.
+  assert.ok(stills.length >= 4, `only ${stills.length} artworks are registered as stills`);
+  assert.ok(moving.length >= 25, `only ${moving.length} artworks are registered as moving`);
 
   const animating = [];
   for (const artwork of stills) {
@@ -117,11 +126,11 @@ test("an artwork registered as a still does not go on drawing on the page", asyn
     }
   }
   assert.deepEqual(animating.sort(), UNDECIDED,
-    "a still's page animates, and it is not one of the ones already known about");
+    "a still's page animates, and it is not the one this is settled for");
 
   // Not vacuous: the rule tells the two kinds apart rather than calling everything still.
   const settled = stills.filter((artwork) => !UNDECIDED.includes(artwork.id));
-  assert.ok(settled.length >= 5, `only ${settled.length} stills are settled`);
+  assert.ok(settled.length >= 4, `only ${settled.length} stills stop for everybody`);
 
   // The negative control, and the shape this exists to catch: stopping only for the
   // renderer leaves the page animating, and is not the same as stopping.

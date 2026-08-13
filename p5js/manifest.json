@@ -637,9 +637,13 @@
         "kepler-cur-sexangula"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/DlaFrost.png",
+        "kind": "video",
+        "artifact": "exports/p5js/DlaFrost.mp4",
+        "durationSeconds": 10,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 299
       }
     },
     {
@@ -655,9 +659,13 @@
         "descartes-theoreme-plus-beau"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/CirclePacking.png",
+        "kind": "video",
+        "artifact": "exports/p5js/CirclePacking.mp4",
+        "durationSeconds": 9,
         "scale": 2
+      },
+      "thumbnail": {
+        "frame": 269
       }
     },
     {

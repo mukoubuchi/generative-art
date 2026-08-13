@@ -20,6 +20,13 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_SIZE = LOGICAL_SIZE * RENDER_SCALE;
 
 const REVEAL_SECONDS = 8;
+/**
+ * The clip runs the reveal and then holds the finished picture for a second, so a looping
+ * card shows what was made rather than cutting from the last of it back to bare ground.
+ */
+const CLIP_SECONDS = REVEAL_SECONDS + 1;
+const TOTAL_FRAMES = CLIP_SECONDS * PLAYBACK_FPS;
+const REVEAL_FRAMES = REVEAL_SECONDS * PLAYBACK_FPS;
 
 const BACKGROUND = [13, 18, 27];
 // Arrival's colour: the early giants glow ember-warm, the mid generation cools through
@@ -60,16 +67,42 @@ new P5((p) => {
     p.pop();
   }
 
-  function publishState(revealedCircles) {
-    window.__ARTWORK_STATE__ = {
-      kind: "image",
+  /**
+   * How much has been laid down by `frameIndex`: a pure function of the index, so a frame
+   * asked for twice is the same frame, and the thumbnail can jump to one from a fresh page.
+   */
+  function revealedBy(frameIndex) {
+    const part = Math.min(frameIndex / REVEAL_FRAMES, 1);
+    return Math.min(CIRCLES.length, Math.round(CIRCLES.length * part));
+  }
+
+  /**
+   * Grows the picture as far as `target`. Nothing clears, so this only goes forward; asked
+   * for an earlier frame than the one already drawn, it lays the ground again and restarts.
+   */
+  function growUpTo(target) {
+    if (target < revealed) {
+      p.background(...BACKGROUND);
+      revealed = 0;
+    }
+    drawCircles(revealed, target);
+    revealed = target;
+  }
+
+  function publishState(frameIndex, revealedCircles) {
+    const state = {
+      kind: "video",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
       circles: CIRCLES.length,
       seed: PACKING_PARAMETERS.seed,
       revealedCircles,
       logicalSize: { width: LOGICAL_SIZE, height: LOGICAL_SIZE },
       outputSize: { width: OUTPUT_SIZE, height: OUTPUT_SIZE }
     };
+    window.__ARTWORK_STATE__ = state;
     window.__ARTWORK_READY__ = true;
+    return state;
   }
 
   p.setup = () => {
@@ -87,24 +120,27 @@ new P5((p) => {
     p.background(...BACKGROUND);
     if (CAPTURE_MODE) {
       p.noLoop();
-      drawCircles(0, CIRCLES.length);
-      publishState(CIRCLES.length);
-      return;
+      // Nothing clears, so a frame is grown up to rather than drawn on its own. The
+      // renderer asks in order and the thumbnail asks for one from a fresh page; growing
+      // forward from wherever the picture stands serves both.
+      window.__renderFrame = (frameIndex) => {
+        growUpTo(revealedBy(frameIndex));
+        return Promise.resolve(publishState(frameIndex, revealed));
+      };
     }
-    publishState(0);
+    publishState(0, 0);
   };
 
   p.draw = () => {
-    if (CAPTURE_MODE || revealed >= CIRCLES.length) {
+    if (CAPTURE_MODE) {
+      return;
+    }
+    if (p.frameCount > TOTAL_FRAMES) {
+      p.noLoop();
       return;
     }
     // Nothing clears: the square fills the way the packing filled, largest first.
-    const next = Math.min(
-      revealed + Math.ceil(CIRCLES.length / (REVEAL_SECONDS * PLAYBACK_FPS)),
-      CIRCLES.length
-    );
-    drawCircles(revealed, next);
-    revealed = next;
-    publishState(revealed);
+    growUpTo(revealedBy(p.frameCount));
+    publishState(p.frameCount, revealed);
   };
 });
