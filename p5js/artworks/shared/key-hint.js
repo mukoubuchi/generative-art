@@ -36,6 +36,43 @@ export function capWidth(p, label, size) {
 }
 
 /**
+ * The room a legend has, which is the canvas less an inset at each end. The plate hangs
+ * half a padding outside the inset on the left and wants the same on the right, and the
+ * padding cancels from both sides, so the legend itself is what has to fit in this.
+ */
+export function legendRoom(width, inset) {
+  return width - 2 * inset;
+}
+
+/**
+ * The type size a legend can actually be set at. Text width is proportional to type
+ * size, so a legend that overruns by some factor comes back inside by shrinking in the
+ * same proportion; `measure` is asked again afterwards because a font's widths are not
+ * exactly proportional at every size, and twice more in case it is stubborn.
+ *
+ * This is what keeps the note inside the canvas by construction rather than by the
+ * wording happening to be short. A thumbnail sets the same legend 1.7 times larger on a
+ * canvas of the same width, so a line that fits a page can overrun a card by half as
+ * much again — which is exactly how this came to be missing.
+ */
+export function fitHintSize(size, room, measure, rounds = 3) {
+  let fitted = size;
+  for (let round = 0; round < rounds; round += 1) {
+    const measured = measure(fitted);
+    if (measured <= room) {
+      return fitted;
+    }
+    fitted *= room / measured;
+  }
+  // A font whose widths have a fixed part to them — rounding to whole pixels, a stem
+  // that will not get thinner — approaches the room from above and could sit a hair
+  // outside it for any number of rounds. A last step of one per cent more than the
+  // ratio asks settles it, and is only ever reached by a font that is not proportional.
+  const measured = measure(fitted);
+  return measured <= room ? fitted : fitted * (room / measured) * 0.99;
+}
+
+/**
  * The width the whole legend will occupy, which the plate behind it has to know before any
  * of it is drawn.
  */
@@ -87,16 +124,25 @@ function drawCap(p, label, x, baseline, size, tone) {
  * around two fifths of its own size and the page's type would arrive there unreadable.
  */
 export function drawKeyHint(p, segments, width, height, scale = 1, tone = HINT_TONE) {
-  const size = hintTextSize(width, height, scale);
   const inset = Math.min(width, height) * HINT_INSET_RATIO;
-  const padding = size * 0.5;
 
   p.push();
   // Restores on pop, so this works whatever colour mode the artwork is drawing in.
   p.colorMode(p.RGB, 255);
   p.noStroke();
-  p.textSize(size);
   p.textAlign(p.LEFT, p.BOTTOM);
+
+  // Set at the size it wants, or at the largest size that fits, whichever is smaller.
+  const size = fitHintSize(
+    hintTextSize(width, height, scale),
+    legendRoom(width, inset),
+    (candidate) => {
+      p.textSize(candidate);
+      return legendWidth(p, segments, candidate);
+    }
+  );
+  const padding = size * 0.5;
+  p.textSize(size);
 
   const baseline = height - inset;
   const total = legendWidth(p, segments, size);
@@ -106,14 +152,14 @@ export function drawKeyHint(p, segments, width, height, scale = 1, tone = HINT_T
   // that reaches the foot of the canvas, and grey on that is unreadable. On a light artwork
   // the plate is barely visible; where the artwork is not light, it is what makes the line
   // readable at all.
+  const plate = {
+    left: inset - padding,
+    top: baseline - size * CAP_RISE - padding * 0.6,
+    width: total + padding * 2,
+    height: size * (CAP_RISE + CAP_DROP) + padding * 1.2
+  };
   p.fill(...tone.plate);
-  p.rect(
-    inset - padding,
-    baseline - size * CAP_RISE - padding * 0.6,
-    total + padding * 2,
-    size * (CAP_RISE + CAP_DROP) + padding * 1.2,
-    size * 0.34
-  );
+  p.rect(plate.left, plate.top, plate.width, plate.height, size * 0.34);
 
   let x = inset;
   segments.forEach((segment, index) => {
@@ -129,4 +175,19 @@ export function drawKeyHint(p, segments, width, height, scale = 1, tone = HINT_T
     x += p.textWidth(segment.text);
   });
   p.pop();
+
+  const bounds = {
+    ...plate,
+    right: plate.left + plate.width,
+    bottom: plate.top + plate.height,
+    size,
+    canvas: { width, height }
+  };
+  // Recorded where the renderer can find it. Text is only as wide as a browser says it
+  // is, so whether a legend fits cannot be settled anywhere but in the page — and this
+  // is what lets the thumbnail run refuse to write a card with the note running off it.
+  if (typeof window !== "undefined") {
+    window.__KEY_HINT_BOUNDS__ = bounds;
+  }
+  return bounds;
 }

@@ -276,6 +276,19 @@ async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width
     if (frame !== undefined) {
       await page.evaluate((requested) => window.__renderFrame(requested), frame);
     }
+
+    // Whether a legend fits can only be settled where the text is measured, so it is
+    // settled here, on the picture about to be written. The card sets the note 1.7
+    // times larger than the page does on a canvas of the same width, so this is the
+    // place a legend overruns first — and the run stops rather than writing a card with
+    // the words running off the edge.
+    const hint = await page.evaluate(() => window.__KEY_HINT_BOUNDS__ ?? null);
+    if (hint && (hint.left < 0 || hint.right > hint.canvas.width || hint.bottom > hint.canvas.height)) {
+      throw new Error(
+        `${artwork.id}: the legend runs outside the canvas ` +
+        `(${hint.left.toFixed(1)}..${hint.right.toFixed(1)} of ${hint.canvas.width})`
+      );
+    }
     // Scaled down and encoded inside the page, so no image library is needed on this side.
     const dataUrl = await page.evaluate((targetWidth) => {
       const source = document.querySelector("canvas");
