@@ -18,13 +18,21 @@
  * every pixel of the canvas themselves, so anything short of the whole buffer being written
  * to is the fault itself. The clips that accumulate cannot be checked that way -- a crystal
  * on a dark ground writes the whole buffer while covering very little of it -- so they are
- * asked instead to move: their opening frame, an early frame and their last must all differ,
- * asked for through the capture path where a frame is a function of its index.
+ * asked two things instead. That they move: their opening frame, an early frame and their
+ * last must all differ. And that a frame is a function of its index and nothing else, which
+ * is the claim their capture path actually rests on: a frame is reached by walking forward
+ * from wherever the sketch has got to, over code that keeps its place between calls and can
+ * be asked to go back. Three paths arrive at the final frame -- the renderer's walk from
+ * the opening, the thumbnail's jump on a page that has drawn nothing, and a walk resumed
+ * after being sent back -- and if they disagree, the thumbnail on the gallery card is not
+ * the end of the clip it is standing for.
  *
- * The measure is checked against a canvas painted only across its top quarter before any
- * artwork is opened, because a coverage measure that cannot report a gap would pass
- * everything. Restoring the fault in one sketch makes this fail, which is how it was
- * confirmed rather than assumed.
+ * The measure has to be able to say no, or a green run means nothing, so it is checked
+ * twice before it is believed. Once against a canvas painted only across its top quarter,
+ * which needs no p5 and no artwork. And once against the fault as it was really made: a
+ * frozen copy of the sketch that shipped broken, which must still read as mostly unpainted.
+ * The first only proves the arithmetic; the second proves the measure would have caught
+ * what a reader caught, which is a stronger claim than any defect written to be caught.
  */
 
 import { readFileSync } from "node:fs";
@@ -34,6 +42,23 @@ import { startStaticServer } from "../lib/render.mjs";
 
 const DEVICE_PIXEL_RATIO = 2;
 const BANDS = 8;
+
+/**
+ * The unrepaired sketch, frozen under test/fixtures rather than fetched from history: the
+ * gallery workflow checks out at depth one, so the commit this came from is not there to
+ * be read.
+ */
+const SPECIMEN_PATH = "/p5js/test/fixtures/retina-density-fault/index.html";
+const SPECIMEN_COMMIT = "facea56";
+
+/**
+ * The specimen wrote a grid of half the width into its buffer, which fills the top quarter
+ * of the canvas and leaves the rest of it bare: six of eight bands, measured, the two at the
+ * top being the quarter it did paint. Four is required rather than six, because the exact
+ * figure depends on how far the strokes drawn over the cells happen to reach and a change
+ * of p5 could move it, while "the bottom half was never written to" is the fault itself.
+ */
+const SPECIMEN_BARE_BANDS = 4;
 
 /**
  * The clips whose frames are walked up to rather than drawn from nothing. A frame of one of
@@ -47,6 +72,9 @@ const ACCUMULATING = [
   "strange-attractor",
   "ulam-spiral"
 ];
+
+/** The frame every clip is asked to arrive at three ways, and an early one to pass through. */
+const EARLY_FRAME = 12;
 
 function sourceOf(artworkId) {
   return readFileSync(new URL(`../artworks/${artworkId}/sketch.js`, import.meta.url), "utf8");
@@ -82,7 +110,7 @@ const measureBands = (bands) => {
   return { backing: `${width}x${height}`, shares };
 };
 
-async function open(browser, baseUrl, artworkId, search = "") {
+async function open(browser, url) {
   const page = await browser.newPage({
     viewport: { width: 1000, height: 900 },
     deviceScaleFactor: DEVICE_PIXEL_RATIO
@@ -94,9 +122,7 @@ async function open(browser, baseUrl, artworkId, search = "") {
       errors.push(`console: ${message.text()}`);
     }
   });
-  await page.goto(`${baseUrl}/p5js/artworks/${artworkId}/index.html${search}`, {
-    waitUntil: "networkidle"
-  });
+  await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForFunction(() => window.__ARTWORK_READY__ === true, undefined, { timeout: 60_000 });
   return { page, errors };
 }
@@ -108,14 +134,12 @@ const { manifest } = await loadCatalog();
 const server = await startStaticServer();
 const browser = await chromium.launch();
 try {
-  // The measure has to be able to say no, or a green run means nothing. A canvas painted
-  // only across its top quarter -- which is exactly how the fault looked -- must come back
-  // with its lower bands empty.
+  // A canvas painted only across its top quarter -- which is the shape the fault had -- must
+  // come back with its lower bands empty. No p5 and no artwork are involved, so this says
+  // only that the arithmetic can report a gap.
   const control = await browser.newPage({ deviceScaleFactor: DEVICE_PIXEL_RATIO });
   await control.setContent('<canvas id="c" width="400" height="400"></canvas>');
   await control.evaluate(() => {
-    // Painted across the top quarter and left untouched below it, which is the shape the
-    // fault had: a logical grid written into a buffer twice its size.
     const context = document.querySelector("canvas").getContext("2d");
     context.fillStyle = "#e8e2d0";
     context.fillRect(0, 0, 400, 100);
@@ -128,6 +152,28 @@ try {
   }
   note(`control (painted top quarter only): ${controlBands.shares.join(" ")}`);
 
+  // And the same measure, unchanged, against the sketch that actually shipped broken: real
+  // p5, a real page, the density the reader had. This is the one that matters, because a
+  // fault written in order to be caught tells you nothing about the fault you did not see.
+  const specimen = await open(browser, `${server.baseUrl}${SPECIMEN_PATH}`);
+  const specimenBands = await specimen.page.evaluate(measureBands, BANDS);
+  await specimen.page.close();
+  const bare = specimenBands.shares.filter((share) => share < 95).length;
+  note(
+    `${`specimen ${SPECIMEN_COMMIT}`.padEnd(26)} backing ${specimenBands.backing.padEnd(11)}`
+    + ` bands ${specimenBands.shares.join(" ")}`
+    + `   ${bare} of ${BANDS} unpainted (the fault as it shipped)`
+  );
+  if (bare < SPECIMEN_BARE_BANDS) {
+    failures.push(
+      `the measure reads ${bare} of ${BANDS} bands as unpainted on the unrepaired sketch,`
+      + ` which drew into the top quarter of the canvas and nowhere else`
+    );
+  }
+  if (specimen.errors.length > 0) {
+    failures.push(`the specimen page: ${specimen.errors[0]}`);
+  }
+
   // Artworks that write every pixel by hand. Derived rather than listed, so one that starts
   // writing pixels is checked without anybody remembering to add it.
   const writers = manifest.artworks
@@ -137,12 +183,15 @@ try {
     failures.push("no artwork writes pixels by hand, so this check is looking at nothing");
   }
   for (const artworkId of writers) {
-    const { page, errors } = await open(browser, server.baseUrl, artworkId);
+    const { page, errors } = await open(
+      browser,
+      `${server.baseUrl}/p5js/artworks/${artworkId}/index.html`
+    );
     const { backing, shares } = await page.evaluate(measureBands, BANDS);
-    const bare = shares.filter((share) => share < 95);
+    const unpainted = shares.filter((share) => share < 95);
     note(`${artworkId.padEnd(26)} backing ${backing.padEnd(11)} bands ${shares.join(" ")}`);
-    if (bare.length > 0) {
-      failures.push(`${artworkId} leaves ${bare.length} of ${BANDS} bands unpainted at ${DEVICE_PIXEL_RATIO}x`);
+    if (unpainted.length > 0) {
+      failures.push(`${artworkId} leaves ${unpainted.length} of ${BANDS} bands unpainted at ${DEVICE_PIXEL_RATIO}x`);
     }
     if (errors.length > 0) {
       failures.push(`${artworkId}: ${errors[0]}`);
@@ -151,7 +200,7 @@ try {
   }
 
   // Clips whose frames are walked up to. Asked to advance rather than to cover, and asked
-  // through the capture path, which is where a frame is a function of its index.
+  // through the capture path, which is where a frame is meant to be a function of its index.
   const accumulating = manifest.artworks
     .filter((artwork) => /function \w+UpTo\(/u.test(sourceOf(artwork.id)))
     .map((artwork) => artwork.id)
@@ -160,19 +209,44 @@ try {
     failures.push(`the roll of accumulating clips has changed: ${accumulating.join(", ")}`);
   }
   for (const artworkId of accumulating) {
-    const { page, errors } = await open(browser, server.baseUrl, artworkId, "?capture=1&renderScale=1");
+    const artwork = manifest.artworks.find((entry) => entry.id === artworkId);
+    const lastFrame = Math.round(artwork.render.durationSeconds * manifest.defaults.fps) - 1;
+    const { page, errors } = await open(
+      browser,
+      `${server.baseUrl}/p5js/artworks/${artworkId}/index.html?capture=1&renderScale=1`
+    );
     const shot = (frame) => page.evaluate(async (index) => {
       await window.__renderFrame(index);
       return document.querySelector("canvas").toDataURL("image/png");
     }, frame);
+
+    // Asked for first, on a page that has drawn nothing: the jump the thumbnail makes.
+    const cold = await shot(lastFrame);
+    // Asking for the opening frame now is a step backwards, which is the branch that throws
+    // the picture away and starts again. So everything after it is a walk forward, and the
+    // final frame is arrived at a second time by a different road than the thumbnail took.
     const opening = await shot(0);
-    const early = await shot(12);
-    const last = await shot(Math.round(manifest.artworks.find((a) => a.id === artworkId)
-      .render.durationSeconds * manifest.defaults.fps) - 1);
-    const advances = opening !== early && early !== last;
-    note(`${artworkId.padEnd(26)} frames 0 < 12 < last all differ: ${advances ? "yes" : "NO"}`);
+    const early = await shot(EARLY_FRAME);
+    const walked = await shot(lastFrame);
+
+    const advances = opening !== early && early !== walked;
+    const goesBack = opening !== cold;
+    const agrees = cold === walked;
+    note(
+      `${artworkId.padEnd(26)} frames 0 < ${EARLY_FRAME} < ${lastFrame} all differ: ${advances ? "yes" : "NO"}`
+      + `   jumped and walked frame ${lastFrame} agree: ${agrees ? "yes" : "NO"}`
+    );
     if (!advances) {
       failures.push(`${artworkId} does not advance between its opening, an early frame and its last`);
+    }
+    if (!goesBack) {
+      failures.push(`${artworkId} keeps its last frame when asked for its first, so it never goes back`);
+    }
+    if (!agrees) {
+      failures.push(
+        `${artworkId} draws frame ${lastFrame} differently depending on how it was reached,`
+        + ` so its thumbnail is not the end of its clip`
+      );
     }
     if (errors.length > 0) {
       failures.push(`${artworkId}: ${errors[0]}`);
