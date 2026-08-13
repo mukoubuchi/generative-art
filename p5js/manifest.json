@@ -721,6 +721,29 @@
         "durationSeconds": 10,
         "scale": 2
       }
+    },
+    {
+      "id": "platonic-duals",
+      "title": "Platonic Duals",
+      "entry": "p5js/artworks/platonic-duals/index.html",
+      "interactivePath": "platonic-duals/",
+      "description": "Each solid's face centres are already the next solid's corners.",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "hypsicles-ho-autos-kyklos"
+      ],
+      "thumbnail": {
+        "frame": 130
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/PlatonicDuals.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }

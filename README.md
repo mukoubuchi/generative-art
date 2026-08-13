@@ -53,6 +53,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Circle Packing](p5js/artworks/circle-packing/) | Darts kept greedy-first, each grown into the largest circle that fits, rendered as a static PNG |
 | [Moiré Rings](p5js/artworks/moire-rings/) | Two families of rings beating into hyperbolas around the pointer, rendered as an MP4 |
 | [Lorenz Ribbons](p5js/artworks/lorenz-ribbon/) | Two orbits a breath apart parting onto different wings, rendered as an MP4 |
+| [Platonic Duals](p5js/artworks/platonic-duals/) | Two solids trading places, each one's face centres already the other's corners, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 

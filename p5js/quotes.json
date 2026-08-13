@@ -330,6 +330,16 @@
       "year": 1908,
       "publicDomain": true,
       "sourceUrl": "https://fr.wikisource.org/wiki/Science_et_m%C3%A9thode/Livre_premier,_%C2%A7_IV"
+    },
+    {
+      "id": "hypsicles-ho-autos-kyklos",
+      "text": "ὁ αὐτὸς κύκλος περιλαμβάνει τό τε τοῦ δωδεκαέδρου πεντάγωνον καὶ τὸ τοῦ εἰκοσαέδρου τρίγωνον τῶν εἰς τὴν αὐτὴν σφαῖραν ἐγγραφομένων.",
+      "lang": "grc",
+      "author": "Hypsicles",
+      "source": "Elements XIV.2",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/lesuvresdeuclide03eucl/page/n517"
     }
   ]
 }

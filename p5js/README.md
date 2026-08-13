@@ -41,6 +41,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `circle-packing` | 680×680 | 1360×1360 PNG | Static capture, animated page |
 | `moire-rings` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, out, once around, and home; interactive page |
 | `lorenz-ribbon` | 800×600 | 1600×1200 MP4 at 30 fps | 10 seconds, both orbits grown and held |
+| `platonic-duals` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one dual cycle, ending where it began; interactive page |
 
 Koch Curves, Recursive Pentagram and Sierpinski Gasket are inherently radial or square constructions, so square logical canvases preserve their symmetry. The 680 px display size follows the laptop-sized square established by the earlier artworks. A per-artwork export scale produces higher-resolution media without enlarging the interactive canvas.
 
@@ -210,6 +211,10 @@ Moiré Rings draws two families of concentric rings, one fixed to the canvas, on
 
 Lorenz Ribbons integrates Lorenz's three equations with fourth-order Runge-Kutta and lets two orbits run from starts one part in ten thousand apart, closer than any pixel will show. The clip grows both ribbons side by side: together through the first turns — the braid alternating gold and steel where they overlap — then parting onto different wings for good. Nothing in the code is random; the parting is the equations' own. The stepper's order is measured (halving the step cuts the local error thirty-two-fold), Lorenz's equilibria are checked to be exactly fixed, the orbit is held to the attractor's bounded box, and the separation is measured as the artwork's whole claim: still within a hundredth two time units in, a sustained macroscopic gulf across the closing stretch. The ribbons are shaded by height alone, and their side vectors stay level, so each banks like a road and the figure's depth reads without any lighting machinery.
 
+Platonic Duals closes its loop on a proposition of Hypsicles'. Dualizing a solid — putting a vertex at the centre of every face — carries the icosahedron to the dodecahedron and back, and the sizes are taken from that operation rather than from anyone's bookkeeping: from circumradius one, one dualization lands the dual at the original's inradius, so two land the icosahedron on itself, smaller by the square of the ratio both solids share. That the ratio is shared at all is the proposition, and it is what makes the nesting one geometric sequence instead of two — the same circle circumscribes the dodecahedron's pentagon and the icosahedron's triangle when both are inscribed in a single sphere, so inradius over circumradius is one number, 0.79465…, for either solid. The camera closes in at exactly that number squared over the clip, and the stage turns a fifth of a turn about the vertical five-fold axis, so the last frame is the first: same figure, same bearing, one dual cycle deeper. Nothing is patched at the seam; it closes because the two dualizations shrink by the same ratio.
+
+What the clip shows is that operation caught in the act. Each solid in turn ignites a spark at the centre of every face, and the sparks are already the next solid's corners — so when its edges close around them, nothing has been constructed, only named, and the old solid thins to a ghost and goes. Everything is drawn as crystal, translucent faces with the depth test off and layered inner to outer, because nested convex solids cannot share a depth buffer without one of them losing, and the nesting is the whole point. On the page a drag turns the stage under the motion it already has. The proposition is quoted as it stands in Book XIV, whose text says in the next breath that Aristaeus had written it before, in a book called the Comparison of the Five Figures.
+
 ## Install
 
 Node.js 22 or later and ffmpeg are required.
@@ -232,7 +237,7 @@ npm run thumbnails
 
 Generated media is written under `exports/p5js/` and is excluded from Git.
 
-`npm run thumbnails` writes one JPEG per artwork into `site/thumbnails/`, for the gallery to show. It is much cheaper than a full render: everything is captured at the logical size rather than the export scale, and a moving artwork gives up one frame instead of a whole encoded clip, so the whole set takes about twenty seconds and under a megabyte between them. The frame chosen is halfway through by default, because several clips open and close on a resting state; an artwork whose telling moment lies elsewhere sets `thumbnail.frame` in the manifest, and twenty-one do — Recursive Pentagram is still drawing itself at its middle and is shown finished instead, Temple Bell is shown mid-toll with a ring in flight, Loader is shown at its opening frontier with the bright arc standing over the oldest stretch of its own track, Spring Polygon is shown at the instant of release, when the pulled star turns from strain to motion, and Bounding Spots is shown a moment after the release, where the ladder has opened into a single clean fan. A test counts them, because a number written in prose is a number nobody updates.
+`npm run thumbnails` writes one JPEG per artwork into `site/thumbnails/`, for the gallery to show. It is much cheaper than a full render: everything is captured at the logical size rather than the export scale, and a moving artwork gives up one frame instead of a whole encoded clip, so the whole set takes about twenty seconds and under a megabyte between them. The frame chosen is halfway through by default, because several clips open and close on a resting state; an artwork whose telling moment lies elsewhere sets `thumbnail.frame` in the manifest, and twenty-two do — Recursive Pentagram is still drawing itself at its middle and is shown finished instead, Temple Bell is shown mid-toll with a ring in flight, Loader is shown at its opening frontier with the bright arc standing over the oldest stretch of its own track, Spring Polygon is shown at the instant of release, when the pulled star turns from strain to motion, and Bounding Spots is shown a moment after the release, where the ladder has opened into a single clean fan. A test counts them, because a number written in prose is a number nobody updates.
 
 The renderer uses the Chromium build that `npx playwright install chromium` downloads, matching CI. Set `PLAYWRIGHT_CHANNEL` only to fall back to a locally installed browser channel; its antialiasing differs from CI's Chromium, so rendered output is no longer comparable.
 
@@ -508,7 +513,7 @@ Every frame is the same shape whatever its artwork's canvas is, and the picture 
 
 ### Telling the reader what there is to do
 
-Seven artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
+Eight artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
 
 | Artwork | Control | The line it prints |
 | --- | --- | --- |
@@ -519,6 +524,7 @@ Seven artworks answer to the reader, and none of them said so, which left the in
 | `pulse-button` | click | `click` the bell tolls |
 | `spring-polygon` | drag | `drag` pull a bob; the ring answers |
 | `moire-rings` | pointer | `move` the pointer carries the second centre |
+| `platonic-duals` | drag | `drag` the stage turns in your hand |
 
 The line is drawn where the line is drawn: an artwork that only plays a fixed loop says nothing, because there is nothing to say. Flow Field is the near case — its page is live, and its trails accumulate as you watch — but nothing it does depends on the reader, so it carries no line.
 
