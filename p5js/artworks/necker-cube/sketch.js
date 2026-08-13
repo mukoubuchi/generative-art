@@ -1,66 +1,82 @@
-import { hintMode, indicatorShown } from "../shared/hint-mode.js";
-import { drawPointerIndicator } from "../shared/input-indicator.js";
+import { hintMode } from "../shared/hint-mode.js";
 import { drawKeyHint } from "../shared/key-hint.js";
-import { angleAt, envelope, stripQuads, stripVertices } from "./cube.js";
+import {
+  EDGES,
+  FACES,
+  REST_TURNS,
+  ROCK_TURNS,
+  STEPS_PER_SECOND,
+  TOTAL_STEPS,
+  declarationAt,
+  frontFace,
+  shadowAt,
+  turnsAt
+} from "./cube.js";
 
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
 const PLAYBACK_FPS = 30;
-const CLIP_SECONDS = 6;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
-const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
-/** The pointer's horizontal position sets the viewing angle. */
 const HINT_LEGEND = [
-  { cap: "move", text: "the pointer turns the cube" }
+  { cap: "move", text: "turns the cube" },
+  { cap: "press", text: "declares a reading" }
 ];
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
-// The original's edge length was a third of its canvas, and its stroke two pixels of six
-// hundred. Both are kept as ratios so the figure is the same at any canvas size.
-const RADIUS = BASE_DIMENSION / 3;
-const STROKE_WEIGHT = BASE_DIMENSION * (2 / 600);
-// The Processing sketch never called this out, but the drawing is turned a quarter turn
-// after being placed, so the projected ellipse stands upright.
-const FIGURE_ROTATION = Math.PI / 2;
-const BACKGROUND = 204;
-const TOTAL_FRAMES = PLAYBACK_FPS * CLIP_SECONDS;
+const HALF_EDGE = BASE_DIMENSION * 0.23;
+const STROKE_WEIGHT = BASE_DIMENSION * (2.6 / 600);
+const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
+const TOTAL_FRAMES = TOTAL_STEPS / STEPS_PER_FRAME;
 
-// Every far corner trails one radius behind its near corner, so the envelope of the whole
-// rotation reaches a radius further one way than the other and the anchor is not its
-// middle. Placing the anchor half a radius past the centre puts the envelope on it.
-const bounds = envelope(RADIUS);
-const ANCHOR_X = LOGICAL_WIDTH / 2;
-const ANCHOR_Y = LOGICAL_HEIGHT / 2 - (bounds.left + bounds.right) / 2;
+/** The wall, the firelight the shadow is cast in, and a tint for each reading. */
+const WALL = [26, 22, 20];
+const SHADOW = [238, 226, 200];
+const FIRST_READING = [236, 152, 68];
+const SECOND_READING = [96, 190, 208];
 
-// Only the pointer's horizontal position turns the cube, so its height in the clip is a
-// free choice; a band under the figure keeps the sweep out of the wireframe, whose two
-// readings are the whole artwork.
-const POINTER_TRACK_Y = LOGICAL_HEIGHT * 0.88;
+let liveTurns = 0;
+let liveReading = 0;
+let pressCount = 0;
 
 const P5 = window.p5;
 
 new P5((p) => {
-  function drawAngle(angle) {
+  /**
+   * The shadow, and — only when a reading is being declared — the one thing the two
+   * readings disagree about: which face is nearest. The wireframe itself is identical
+   * either way and is never touched, which is the artwork's whole claim.
+   */
+  function drawStep(turns, declaration) {
+    const corners = shadowAt(turns, HALF_EDGE);
+
     p.push();
     p.scale(RENDER_SCALE);
-    p.background(BACKGROUND);
-    p.translate(ANCHOR_X, ANCHOR_Y);
-    p.rotate(FIGURE_ROTATION);
-    p.noFill();
-    p.stroke(0);
-    p.strokeWeight(STROKE_WEIGHT);
-    for (const quad of stripQuads(stripVertices(angle, RADIUS))) {
+    p.background(...WALL);
+    p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+
+    if (declaration.reading !== 0 && declaration.amount > 0) {
+      const tint = declaration.reading > 0 ? FIRST_READING : SECOND_READING;
+      const face = FACES[frontFace(turns, declaration.reading, HALF_EDGE)];
+      p.noStroke();
+      p.fill(tint[0], tint[1], tint[2], 132 * declaration.amount);
       p.beginShape();
-      for (const vertex of quad) {
-        p.vertex(vertex.x, vertex.y);
+      for (const corner of face) {
+        p.vertex(corners[corner].x, corners[corner].y);
       }
       p.endShape(p.CLOSE);
+    }
+
+    p.noFill();
+    p.stroke(...SHADOW);
+    p.strokeWeight(STROKE_WEIGHT);
+    for (const [from, to] of EDGES) {
+      p.line(corners[from].x, corners[from].y, corners[to].x, corners[to].y);
     }
     p.pop();
 
@@ -69,13 +85,14 @@ new P5((p) => {
     }
   }
 
-  function publishState(frameIndex, pointerX, angle) {
+  function publishState(frameIndex, turns, declaration) {
     const publishedState = {
       kind: "video",
       frameIndex,
       totalFrames: TOTAL_FRAMES,
-      pointerX,
-      angle,
+      turns,
+      reading: declaration.reading,
+      declared: declaration.amount,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
@@ -90,32 +107,38 @@ new P5((p) => {
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();
-      // The capture walks the pointer from the left edge to just short of the right one,
-      // so the clip turns the cube exactly once and its last frame meets its first.
+      // Every frame is a pure function of its index: the cube turns once over the clip
+      // and the declarations follow the plan, so any frame can be drawn on its own.
       window.__renderFrame = (frameIndex) => {
-        const pointerX = frameIndex * LOGICAL_WIDTH / TOTAL_FRAMES;
-        const angle = angleAt(pointerX, LOGICAL_WIDTH);
-        drawAngle(angle);
-        if (INDICATOR) {
-          p.push();
-          p.scale(RENDER_SCALE);
-          drawPointerIndicator(p, pointerX, POINTER_TRACK_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-          p.pop();
-        }
-        return Promise.resolve(publishState(frameIndex, pointerX, angle));
+        const step = frameIndex * STEPS_PER_FRAME;
+        const turns = turnsAt(step);
+        const declaration = declarationAt(step);
+        drawStep(turns, declaration);
+        return Promise.resolve(publishState(frameIndex, turns, declaration));
       };
     }
-    drawAngle(angleAt(0, LOGICAL_WIDTH));
-    publishState(0, 0, angleAt(0, LOGICAL_WIDTH));
+    drawStep(turnsAt(0), { reading: 0, amount: 0 });
+    publishState(0, turnsAt(0), { reading: 0, amount: 0 });
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
       return;
     }
-    const pointerX = p.constrain(p.mouseX, 0, LOGICAL_WIDTH);
-    const angle = angleAt(pointerX, LOGICAL_WIDTH);
-    drawAngle(angle);
-    publishState(p.frameCount, pointerX, angle);
+    // The pointer turns the cube, as it always has. Crossing the canvas rocks it
+    // through the same span the clip does, so the page never flattens it either.
+    const across = p.constrain(p.mouseX, 0, LOGICAL_WIDTH) / LOGICAL_WIDTH;
+    liveTurns = REST_TURNS + ROCK_TURNS * (2 * across - 1);
+    const declaration = { reading: liveReading, amount: liveReading === 0 ? 0 : 1 };
+    drawStep(liveTurns, declaration);
+    publishState(p.frameCount, liveTurns, declaration);
+  };
+
+  // Pressing declares a reading, and pressing again declares the other one — so the
+  // reader can hold the cube either way round instead of waiting to be told.
+  p.mousePressed = () => {
+    pressCount += 1;
+    liveReading = pressCount % 3 === 0 ? 0 : (pressCount % 3 === 1 ? 1 : -1);
+    return true;
   };
 });

@@ -417,7 +417,7 @@
       "title": "Necker Cube",
       "entry": "p5js/artworks/necker-cube/index.html",
       "interactivePath": "necker-cube/",
-      "description": "Nothing here has depth. The pointer turns the cube you supply.",
+      "description": "One shadow, two worlds: the same cube turning either way.",
       "canvas": {
         "width": 680,
         "height": 680
@@ -425,10 +425,13 @@
       "quoteIds": [
         "platon-skeuaston-skias"
       ],
+      "thumbnail": {
+        "frame": 60
+      },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/NeckerCube.mp4",
-        "durationSeconds": 6,
+        "durationSeconds": 10,
         "scale": 2
       }
     },

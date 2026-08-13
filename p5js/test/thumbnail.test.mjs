@@ -8,7 +8,9 @@ import { P5JS_DIRECTORY, loadCatalog, thumbnailFrame, validateManifest } from ".
 const NUMBER_WORDS = [
   "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
   "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
-  "eighteen", "nineteen", "twenty"
+  "eighteen", "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three",
+  "twenty-four", "twenty-five", "twenty-six", "twenty-seven", "twenty-eight",
+  "twenty-nine", "thirty", "thirty-one", "thirty-two", "thirty-three"
 ];
 
 test("a still artwork has no frame to choose", async () => {
@@ -71,7 +73,7 @@ test("the README's count of overriding artworks is the manifest's own", async ()
   // was written once and went stale across seven of them, which is what a number in
   // prose does; this reads it back and holds it to the manifest.
   const readme = await readFile(resolve(P5JS_DIRECTORY, "README.md"), "utf8");
-  const claim = readme.match(/sets `thumbnail\.frame` in the manifest, and (?<count>\w+) do/u);
+  const claim = readme.match(/sets `thumbnail\.frame` in the manifest, and (?<count>[\w-]+) do/u);
   assert.ok(claim, "the README no longer states how many artworks override the frame");
 
   const stated = NUMBER_WORDS.indexOf(claim.groups.count);
