@@ -1,19 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  GRID_SIZE,
-  RUN_STEP,
-  TILE_LENGTH,
-  allSegments,
-  horizontalSegments,
-  verticalSegments,
-  visibleSegments
-,
   DISSOLVE_FRAMES,
+  DRIVE_FRAMES,
+  GRID_SIZE,
   HOLD_FRAMES,
   LAY_FRAMES,
+  RUN_STEP,
+  TILE_LENGTH,
   TOTAL_FRAMES,
-  layingOrder
+  allSegments,
+  driveAt,
+  fadeAt,
+  horizontalSegments,
+  layingOrder,
+  verticalSegments,
+  visibleSegments
 } from "../artworks/herringbone/geometry.js";
 
 const GAP = RUN_STEP - TILE_LENGTH;
@@ -133,4 +135,43 @@ test("the clip's plan lands on three hundred frames and the manifest agrees", as
   const artwork = manifest.artworks.find((entry) => entry.id === "herringbone");
   assert.equal(artwork.render.kind, "video");
   assert.equal(artwork.render.durationSeconds * 30, TOTAL_FRAMES);
+});
+
+test("the card shows the floor finished: every plank in, at full strength", async () => {
+  // The gallery card was a frame of the laying rather than of the floor -- the last run
+  // was still being driven in, so the weave was missing its bottom corner, which is what
+  // a reader saw. There is a window where the floor is whole and undimmed, and the card
+  // has to be taken inside it. Which frames those are is asked of the same two functions
+  // the sketch draws with, so retuning the laying moves the window and this moves with it.
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const frame = manifest.artworks.find((entry) => entry.id === "herringbone").thumbnail.frame;
+  const tiles = layingOrder();
+  const whole = (index) => tiles.every((tile, place) => driveAt(place, tiles.length, index) === 1);
+
+  assert.ok(whole(frame), `plank ${tiles.findIndex((tile, place) =>
+    driveAt(place, tiles.length, frame) < 1)} is still going in at frame ${frame}`);
+  assert.equal(fadeAt(frame), 1, `the weave is already letting go at frame ${frame}`);
+
+  // And the frame stands in the middle of that window rather than on its lip, because
+  // every frame in it draws the identical picture and the only thing left to choose by is
+  // how much room there is on either side.
+  const finished = [];
+  for (let index = 0; index < TOTAL_FRAMES; index += 1) {
+    if (whole(index) && fadeAt(index) === 1) {
+      finished.push(index);
+    }
+  }
+  // The window opens when the last plank is in and closes when the hold does, both asked
+  // of the plan rather than written down: the last plank sets off a whole laying's worth
+  // of sweep after the first, and takes its own DRIVE_FRAMES to go in from there.
+  const lastPlankIn = ((tiles.length - 1) / tiles.length) * LAY_FRAMES + DRIVE_FRAMES;
+  assert.equal(finished.at(0), Math.ceil(lastPlankIn));
+  assert.equal(finished.at(-1), LAY_FRAMES + HOLD_FRAMES);
+  assert.equal(frame, Math.floor((finished.at(0) + finished.at(-1)) / 2));
+
+  // The old card, held as the negative: it really was a frame of an unfinished floor.
+  assert.equal(whole(190), false, "frame 190 no longer shows the floor half-laid");
 });

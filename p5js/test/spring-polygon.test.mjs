@@ -272,6 +272,38 @@ test("the clip is a whole number of frames and ten seconds long", () => {
   assert.equal(TOTAL_STEPS / STEPS_PER_SECOND, 10);
 });
 
+test("the card shows the ring before the hand: nothing pulled, nothing stored", async () => {
+  // The gallery card was a frame of the pull -- the top bob already drawn a long way out
+  // of the ring, on its way to the release. That is the one moment of the clip in which a
+  // hand nobody can see is doing the work, so a still of it reads as a broken pentagon
+  // rather than as a pentagon about to be disturbed. The card is the equilibrium instead.
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const frame = manifest.artworks.find((entry) => entry.id === "spring-polygon").thumbnail.frame;
+  const steps = frame * STEPS_PER_FRAME;
+
+  // Stated about the drawing rather than about the frame number: at that moment no bob has
+  // moved off the pentagon and the network holds none of the hand's energy, so the stars
+  // are all at their dimmest and the rigging is straight.
+  const shown = networkAfter(steps, OPTIONS);
+  const opening = createNetwork(OPTIONS);
+  shown.bobs.forEach((bob, index) => {
+    assert.ok(Math.abs(bob.x - opening.bobs[index].x) < 1e-6, `bob ${index} has been moved`);
+    assert.ok(Math.abs(bob.y - opening.bobs[index].y) < 1e-6, `bob ${index} has been moved`);
+  });
+  assert.ok(totalEnergy(shown) < 1e-12, `the card already holds ${totalEnergy(shown)}`);
+  // And the hand has not arrived, so no bob is being held either.
+  assert.ok(shown.bobs.every((bob) => !bob.dragging));
+  assert.ok(steps <= REST_STEPS, `the pull begins ${steps - REST_STEPS} steps before the card`);
+
+  // The old card, held as the negative: it really was a frame of the pull.
+  const before = networkAfter(82 * STEPS_PER_FRAME, OPTIONS);
+  assert.ok(totalEnergy(before) > 0, "frame 82 no longer catches the ring mid-pull");
+  assert.ok(Math.abs(before.bobs[0].y - opening.bobs[0].y) > 1);
+});
+
 test("the scenario holds, eases the bob out, then lets go for good", () => {
   const start = { x: 340, y: 230 };
   const target = OPTIONS.dragTarget;

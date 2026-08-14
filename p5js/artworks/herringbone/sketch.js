@@ -1,9 +1,8 @@
 import {
-  DISSOLVE_FRAMES,
   GRID_SIZE,
-  HOLD_FRAMES,
-  LAY_FRAMES,
   TOTAL_FRAMES,
+  driveAt,
+  fadeAt,
   layingOrder
 } from "./geometry.js";
 
@@ -27,9 +26,6 @@ const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const UNIT = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT) / GRID_SIZE;
 
-/** How long one plank takes to drive in along its own axis. */
-const DRIVE_FRAMES = 9;
-
 /**
  * The floor, and the two directions' voices.
  *
@@ -51,8 +47,7 @@ const P5 = window.p5;
 
 new P5((p) => {
   function drawWeave(frameIndex) {
-    const dissolve = Math.max(0, frameIndex - LAY_FRAMES - HOLD_FRAMES) / DISSOLVE_FRAMES;
-    const fade = 1 - dissolve;
+    const fade = fadeAt(frameIndex);
 
     p.push();
     p.scale(RENDER_SCALE);
@@ -62,8 +57,7 @@ new P5((p) => {
     p.strokeWeight(PLANK_WEIGHT);
     let laid = 0;
     TILES.forEach((tile, index) => {
-      const started = (index / TILES.length) * LAY_FRAMES;
-      const drive = Math.min(Math.max((frameIndex - started) / DRIVE_FRAMES, 0), 1);
+      const drive = driveAt(index, TILES.length, frameIndex);
       if (drive === 0) {
         return;
       }

@@ -257,7 +257,7 @@
         "thompson-stir-a-flower"
       ],
       "thumbnail": {
-        "frame": 82
+        "frame": 0
       },
       "render": {
         "kind": "video",
@@ -322,7 +322,7 @@
         "scale": 2
       },
       "thumbnail": {
-        "frame": 190
+        "frame": 235
       }
     },
     {

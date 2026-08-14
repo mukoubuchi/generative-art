@@ -91,3 +91,23 @@ export const LAY_FRAMES = 195;
 export const HOLD_FRAMES = 75;
 export const DISSOLVE_FRAMES = 30;
 export const TOTAL_FRAMES = LAY_FRAMES + HOLD_FRAMES + DISSOLVE_FRAMES;
+/** How long one plank takes to drive in along its own axis. */
+export const DRIVE_FRAMES = 9;
+
+/**
+ * How much of plank `index` is in at `frameIndex`, from none of it to the whole. The sweep
+ * hands every plank its own moment — its place in the laying order, spread evenly over the
+ * laying — and from there it drives in along its own axis.
+ *
+ * The timing lives here rather than in the sketch because it decides when the floor is
+ * finished, and the card the gallery shows has to be a frame where it is.
+ */
+export function driveAt(index, tileCount, frameIndex) {
+  const started = (index / tileCount) * LAY_FRAMES;
+  return Math.min(Math.max((frameIndex - started) / DRIVE_FRAMES, 0), 1);
+}
+
+/** How opaque the weave is at `frameIndex`: whole until the hold is over, then let go. */
+export function fadeAt(frameIndex) {
+  return 1 - Math.max(0, frameIndex - LAY_FRAMES - HOLD_FRAMES) / DISSOLVE_FRAMES;
+}
