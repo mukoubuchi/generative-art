@@ -10,12 +10,18 @@ import {
   RING_TILT,
   STEPS_PER_SECOND,
   TURN_STEPS,
+  ballAt,
+  coveringEdge,
+  coveringRegion,
   discDepth,
   discPlace,
   frontDisc,
   handoverTurns,
+  insideRegion,
+  meetingCircle,
   paintingOrder,
   ringAngle,
+  surfaceHeight,
   sweptBounds,
   sweptCentreY
 } from "../artworks/toggle-color-ball/carousel.js";
@@ -257,6 +263,209 @@ test("the whole figure stands on the canvas, sides included", () => {
   assert.ok(widest > CANVAS_HEIGHT / 2, "the figure would have fitted a square canvas");
 });
 
+/**
+ * The handover, and why it had to become a sweep.
+ *
+ * Four flat discs painted furthest first hand over in a single frame: at the instant two
+ * of them are equally far away the whole overlap changes hands, because a flat disc covers
+ * everything its outline covers and nothing less. What follows measures that this is not
+ * an incidental fault but the crowding itself, and then measures the boundary that
+ * replaces it — where the two balls' surfaces come to the same height, which is where they
+ * pass through one another.
+ */
+const balls = (turns) => Array.from({ length: DISC_COUNT }, (unused, index) =>
+  ballAt(index, turns, RING_RADIUS, DISC_RADIUS));
+
+test("no radius both crowds the ring and keeps the balls apart", () => {
+  // The two conditions, each stated about the ring rather than taken from the picture.
+  // Crowding: the near and the far disc meet only if a disc beats the ring's half-height.
+  const crowds = RING_RADIUS * Math.sin(RING_TILT);
+  assert.ok(DISC_RADIUS > crowds, "the ring is not crowded any more");
+
+  // Clearing: at a handover the two neighbours are equally far away, so their circles are
+  // the same size, and they would leave each other alone only at half their distance.
+  const handover = handoverTurns()[0];
+  const here = balls(handover);
+  const first = frontDisc(handover + 1e-9);
+  const second = frontDisc(handover - 1e-9);
+  const apart = Math.hypot(here[first].x - here[second].x, here[first].y - here[second].y);
+  assert.ok(Math.abs(here[first].radius - here[second].radius) < 1e-9, "they are not the same size");
+  const clears = apart / 2 / (here[first].radius / DISC_RADIUS);
+
+  // And the second is the smaller, so the two cannot both be met. This is the whole
+  // argument that the jump a reader saw is the crowding rather than a fault beside it.
+  assert.ok(clears < crowds, `a radius between ${clears} and ${crowds} would do both`);
+  assert.ok(DISC_RADIUS > clears, "the balls do not actually pass through each other");
+});
+
+test("the boundary is where the two surfaces meet, which is a circle", () => {
+  // The cut along a row ends for one of exactly two reasons, and the run says which. Where
+  // the two balls' surfaces come to the same height -- a reader standing there would see
+  // them at the same distance -- the point lies, in space, on the circle the two balls
+  // share. Where the far ball simply stops instead, the point stands on its outline, a
+  // pixel inside it so that no paper can be left showing between the two.
+  let meetings = 0;
+  let outlines = 0;
+  let worstGap = 0;
+  let worstCircle = 0;
+  let worstOutline = 0;
+  for (let step = 0; step < TURN_STEPS; step += 7) {
+    const turns = step / TURN_STEPS;
+    const here = balls(turns);
+    for (let first = 0; first < DISC_COUNT; first += 1) {
+      for (let second = 0; second < DISC_COUNT; second += 1) {
+        if (first === second) {
+          continue;
+        }
+        const edge = coveringEdge(here[first], here[second], 96);
+        if (edge === null) {
+          continue;
+        }
+        const circle = meetingCircle(here[first], here[second]);
+        for (const point of edge.crossings) {
+          if (!point.meets) {
+            // The cut ended on an outline rather than on a meeting: either the ball in
+            // front stops there, or this ball's own edge is reached with nothing of it
+            // covered. Undo the nudge -- a pixel back along the line joining the two
+            // centres, which is the direction it was applied in -- and the point should
+            // stand on one of the two outlines exactly.
+            outlines += 1;
+            const found = {
+              x: point.x + edge.along.x,
+              y: point.y + edge.along.y
+            };
+            worstOutline = Math.max(worstOutline, Math.min(
+              Math.abs(Math.hypot(found.x - here[second].x, found.y - here[second].y)
+                - here[second].radius),
+              Math.abs(Math.hypot(found.x - here[first].x, found.y - here[first].y)
+                - here[first].radius)
+            ));
+            continue;
+          }
+          meetings += 1;
+          assert.ok(circle !== null, "the surfaces met where the balls do not");
+          const height = surfaceHeight(here[first], point);
+          worstGap = Math.max(worstGap, Math.abs(height - surfaceHeight(here[second], point)));
+          worstCircle = Math.max(worstCircle, Math.abs(Math.hypot(
+            point.x - circle.centre.x,
+            point.y - circle.centre.y,
+            height - circle.centre.height
+          ) - circle.radius));
+        }
+      }
+    }
+  }
+  assert.ok(meetings > 1000, `only ${meetings} points of the boundary are a meeting`);
+  assert.ok(outlines > 100, `only ${outlines} points of the boundary are an outline`);
+  // A thousandth of a pixel of height, on balls a hundred and thirty-six pixels across.
+  // It is not tighter because a surface climbs like a square root near its own outline,
+  // so a crossing that falls close to one leaves a little height in an interval already
+  // narrowed past what a double can hold.
+  assert.ok(worstGap < 1e-2, `the surfaces stand ${worstGap} apart where they should meet`);
+  assert.ok(worstCircle < 1e-3, `the run leaves the meeting circle by ${worstCircle}`);
+  // Which is where the search actually stopped, to within floating point.
+  assert.ok(worstOutline < 1e-3, `an outline point stands ${worstOutline} px off both outlines`);
+});
+
+test("what is painted is what is nearest, everywhere on the canvas", () => {
+  // The claim the whole construction exists for, held against the picture rather than
+  // against the reasoning: paint the discs the way the sketch does -- furthest first, each
+  // cut where an earlier ball stands in front of it -- and compare, point by point, with
+  // whichever ball's surface is actually nearest. Coarse enough to run in a moment, fine
+  // enough that a boundary in the wrong place could not hide between the samples.
+  let disagreements = 0;
+  let inked = 0;
+  for (const turns of [0.115, 0.125, 0.135, 0.3, 0.625, 0.87]) {
+    const here = balls(turns);
+    const order = paintingOrder(turns);
+    const cuts = new Map();
+    order.forEach((index, place) => {
+      for (const earlier of order.slice(0, place)) {
+        cuts.set(`${index}-${earlier}`, coveringRegion(here[index], here[earlier], 96));
+      }
+    });
+    for (let x = -CANVAS_WIDTH / 2; x < CANVAS_WIDTH / 2; x += 2) {
+      for (let y = -CANVAS_HEIGHT / 2; y < CANVAS_HEIGHT / 2; y += 2) {
+        const point = { x, y };
+        const heights = here.map((ball) => surfaceHeight(ball, point));
+        const best = Math.max(...heights);
+        const nearest = Number.isFinite(best) ? heights.indexOf(best) : -1;
+        // Points within a hair of an outline are left out: whether a ball is there at all
+        // comes down to the last bit of a square root, and the drawing simply draws a
+        // circle. This is about which ball shows, not about where a circle ends.
+        if (here.some((ball) => Math.abs(Math.hypot(x - ball.x, y - ball.y) - ball.radius) < 1)) {
+          continue;
+        }
+        let painted = -1;
+        order.forEach((index, place) => {
+          const ball = here[index];
+          if (Math.hypot(x - ball.x, y - ball.y) > ball.radius) {
+            return;
+          }
+          for (const earlier of order.slice(0, place)) {
+            const region = cuts.get(`${index}-${earlier}`);
+            if (region !== null && insideRegion(region, point)) {
+              return;
+            }
+          }
+          painted = index;
+        });
+        if (nearest >= 0) {
+          inked += 1;
+        }
+        if (painted !== nearest) {
+          disagreements += 1;
+        }
+      }
+    }
+  }
+  assert.ok(inked > 100000, `only ${inked} points of the canvas carry any ink`);
+  // A run that stood off the true curve would show up here as a band of wrong colour. The
+  // run is walked in a hundred and twenty-eight rows on the page and ninety-six here, and
+  // at that coarseness it stands off by under half a pixel at its worst.
+  assert.ok(
+    disagreements / inked < 0.001,
+    `${disagreements} of ${inked} inked points take the wrong ball`
+  );
+});
+
+test("the handover became a sweep: the boundary moves a little every frame", () => {
+  // Before, two per cent of the canvas changed hands between two frames. What is measured
+  // now is how far the boundary itself travels from one frame to the next, at its fastest,
+  // and how long it takes to cross the overlap -- the difference between an event and a
+  // passage.
+  const first = frontDisc(handoverTurns()[0] + 1e-9);
+  const second = frontDisc(handoverTurns()[0] - 1e-9);
+  const middleOf = (turns) => {
+    const here = balls(turns);
+    const edge = coveringEdge(here[first], here[second], 96);
+    if (edge === null || edge.crossings.length === 0) {
+      return null;
+    }
+    const sum = edge.crossings.reduce(
+      (total, point) => ({ x: total.x + point.x, y: total.y + point.y }),
+      { x: 0, y: 0 }
+    );
+    return { x: sum.x / edge.crossings.length, y: sum.y / edge.crossings.length };
+  };
+
+  let sweeping = 0;
+  let fastest = 0;
+  for (let frame = 0; frame < 300; frame += 1) {
+    const before = middleOf(frame / 300);
+    const after = middleOf((frame + 1) / 300);
+    if (before === null || after === null) {
+      continue;
+    }
+    sweeping += 1;
+    fastest = Math.max(fastest, Math.hypot(after.x - before.x, after.y - before.y));
+  }
+  // It is a passage, not an instant: the boundary exists for a good part of the turn and
+  // never jumps more than a few pixels in a frame.
+  assert.ok(sweeping > 60, `the boundary is only in view for ${sweeping} frames`);
+  assert.ok(fastest < 10, `the boundary jumps ${fastest} px in one frame`);
+});
+
 test("the ring closes: a whole turn puts every disc back where it started", () => {
   for (let index = 0; index < DISC_COUNT; index += 1) {
     const start = discPlace(index, 0, RING_RADIUS);
@@ -300,12 +509,19 @@ test("the discs really move: the ring is not standing still", () => {
  * measurement that found it is not a check that can be kept: reading pixels needs a
  * browser, and one artwork's composition does not earn a browser check of its own.
  *
- * What can be kept is the vocabulary. The sketch draws filled circles on a ground and
- * nothing else, so there is nothing that could surface through a seam. The specimen below
- * is the sketch exactly as it shipped with the fault, frozen out of the artworks tree, and
- * the same scan is run over it: a scanner that cannot see the real fault is not a scanner.
+ * What can be kept is the vocabulary, and it has had to be restated. The sketch now builds
+ * a path — the shape one ball is cut back to where another stands in front of it — so it
+ * can no longer be said that nothing here has a path in it. What is said instead is that
+ * nothing here can put ink along one: every verb that turns a stroke on is absent, the one
+ * call that turns p5's default stroke off is present and comes first, and the path the
+ * context is given is only ever handed to clip. A shape drawn with no stroke leaves no
+ * line, so the guarantee is the same one.
+ *
+ * The specimen below is the sketch exactly as it shipped with the fault, frozen out of the
+ * artworks tree, and the same scan is run over it: a scanner that cannot see the real
+ * fault is not a scanner.
  */
-const STROKING = /\bp\.(stroke|strokeWeight|strokeCap|strokeJoin|line|beginShape|vertex|curve|arc)\s*\(/gu;
+const STROKING = /\bp\.(stroke|strokeWeight|strokeCap|strokeJoin|line|curve|arc)\s*\(/gu;
 
 function strokingCalls(source) {
   return [...source.matchAll(STROKING)].map((match) => match[1]);
@@ -324,7 +540,21 @@ test("the sketch has no way to draw a line, which is why nothing can show throug
 
   // p5 starts with a black stroke a pixel wide, so switching it off is not decoration: a
   // sketch that only stopped calling the ring would outline every disc in black instead.
+  // And it has to come before anything is drawn, not merely be somewhere in the file.
   assert.deepEqual(strokingCalls(sketch), [], "the sketch can still draw a line");
+  assert.ok(
+    sketch.indexOf("p.noStroke(") < sketch.indexOf("p.circle("),
+    "the stroke is switched off after the discs are drawn"
+  );
+
+  // The path the sketch does build goes to clip and nowhere else. A context asked to
+  // stroke or to fill a path of its own would be outside everything above.
+  const context = [...sketch.matchAll(/\bcontext\.(\w+)\s*\(/gu)].map((match) => match[1]);
+  assert.deepEqual(
+    [...new Set(context)].sort(),
+    ["beginPath", "clip", "closePath", "lineTo", "moveTo", "rect", "restore", "save"],
+    `the drawing context is asked for more than a cut: ${[...new Set(context)].join(", ")}`
+  );
 });
 
 test("the scan finds the fault in the sketch that shipped with it", async () => {
@@ -337,9 +567,14 @@ test("the scan finds the fault in the sketch that shipped with it", async () => 
   const found = strokingCalls(specimen);
   assert.deepEqual(
     found.sort(),
-    ["beginShape", "stroke", "strokeWeight", "vertex"],
+    ["stroke", "strokeWeight"],
     `the specimen no longer carries the fault: found ${found.join(", ")}`
   );
+  // Which are the two verbs that actually put the hairline down. The specimen also builds
+  // a shape to walk the ring round, and that is deliberately not what it is caught for:
+  // the sketch builds a shape too now, for the cut, and a shape without a stroke leaves
+  // no line. What the scan rejects is the ink, not the path.
+  assert.ok(specimen.includes("p.beginShape("), "the specimen no longer draws its ring as a shape");
   // And the specimen is otherwise the same artwork, so what the scan rejects it for is
   // the line and not some other difference.
   assert.equal([...specimen.matchAll(/\bp\.circle\s*\(/gu)].length, 1);

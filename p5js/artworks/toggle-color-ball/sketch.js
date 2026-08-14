@@ -4,7 +4,8 @@ import {
   RING_RADIUS_RATIO,
   STEPS_PER_SECOND,
   TURN_STEPS,
-  discPlace,
+  ballAt,
+  coveringRegion,
   frontDisc,
   paintingOrder,
   sweptCentreY
@@ -32,6 +33,14 @@ const DISC_DIAMETER = BASE_DIMENSION * DISC_DIAMETER_RATIO;
 const CENTRE_RISE = sweptCentreY(RING_RADIUS, DISC_DIAMETER / 2);
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
 const TOTAL_FRAMES = TURN_STEPS / STEPS_PER_FRAME;
+/**
+ * How many rows the boundary between two balls is found along. At a hundred and
+ * twenty-eight the run stands off the true curve by under a quarter of a pixel at its
+ * worst, which is finer than the edge either colour is drawn with.
+ */
+const EDGE_ROWS = 128;
+/** Far enough outside the canvas that the cut shapes close where nothing is drawn. */
+const OUT_OF_SIGHT = 20000;
 
 /**
  * Two kinds, alternating around the ring: warm and light, cool and dark. Which is why
@@ -51,17 +60,35 @@ const P5 = window.p5;
 
 new P5((p) => {
   /**
-   * Four filled circles on paper, and nothing else at all.
+   * Four circles on paper, and nothing else — but they are balls, and they overlap.
    *
-   * The path the discs ride used to be drawn under them, faintly. It was never once
-   * visible on purpose: measured over the whole turn, every point of it lies inside some
-   * disc at every step. What it did do was show — where two discs cross, neither edge
-   * covers its pixel completely, and the faint line laid underneath came through the
-   * seam as a short dark hair. So the ring is not drawn. Nothing here strokes anything,
-   * which is the only way to be sure nothing can surface through a seam again.
+   * They were painted as flat discs, furthest first, and a reader saw the switch. Where
+   * two of them cross, a flat disc covers everything its own outline covers, so at the
+   * instant the two are equally far away the whole overlap changes hands in one frame:
+   * two per cent of the canvas, gone from one colour to the other between two frames.
+   *
+   * The crowding is the reason, not a fault beside it. Two neighbours have to overlap on
+   * the canvas for the ring to read as a cluster at all — a disc's radius has to beat the
+   * ring's own half-height, over 118.9 here — and at the moment they hand over their
+   * circles stand 268.6 apart, so as balls they would only clear each other at 113.2 or
+   * less. There is no radius that crowds the ring and keeps the balls apart. They pass
+   * through one another, and two balls that pass through one another meet on a circle.
+   *
+   * That circle is the boundary. Edge-on at the handover, so its shadow is the straight
+   * line halfway between the two centres; turning as one draws ahead, so the shadow opens
+   * and sweeps clear of the overlap over about a second and a third. What is drawn is
+   * still four circles: each one is simply cut where a ball already painted stands in
+   * front of it, and the shape cut away is bounded by that circle's shadow.
+   *
+   * Nothing here strokes anything. The context is asked for a path only to cut with, and
+   * the one call that could put a stroke down — the default one p5 begins with — is
+   * switched off before anything is drawn at all.
    */
   function render(step) {
     const turns = (step % TURN_STEPS) / TURN_STEPS;
+    const balls = Array.from({ length: DISC_COUNT }, (unused, index) =>
+      ballAt(index, turns, RING_RADIUS, DISC_DIAMETER / 2));
+    const context = p.drawingContext;
 
     p.push();
     p.scale(RENDER_SCALE);
@@ -69,11 +96,32 @@ new P5((p) => {
     p.background(...PAPER);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - CENTRE_RISE);
     // Furthest first. Nothing here knows which disc that is; the ring is asked.
+    const painted = [];
     for (const index of paintingOrder(turns)) {
-      const { x, y, scale } = discPlace(index, turns, RING_RADIUS);
+      const ball = balls[index];
+      context.save();
+      for (const earlier of painted) {
+        const region = coveringRegion(ball, balls[earlier], EDGE_ROWS);
+        if (region === null) {
+          continue;
+        }
+        // Everything, less the piece the earlier ball stands in front of: an outer square
+        // and the cut shape inside it, taken by the even-odd rule so the inside is what
+        // falls away. Successive cuts narrow what is left, which is what nesting does.
+        context.beginPath();
+        context.rect(-OUT_OF_SIGHT, -OUT_OF_SIGHT, 2 * OUT_OF_SIGHT, 2 * OUT_OF_SIGHT);
+        context.moveTo(region[0].x, region[0].y);
+        for (const point of region.slice(1)) {
+          context.lineTo(point.x, point.y);
+        }
+        context.closePath();
+        context.clip("evenodd");
+      }
       const [red, green, blue] = discColor(index);
       p.fill(red, green, blue);
-      p.circle(x, y, DISC_DIAMETER * scale);
+      p.circle(ball.x, ball.y, 2 * ball.radius);
+      context.restore();
+      painted.push(index);
     }
     p.pop();
 
