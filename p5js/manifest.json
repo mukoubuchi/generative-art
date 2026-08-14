@@ -488,8 +488,9 @@
         "hojoki-yuku-kawa"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/TruchetTides.png",
+        "kind": "video",
+        "artifact": "exports/p5js/TruchetTides.mp4",
+        "durationSeconds": 10,
         "scale": 2
       }
     },

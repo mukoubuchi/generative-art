@@ -99,7 +99,7 @@ test("a sketch that writes pixels indexes by the buffer it is writing into", () 
   const writers = sketches().filter(({ source }) => source.includes("p.pixels"));
   assert.deepEqual(
     writers.map(({ artwork }) => artwork).sort(),
-    ["reaction-diffusion-coral", "truchet-tides", "voronoi-bloom"],
+    ["reaction-diffusion-coral", "voronoi-bloom"],
     "the roll of sketches that write pixels by hand has changed"
   );
 

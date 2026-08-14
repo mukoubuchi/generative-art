@@ -30,7 +30,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `necker-cube` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one rock and two readings; interactive page |
 | `harriss-spiral` | 795×600 | 1590×1200 MP4 at 30 fps | 10 seconds, fifteen waves of the cascade |
 | `reaction-diffusion-coral` | 680×680 | 1360×1360 PNG | Static |
-| `truchet-tides` | 960×640 | 1920×1280 PNG | Static |
+| `truchet-tides` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, one drift of the current |
 | `voronoi-bloom` | 800×640 | 1600×1280 PNG | Static |
 | `flow-field` | 960×640 | 1920×1280 PNG | Static capture, interactive page |
 | `strange-attractor` | 680×680 | 1360×1360 PNG | Static |
@@ -187,7 +187,11 @@ What is checked instead is that it is the same kind. Against the Processing imag
 
 Both generators are seeded at the top of `draw` rather than in `setup`, so the image is a function of the seed alone however many times the sketch is drawn. The simulation module takes `noise` and `random` as arguments, which is what lets the model be tested in Node without a browser. The Processing sketch wrote packed HSB colours straight into its pixel buffer; p5's buffer is RGBA bytes, so the port converts explicitly and a test pins the conversion against known colours.
 
-Truchet Tides keeps the Processing sketch's grid, tiles and four stacked passes. Its 28 columns of 32 pixels divide the framed area exactly, and every tile is one of two quarter-turn pairs whose ends meet the midpoints of its edges — which is why the curves join across the grid however the orientations fall, and what a test pins. Orientation is a noise field pushed one way or the other by a travelling sine wave; the noise alone would scatter the tiles, and the wave is what makes whole bands agree and read as currents.
+Truchet Tides keeps the Processing sketch's tiles and nothing else. Every cell is one of two quarter-turn pairs whose ends meet the midpoints of its edges — which is why the curves join across the grid however the orientations fall, and what a test pins — and fourteen columns of sixty-four pixels divide the framed area exactly, where twenty-eight of thirty-two came out the size of graph paper: an even texture with nothing happening at any scale a person looks at.
+
+What decides each cell is a field of three long waves, and the field drifts. So the channels the arcs make are continually cut and rejoined: the same cells, and never the same water, which is what the artwork's line from the Hōjōki says of a river. It was a still picture before, which left the tides in the title and nowhere else; it is ten seconds now. Each wave drifts a whole number of cycles over the clip, so the field arrives back where it started rather than mid-stride — and the clip closes for a simpler reason on top of that, since the sketch wraps the frame index before it divides and the last frame is the first one bit for bit.
+
+Paper and one indigo at two weights, where there were four stacked passes of glow over a hue running from cyan to deep blue and a paper painted pixel by pixel out of noise. The two weights are the channels the current has decided and the cells it is still making up its mind about, and a test holds that neither ever takes the whole grid, since a distinction nobody can see is not one.
 
 As with Reaction Diffusion Coral the generators differ from Processing's, so the orientations differ and the image is not reproduced pixel for pixel. Coverage and the length of the currents are: ink over 10.71 per cent of the frame against the original's 10.37, and diagonal runs averaging 2.71 and 4.91 pixels against 1.53 and 2.54 at half the resolution, so 2.71 against 3.06 and 4.91 against 5.08 once the export scale is taken out.
 
@@ -752,7 +756,7 @@ The shape layer is adapted from [yui540's css-animations](https://github.com/yui
 
 **The ring from a pressed card**, from `2026-04-25/tips-4.html`, where two rings grow from nothing and are already invisible at four fifths of the way out, so there is a beat of empty space between one and the next rather than a continuous pulse. Here it fires once, from wherever the card was pressed. A press starts a navigation, and until the page changes there is nothing to say the press was received.
 
-**The mark on artworks that move**, from the orbit in `2026-05-02/tips-4.html`, where a small body circles a larger one and its own turn finishes at 80 per cent of the cycle, so it comes to rest for the last fifth before setting off again — that pause is what stops a loop from reading as a spinner. Here it is the badge itself. A mark that says an artwork moves may as well move, and this site's artworks are made of orbits and spirals. It makes one lap as the card arrives and only keeps going under the pointer: thirty-two of the thirty-eight carry it, and thirty-two things circling on their own is a page that will not sit still.
+**The mark on artworks that move**, from the orbit in `2026-05-02/tips-4.html`, where a small body circles a larger one and its own turn finishes at 80 per cent of the cycle, so it comes to rest for the last fifth before setting off again — that pause is what stops a loop from reading as a spinner. Here it is the badge itself. A mark that says an artwork moves may as well move, and this site's artworks are made of orbits and spirals. It makes one lap as the card arrives and only keeps going under the pointer: thirty-three of the thirty-eight carry it, and thirty-three things circling on their own is a page that will not sit still.
 
 **The rule above the colophon**, from the painting-in of `2026-04-22/tips-3.html`, where lines of unequal length slide in from the same side one after another. The unevenness is the point: three equal bars arriving in order is a progress bar, and three unequal ones is a rule being laid down. Here they stay, where the original sends them out again, and they arrive when the foot of the page is reached rather than on a timer — it is the one rule on the page a reader scrolls towards, so it is the one that can afford to be drawn rather than simply be there.
 

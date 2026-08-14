@@ -1,41 +1,66 @@
-export const COLUMN_COUNT = 28;
-export const ROW_COUNT = 18;
-/** Hue runs from cyan to a deep blue across the grid. */
-export const HUE_LOW = 178;
-export const HUE_HIGH = 224;
+/**
+ * Truchet tiles in a current.
+ *
+ * Each cell of the grid holds the same two quarter arcs, turned one way or the other, and
+ * whichever way a cell is turned its arcs meet its neighbours' at the midpoints of the
+ * shared edges. So the curves always join up, and what the picture is depends entirely on
+ * which way each cell has been turned.
+ *
+ * Here that is not a throw of the dice. A field of three long waves runs across the grid,
+ * and a cell turns whichever way the field leans where it stands. The waves drift, so the
+ * channels the arcs make are continually cut and rejoined — the same cells, and never the
+ * same water. The artwork's line from the Hōjōki says as much of a river.
+ *
+ * The drift is a whole number of cycles over the clip, so the field at the end is the
+ * field at the beginning to the last bit, and the loop closes exactly rather than nearly.
+ */
 
+export const COLUMN_COUNT = 14;
+export const ROW_COUNT = 9;
+
+const FULL_TURN = Math.PI * 2;
 const HALF_TURN = Math.PI;
 const QUARTER_TURN = Math.PI / 2;
-const FULL_TURN = Math.PI * 2;
 
-function mix(from, to, amount) {
-  return from + (to - from) * amount;
+/**
+ * The three waves the current is made of, in cycles per cell across and down, and in
+ * whole cycles over the clip. Whole, so the loop closes; different, so the three never
+ * come back into step with each other in between and the pattern never repeats inside a
+ * single run of it.
+ */
+export const WAVES = [
+  { across: 0.085, down: 0.055, turns: 1, phase: 0.00, weight: 1.00 },
+  { across: -0.048, down: 0.101, turns: 2, phase: 0.37, weight: 0.72 },
+  { across: 0.132, down: -0.037, turns: 3, phase: 0.68, weight: 0.55 }
+];
+
+/** How far the field leans at a cell, at `turns` of the clip. In [-1, 1] by construction. */
+export function fieldAt(column, row, turns) {
+  let total = 0;
+  let scale = 0;
+  for (const wave of WAVES) {
+    total += wave.weight * Math.sin(
+      FULL_TURN * (wave.across * column + wave.down * row + wave.turns * turns + wave.phase)
+    );
+    scale += wave.weight;
+  }
+  return total / scale;
 }
 
 /**
- * One tile's orientation, hue and strength. `noise` is injected so the grid can be built
- * without a p5 instance.
- *
- * Orientation is a noise field pushed one way or the other by a travelling sine wave. The
- * noise alone would scatter the tiles; the wave biases whole diagonal bands towards the
- * same orientation, and that bias is what makes the arcs read as currents rather than as
- * a random weave.
+ * How firmly the field leans before a cell counts as part of a channel rather than as a
+ * place the current is about to change its mind about. The one number in the drawing that
+ * is a matter of taste; everything else follows from the waves.
  */
-export function buildTiles(noise) {
+export const CHANNEL_LEAN = 0.24;
+
+/** Every cell of the grid at `turns`: which way it is turned, and how firmly. */
+export function tilesAt(turns) {
   const tiles = [];
   for (let row = 0; row < ROW_COUNT; row += 1) {
     for (let column = 0; column < COLUMN_COUNT; column += 1) {
-      const orientation = noise(column * 0.115, row * 0.115);
-      const tide = Math.sin(
-        column * 0.41 + row * 0.16 + noise(row * 0.07 + 40) * FULL_TURN
-      ) * 0.085;
-      tiles.push({
-        column,
-        row,
-        direction: orientation + tide > 0.5,
-        hue: mix(HUE_LOW, HUE_HIGH, noise(column * 0.082 + 90, row * 0.082 + 90)),
-        strength: noise(column * 0.15 + 180, row * 0.15 + 180)
-      });
+      const lean = fieldAt(column, row, turns);
+      tiles.push({ column, row, direction: lean > 0, lean, channel: Math.abs(lean) > CHANNEL_LEAN });
     }
   }
   return tiles;
@@ -72,25 +97,4 @@ export function tileArcs(tile, tileSize, margin) {
       stop: FULL_TURN
     }
   ];
-}
-
-/**
- * The four passes the sketch drew, thickest and faintest first. Stacking them turns a
- * plain arc into a current with a glow around a bright core.
- */
-export const TIDE_LAYERS = [
-  { weight: 13.0, alpha: 5.5, saturation: 76, brightness: 48, hueOffset: -7 },
-  { weight: 7.0, alpha: 8.0, saturation: 78, brightness: 55, hueOffset: -4 },
-  { weight: 2.7, alpha: 74.0, saturation: 72, brightness: 52, hueOffset: 0 },
-  { weight: 0.75, alpha: 50.0, saturation: 16, brightness: 98, hueOffset: 9 }
-];
-
-/** A layer's stroke for one tile: stronger tiles are brighter and more opaque. */
-export function layerStroke(layer, tile) {
-  return {
-    hue: tile.hue + layer.hueOffset,
-    saturation: layer.saturation,
-    brightness: layer.brightness * mix(0.84, 1.0, tile.strength),
-    alpha: layer.alpha * mix(0.68, 1.0, tile.strength)
-  };
 }
