@@ -49,8 +49,8 @@ export const RING_TILT = (48 * Math.PI) / 180;
  * It is short here because the lean is steep. Leaning the ring further opens the
  * ellipse but shortens the depth it swings through — the depth carries a cosine of the
  * lean — so the sizes would have drawn together as the path opened. Bringing the eye in
- * from three and a half radii to three gives that back: near and far stand in the same
- * ratio they did at the shallower lean, and the steepening is all in the perspective.
+ * from 3.4 radii to 3 gives that back: near and far stand in the same ratio they did at
+ * the shallower lean, and the steepening is all in the perspective.
  */
 export const EYE_DISTANCE = 3;
 
