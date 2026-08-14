@@ -1,10 +1,13 @@
 import {
   DISC_COUNT,
+  DISC_DIAMETER_RATIO,
+  RING_RADIUS_RATIO,
   STEPS_PER_SECOND,
   TURN_STEPS,
   discPlace,
   frontDisc,
-  paintingOrder
+  paintingOrder,
+  sweptCentreY
 } from "./carousel.js";
 
 const LOGICAL_WIDTH = 680;
@@ -18,13 +21,12 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
-// The Processing sketch swung by 200 on a 600 px canvas and drew discs of 280, so the
-// discs were larger than their own swing and ran past the canvas edge. The ring keeps
-// that crowding — the discs still overlap deeply, which is what makes the order they
-// are painted in the whole subject — but gives back enough room for the ring itself to
-// be a shape rather than a row.
-const RING_RADIUS = BASE_DIMENSION * (175 / 600);
-const DISC_DIAMETER = BASE_DIMENSION * (252 / 600);
+const RING_RADIUS = BASE_DIMENSION * RING_RADIUS_RATIO;
+const DISC_DIAMETER = BASE_DIMENSION * DISC_DIAMETER_RATIO;
+// The ring is drawn this much above the middle of the canvas, because perspective puts
+// the figure it sweeps that much below its own centre. Asked of the ring rather than
+// tuned by eye, so it follows the lean and the eye distance wherever they go.
+const CENTRE_RISE = sweptCentreY(RING_RADIUS, DISC_DIAMETER / 2);
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
 const TOTAL_FRAMES = TURN_STEPS / STEPS_PER_FRAME;
 
@@ -67,7 +69,7 @@ new P5((p) => {
     p.push();
     p.scale(RENDER_SCALE);
     p.background(...PAPER);
-    p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+    p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - CENTRE_RISE);
     drawRing(turns);
     // Furthest first. Nothing here knows which disc that is; the ring is asked.
     for (const index of paintingOrder(turns)) {

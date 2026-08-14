@@ -21,18 +21,38 @@ export const TURN_STEPS = 600;
 const FULL_TURN = Math.PI * 2;
 
 /**
- * How far the ring is leaned back from edge-on. At zero the four discs would slide
- * along a single line; a little lean opens their path into an ellipse, which is what
- * makes the near ones read as near before the sizes are even compared.
+ * The ring and the discs, as fractions of the canvas's shorter side. The Processing
+ * sketch swung by 200 on a 600 px canvas and drew discs of 280, so the discs were larger
+ * than their own swing and ran past the canvas edge. These keep that crowding — the discs
+ * still overlap deeply, which is what makes the order they are painted in the whole
+ * subject — but give back enough room for the ring itself to be a shape rather than a row.
+ *
+ * They live here rather than in the sketch because what the figure covers is a question
+ * about the ring, and the tests have to be able to ask it of the same numbers the page
+ * draws with.
  */
-export const RING_TILT = (40 * Math.PI) / 180;
+export const RING_RADIUS_RATIO = 175 / 600;
+export const DISC_DIAMETER_RATIO = 252 / 600;
+
+/**
+ * How far the ring is leaned back from edge-on. At zero the four discs would slide
+ * along a single line; a lean opens their path into an ellipse, which is what makes the
+ * near ones read as near before the sizes are even compared.
+ */
+export const RING_TILT = (48 * Math.PI) / 180;
 /**
  * The eye's distance from the ring's centre, in ring radii. It sets how much bigger a
- * disc looks in front than behind: at three and a half radii, two fifths larger in
- * front against a fifth smaller behind, which is enough for the eye to read depth
+ * disc looks in front than behind: at three radii, a little under three tenths larger
+ * in front against a fifth smaller behind, which is enough for the eye to read depth
  * from size alone before anything overlaps.
+ *
+ * It is short here because the lean is steep. Leaning the ring further opens the
+ * ellipse but shortens the depth it swings through — the depth carries a cosine of the
+ * lean — so the sizes would have drawn together as the path opened. Bringing the eye in
+ * from three and a half radii to three gives that back: near and far stand in the same
+ * ratio they did at the shallower lean, and the steepening is all in the perspective.
  */
-export const EYE_DISTANCE = 3.4;
+export const EYE_DISTANCE = 3;
 
 /** Where disc `index` stands on the ring at `turns` of the whole turn, in radians. */
 export function ringAngle(index, turns) {
@@ -59,6 +79,39 @@ export function discPlace(index, turns, ringRadius) {
     depth,
     scale
   };
+}
+
+/**
+ * The lowest and highest a disc's edge reaches over a whole turn, measured from the
+ * ring's centre.
+ *
+ * Both extremes belong to the near and the far point of the ring. A disc goes lower on
+ * the canvas as it comes forward and the distance draws it larger at the same time, so
+ * the two effects pull the same way and the lowest edge is the near disc's bottom; the
+ * far point is the same argument reversed. The tests hold that against every disc at
+ * every step of the clip rather than taking it on the reasoning.
+ */
+export function sweptBounds(ringRadius, discRadius) {
+  const near = discPlace(0, 0.25, ringRadius);
+  const far = discPlace(0, 0.75, ringRadius);
+  return {
+    top: far.y - discRadius * far.scale,
+    bottom: near.y + discRadius * near.scale
+  };
+}
+
+/**
+ * How far below the ring's centre the swept figure's own middle falls.
+ *
+ * Perspective is not symmetric: the near half of the ring is magnified and the far half
+ * shrunk, so a ring drawn about the centre of the canvas hangs below it — by enough,
+ * before this, for the near disc to run off the bottom edge while a band of empty paper
+ * stood at the top. Drawing the ring this much higher puts the figure in the middle of
+ * the frame without touching any of the geometry that makes it lean.
+ */
+export function sweptCentreY(ringRadius, discRadius) {
+  const { top, bottom } = sweptBounds(ringRadius, discRadius);
+  return (top + bottom) / 2;
 }
 
 /** The discs, furthest first, which is the order they have to be painted in. */
