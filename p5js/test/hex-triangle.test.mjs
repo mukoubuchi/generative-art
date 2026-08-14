@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   CYCLES,
@@ -206,6 +207,70 @@ test("each triangle is equilateral, and half the path it walks", () => {
   for (const point of corners) {
     assert.ok(Math.abs(Math.hypot(point.x, point.y) - PATH_RADIUS) < 1e-12);
   }
+});
+
+/**
+ * The guide paths, and why what is pinned is the absence of the means.
+ *
+ * The two triangular paths the six walk used to be stroked faintly underneath. They were
+ * drawn on purpose and they were still wrong: they stood perfectly still while everything
+ * else moved, so a reader took them for scaffolding somebody had forgotten to rub out.
+ * The walk teaches the paths in a couple of seconds anyway.
+ *
+ * What is left is six filled triangles on a ground, so the scan below is over the
+ * vocabulary rather than over pixels — the same shape of pin as Toggle Color Ball's, and
+ * for the same reason: reading pixels needs a browser, and this is a claim about what the
+ * sketch is able to draw. It cannot be the whole vocabulary here, because the triangles
+ * are themselves drawn as shapes and keep beginShape and vertex. The specimen beside it is
+ * the sketch exactly as it shipped with the guides, so a scan that stopped seeing them
+ * would fail rather than pass.
+ */
+const STROKING = /\bp\.(stroke|strokeWeight|strokeCap|strokeJoin|noFill|line|curve|arc|point)\s*\(/gu;
+
+function strokingCalls(source) {
+  return [...source.matchAll(STROKING)].map((match) => match[1]);
+}
+
+test("the sketch has no way to draw a line, and switches the default one off", async () => {
+  const sketch = await readFile(
+    new URL("../artworks/hex-triangle/sketch.js", import.meta.url),
+    "utf8"
+  );
+  // The scan is looking at the real thing: a file long enough to be the sketch, drawing
+  // the one shape it is supposed to draw.
+  assert.ok(sketch.length > 2000, `the sketch is only ${sketch.length} characters long`);
+  assert.equal([...sketch.matchAll(/\bp\.beginShape\s*\(/gu)].length, 1, "the triangles are gone");
+  assert.equal([...sketch.matchAll(/\bp\.noStroke\s*\(/gu)].length, 1, "nothing turns the stroke off");
+
+  assert.deepEqual(strokingCalls(sketch), [], "the sketch can still draw a line");
+
+  // p5 begins with a black stroke a pixel wide, and it was the guides' own last call that
+  // used to switch it off: deleting them without moving that call would have outlined all
+  // six triangles instead. So the switch-off has to come before anything is drawn, which
+  // is an ordering the file itself can be read for.
+  assert.ok(
+    sketch.indexOf("p.noStroke(") < sketch.indexOf("p.beginShape("),
+    "the stroke is switched off after the triangles are drawn"
+  );
+});
+
+test("the scan finds the guides in the sketch that shipped with them", async () => {
+  // The negative control, and it is the real thing rather than one invented for the
+  // occasion: the sketch as it stood when a reader took the guides for a stray mark.
+  const specimen = await readFile(
+    new URL("./fixtures/hex-triangle-guides/sketch.js", import.meta.url),
+    "utf8"
+  );
+  const found = strokingCalls(specimen);
+  assert.deepEqual(
+    found.sort(),
+    ["noFill", "stroke", "strokeWeight"],
+    `the specimen no longer carries the guides: found ${found.join(", ")}`
+  );
+  // And the specimen is otherwise the same artwork, drawing the triangles the same way,
+  // so what the scan rejects it for is the guides and not some other difference.
+  assert.ok(specimen.includes("trianglesAt"), "the specimen is not this artwork");
+  assert.equal([...specimen.matchAll(/\bp\.beginShape\s*\(/gu)].length, 2, "guides and triangles");
 });
 
 test("the clip is five gatherings, three hundred frames, ten seconds", () => {

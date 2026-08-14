@@ -72,7 +72,11 @@ export function triangleShape(triangleRadius, rotation) {
   });
 }
 
-/** The three corners a path is walked around, which the sketch draws as its guide. */
+/**
+ * The three corners a path is walked around. Nothing draws them -- the sketch once
+ * stroked both paths faintly under the triangles and no longer does -- but they are what
+ * the walk is built out of, and the tests measure the path against them.
+ */
 export function pathCorners(pathIndex, pathRadius) {
   return Array.from({ length: TRIANGLES_PER_PATH }, (unused, cornerIndex) =>
     corner(pathIndex, cornerIndex, pathRadius));
