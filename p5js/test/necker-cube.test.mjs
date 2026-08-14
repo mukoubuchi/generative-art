@@ -7,8 +7,6 @@ import {
   FACES,
   PLAN,
   READINGS,
-  REST_TURNS,
-  ROCK_TURNS,
   STEPS_PER_SECOND,
   TILT,
   TOTAL_STEPS,
@@ -20,7 +18,10 @@ import {
   project,
   sceneAt,
   shadowAt,
-  turnsAt
+  BREAK_SHARE,
+  VIEW_TURNS,
+  farCorner,
+  hiddenEdges
 } from "../artworks/necker-cube/cube.js";
 
 const PLAYBACK_FPS = 30;
@@ -52,7 +53,7 @@ test("the other world casts exactly this shadow, corner for corner", () => {
   // into a lean away, and carries each corner to the one behind it. The shadow does not
   // notice any of it.
   for (const step of [0, 37, 111, 150, 288, 401, 599]) {
-    const turns = turnsAt(step);
+    const turns = VIEW_TURNS + step / 10_000;
     const here = shadowAt(turns, HALF, TILT);
     const other = otherReading(turns, TILT);
     const there = shadowAt(other.turns, HALF, other.tilt);
@@ -66,7 +67,7 @@ test("the other world casts exactly this shadow, corner for corner", () => {
 
 test("throwing depth away is what makes the two indistinguishable", () => {
   for (const step of [0, 90, 210, 450]) {
-    const scene = sceneAt(turnsAt(step), HALF);
+    const scene = sceneAt(VIEW_TURNS + step / 10_000, HALF);
     const mirrored = mirrorDepth(scene);
     // The mirrored world is a different world — its depths are the negatives.
     scene.forEach((point, index) => {
@@ -80,9 +81,9 @@ test("throwing depth away is what makes the two indistinguishable", () => {
 test("the two readings disagree about the near face, and never agree", () => {
   let disagreements = 0;
   for (let step = 0; step <= TOTAL_STEPS; step += 1) {
-    const turns = turnsAt(step);
-    const first = frontFace(turns, READINGS[0], HALF);
-    const second = frontFace(turns, READINGS[1], HALF);
+    const turns = VIEW_TURNS + step / 10_000;
+    const first = frontFace(READINGS[0], turns, HALF);
+    const second = frontFace(READINGS[1], turns, HALF);
     assert.notEqual(first, second, `the readings agreed at step ${step}`);
     disagreements += 1;
   }
@@ -93,43 +94,107 @@ test("the wireframe owes nothing to the reading", () => {
   // The shadow is a function of how far round the cube stands, and of nothing else.
   // There is no reading to pass it, which is why a declaration cannot quietly redraw
   // the figure it claims only to be interpreting.
-  for (const step of [12, 200, 480]) {
-    const turns = turnsAt(step);
+  for (const turns of [VIEW_TURNS, 0.09, 0.2]) {
     assert.deepEqual(shadowAt(turns, HALF), shadowAt(turns, HALF));
     // Both readings are available at the same instant, over one unchanged drawing.
-    const face = FACES[frontFace(turns, 1, HALF)];
-    const other = FACES[frontFace(turns, -1, HALF)];
+    const face = FACES[frontFace(1, turns, HALF)];
+    const other = FACES[frontFace(-1, turns, HALF)];
     assert.notDeepEqual(face, other);
   }
 });
 
-test("the figure never flattens: it is a Necker cube at every frame", () => {
-  // A whole turn would pass four times through a face-on view, where four faces project
-  // to lines and there is no near corner to read either way. The rock stays clear of
-  // those, and the smallest face on the wall keeps better than a third of a full one.
-  const fullFace = (2 * HALF) ** 2;
-  let smallest = Infinity;
-  for (let step = 0; step <= TOTAL_STEPS; step += 1) {
-    const corners = shadowAt(turnsAt(step), HALF);
-    for (const face of FACES) {
-      smallest = Math.min(smallest, projectedArea(corners, face));
+test("the figure never moves, and the two readings are equally easy to take", () => {
+  // Rocking the cube, or letting a reader turn it, hands the drawing a depth cue it is
+  // not entitled to: parallax says at once which corner is nearer, and there is nothing
+  // left to reverse. So the corners are one drawing for the whole clip.
+  const corners = shadowAt(VIEW_TURNS, HALF);
+  for (const step of [0, 137, TOTAL_STEPS - 1, TOTAL_STEPS]) {
+    assert.deepEqual(shadowAt(VIEW_TURNS, HALF), corners, `the figure moved by step ${step}`);
+  }
+  // And it stands where neither reading is the easier one: the shadow is symmetric about
+  // both axes, and the two interior corners fall symmetrically about the centre, so the
+  // figure carries no hint of which corner is meant to be in front.
+  const flipped = corners.map(({ x, y }) => ({ x: -x, y: -y }));
+  const key = (point) => `${point.x.toFixed(9)},${point.y.toFixed(9)}`;
+  assert.deepEqual(corners.map(key).sort(), flipped.map(key).sort());
+});
+
+test("a declaration interrupts the three lines a cube of wood would hide", () => {
+  // The far corner is the one the reading likes least, and a convex body hides exactly
+  // the edges that meet it. That is the only thing the two readings disagree about that
+  // a drawing can show, so it is the only thing the drawing does.
+  const seen = new Set();
+  for (const reading of READINGS) {
+    const far = farCorner(reading, VIEW_TURNS, HALF);
+    const hidden = hiddenEdges(reading, VIEW_TURNS, HALF);
+    assert.equal(hidden.length, 3, `reading ${reading} hides ${hidden.length} edges`);
+    for (const index of hidden) {
+      assert.ok(EDGES[index].includes(far), "an interrupted line does not meet the far corner");
+    }
+    // Every other edge has a face of its own turned towards the eye, which is why three
+    // is the whole answer and no hidden-line machinery is needed.
+    assert.equal(EDGES.filter((edge) => edge.includes(far)).length, 3);
+    // The reading that hides these is the reading whose front face this is: the two
+    // statements are about the same choice, and they must not be able to disagree.
+    const scene = sceneAt(VIEW_TURNS, HALF);
+    const front = FACES[frontFace(reading, VIEW_TURNS, HALF)];
+    assert.ok(!front.includes(far), "the face declared nearest contains the corner declared furthest");
+    assert.ok(
+      front.every((corner) => reading * scene[corner].z > reading * scene[far].z),
+      "the front face is not in front of the far corner"
+    );
+    seen.add(hidden.join(","));
+  }
+  // And the two readings never interrupt the same lines, or there would be nothing to see.
+  assert.equal(seen.size, 2);
+  const [first, second] = READINGS.map((reading) => hiddenEdges(reading, VIEW_TURNS, HALF));
+  assert.deepEqual(first.filter((index) => second.includes(index)), []);
+  // The far corners are opposite corners of the cube, as the near and far of a cube are.
+  const a = CORNERS[farCorner(1, VIEW_TURNS, HALF)];
+  const b = CORNERS[farCorner(-1, VIEW_TURNS, HALF)];
+  assert.deepEqual([a.x + b.x, a.y + b.y, a.z + b.z], [0, 0, 0]);
+});
+
+test("nothing is interrupted while the figure is ambiguous", () => {
+  // The clip opens and closes with all twelve lines whole, and every step that declares
+  // nothing draws them whole. A break that lingered would be a reading nobody made.
+  let ambiguous = 0;
+  let broken = 0;
+  for (let step = 0; step < TOTAL_STEPS; step += 1) {
+    const declaration = declarationAt(step);
+    const share = BREAK_SHARE * declaration.amount;
+    if (declaration.reading === 0) {
+      ambiguous += 1;
+      assert.equal(share, 0, `step ${step} interrupts a line while declaring nothing`);
+    } else if (share > 0) {
+      broken += 1;
     }
   }
-  assert.ok(smallest > 0.3 * fullFace, `a face shrank to ${smallest / fullFace} of itself`);
-  // The rock stays away from the face-on angles, which are the quarter turns.
+  // The scan is scanning: the clip really has stretches of both.
+  assert.ok(ambiguous > 90, `only ${ambiguous} steps are ambiguous`);
+  assert.ok(broken > 90, `only ${broken} steps interrupt anything`);
+  assert.ok(BREAK_SHARE > 0 && BREAK_SHARE < 1, "a whole line rubbed out is not an interruption");
+});
+
+test("the figure never flattens: it is a Necker cube", () => {
+  // A quarter turn away is a face-on view, where four faces project to lines and there is
+  // no near corner to read either way. The view stands clear of those, and the smallest
+  // face on the wall keeps better than a third of a full one.
+  const fullFace = (2 * HALF) ** 2;
+  const corners = shadowAt(VIEW_TURNS, HALF);
+  let smallest = Infinity;
+  for (const face of FACES) {
+    smallest = Math.min(smallest, projectedArea(corners, face));
+  }
+  assert.ok(smallest > 0.3 * fullFace, `a face is only ${smallest / fullFace} of itself`);
   for (const degenerate of [0, 0.25]) {
-    assert.ok(Math.abs(REST_TURNS - degenerate) - ROCK_TURNS > 0.05);
+    assert.ok(Math.abs(VIEW_TURNS - degenerate) > 0.05);
   }
 });
 
-test("the rock closes exactly, and the declarations close with it", () => {
-  assert.equal(turnsAt(TOTAL_STEPS), turnsAt(0));
-  assert.equal(turnsAt(TOTAL_STEPS), REST_TURNS);
-  assert.deepEqual(shadowAt(turnsAt(TOTAL_STEPS), HALF), shadowAt(turnsAt(0), HALF));
+test("the clip closes exactly, because there was never anything to close", () => {
+  assert.deepEqual(shadowAt(VIEW_TURNS, HALF), shadowAt(VIEW_TURNS, HALF));
   assert.deepEqual(declarationAt(TOTAL_STEPS), declarationAt(0));
-  // And the cube really moves in between, rather than sitting at its rest.
-  const travelled = Math.abs(turnsAt(TOTAL_STEPS / 4) - REST_TURNS);
-  assert.ok(Math.abs(travelled - ROCK_TURNS) < 1e-12);
 });
 
 test("each reading is declared once, and the clip opens and closes undeclared", () => {
@@ -170,7 +235,7 @@ test("it is a cube: eight corners, twelve edges, six faces that agree with each 
     assert.equal(sharing.length, 2, `the edge ${from}-${to} is not shared by two faces`);
   }
   // And every edge is the same length in space, whatever the cube is doing.
-  const scene = sceneAt(turnsAt(77), HALF);
+  const scene = sceneAt(VIEW_TURNS, HALF);
   const lengths = EDGES.map(([from, to]) =>
     Math.hypot(scene[from].x - scene[to].x, scene[from].y - scene[to].y, scene[from].z - scene[to].z));
   for (const length of lengths) {

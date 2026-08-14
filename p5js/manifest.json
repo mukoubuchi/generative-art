@@ -426,7 +426,7 @@
         "platon-skeuaston-skias"
       ],
       "thumbnail": {
-        "frame": 60
+        "frame": 20
       },
       "render": {
         "kind": "video",

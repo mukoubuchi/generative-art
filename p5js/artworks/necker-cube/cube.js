@@ -21,24 +21,20 @@ export const STEPS_PER_SECOND = 60;
 export const TOTAL_STEPS = 600;
 
 /**
- * The cube rocks about a corner-on view rather than turning all the way round. A whole
- * turn would pass four times through a face-on view, where the shadow collapses to a
- * rectangle with a line across it — flat, and not ambiguous about anything, since there
- * is no corner to read as near or far. Rocking a fifth of a turn either side of
- * corner-on keeps the figure a Necker cube for every frame of the clip.
+ * The cube does not move, and that is the artwork.
+ *
+ * It used to rock, and a reader used to be able to turn it with the pointer. Both were
+ * mistakes of the same kind: motion gives a drawing depth cues it is not entitled to —
+ * parallax says at once which corner is nearer — and a figure that answers the hand is a
+ * figure the hand can be blamed for. A Necker cube reverses in the person looking at it.
+ * So the figure stands still and nothing here is asked of anybody.
+ *
+ * It stands corner-on, an eighth of a turn round. There the shadow is symmetric about
+ * both axes and the two interior corners fall symmetrically about the centre, so neither
+ * reading is the easier one to take — which is what makes the reversal a reversal rather
+ * than a correction.
  */
-export const REST_TURNS = 0.125;
-export const ROCK_TURNS = 0.055;
-
-/**
- * How far round the cube stands at `step`, in turns. One rock fills the clip. The step
- * is wrapped into the clip before the sine is taken, so the closing step is the opening
- * one exactly rather than to within the last bit of a sine of two pi.
- */
-export function turnsAt(step) {
-  const wrapped = ((step % TOTAL_STEPS) + TOTAL_STEPS) % TOTAL_STEPS;
-  return REST_TURNS + ROCK_TURNS * Math.sin((Math.PI * 2 * wrapped) / TOTAL_STEPS);
-}
+export const VIEW_TURNS = 0.125;
 /** The two readings: which sign of depth the viewer is taking to be towards them. */
 export const READINGS = [1, -1];
 
@@ -127,7 +123,7 @@ export function otherReading(turns, tilt = TILT) {
  * about nothing else that can be seen, so it is the only thing the drawing shows when
  * it declares one.
  */
-export function frontFace(turns, reading, half = 1) {
+export function frontFace(reading, turns = VIEW_TURNS, half = 1) {
   const scene = sceneAt(turns, half);
   let best = 0;
   let bestDepth = -Infinity;
@@ -140,6 +136,59 @@ export function frontFace(turns, reading, half = 1) {
   });
   return best;
 }
+
+
+/**
+ * The corner a reading puts furthest from the eye. A cube is convex, so its far corner is
+ * simply the one whose depth the reading likes least, and there is never a tie: the two
+ * candidates are opposite corners of the cube and the view is not edge-on to either.
+ */
+export function farCorner(reading, turns = VIEW_TURNS, half = 1) {
+  const scene = sceneAt(turns, half);
+  let far = 0;
+  scene.forEach((point, index) => {
+    if (reading * point.z < reading * scene[far].z) {
+      far = index;
+    }
+  });
+  return far;
+}
+
+/**
+ * The three edges a reading puts behind the solid — the ones a cube of wood would hide.
+ *
+ * For a convex body this needs no hidden-line machinery: every edge that does not meet
+ * the far corner has a face of its own turned towards the eye, and the three that do meet
+ * it have none. Which three they are is the only thing in the drawing the two readings
+ * disagree about, so interrupting them is the whole of a declaration.
+ */
+export function hiddenEdges(reading, turns = VIEW_TURNS, half = 1) {
+  const far = farCorner(reading, turns, half);
+  return EDGES.map((edge, index) => ({ edge, index }))
+    .filter(({ edge }) => edge.includes(far))
+    .map(({ index }) => index);
+}
+
+/** Where along an edge the interruption runs, from the far corner in. */
+export function breakAt(edgeIndex, reading, amount, turns = VIEW_TURNS, half = 1) {
+  const hidden = hiddenEdges(reading, turns, half);
+  if (amount <= 0 || !hidden.includes(edgeIndex)) {
+    return null;
+  }
+  const far = farCorner(reading, turns, half);
+  const [from] = EDGES[edgeIndex];
+  // Measured from the far end whichever way the edge is written down.
+  return { fromFarEnd: from === far, share: BREAK_SHARE * amount };
+}
+
+/**
+ * How much of an interrupted edge is taken out at a full declaration. Not all of it: the
+ * truth is that the whole edge is hidden, but a line rubbed out entirely leaves nine
+ * lines and no argument, and what the figure has to show is a corner being pushed back
+ * rather than a corner being deleted. Interrupted at the far end and left hanging is the
+ * cue a draughtsman uses, and it keeps all twelve lines in the picture.
+ */
+export const BREAK_SHARE = 0.44;
 
 /**
  * The clip's plan, in steps: a reading is declared, let go of, the other is declared,

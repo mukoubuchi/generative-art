@@ -159,9 +159,13 @@ Eyes Pattern still draws nothing but circles, and for a third of the clip there 
 
 Necker Cube is a real cube now, turned in three dimensions and flattened by throwing depth away — and throwing depth away is exactly what makes the drawing ambiguous. The ambiguity has a precise form. Reflecting a scene front to back leaves every projected point where it was; it also turns a rotation into its opposite and a lean towards the eye into a lean away, and it carries each corner to the one behind it. So the other world casting this same shadow is this cube turning the other way, seen from the other side, with its front and back corners exchanged. The tests hold that as an identity rather than a resemblance: corner for corner, the two shadows are the same numbers, compared with strict equality and not a tolerance.
 
-What the two readings do disagree about is which face is nearest, and that is the only thing the drawing is allowed to show when it declares one. The wireframe is a function of how far round the cube stands and of nothing else — there is no reading to pass it — so a declaration cannot quietly redraw the figure it claims only to be interpreting. The clip states one reading, lets it go, states the other, and lets that go too, tinting the near face warm for the first and cool for the second while the lines themselves never move. The tests check that the two readings never once agree on which face that is.
+What the two readings disagree about is which corner is furthest away, and that is the only thing the drawing is allowed to show when it declares one. A cube is convex, so the three edges meeting the far corner are exactly the three a cube of wood would hide, and no hidden-line machinery is needed to find them. The clip interrupts those three at the far end, lets them heal, interrupts the other three, and heals them again — so the figure is ambiguous, then it is not, then it is again, then it is not the other way. Nothing else changes at all: one ink, one line weight, and the twelve corners in the same places from the first frame to the last. The tests hold that the interrupted three always meet the corner the reading puts furthest away, that the two readings never interrupt the same lines, and that nothing is interrupted while the figure is ambiguous.
 
-The cube rocks about a corner-on view rather than turning all the way round. A whole turn passes four times through a face-on view, where four faces project to lines and there is no near corner to read either way; rocking a twentieth of a turn either side keeps the figure a Necker cube at every frame, and the smallest face on the wall never falls below a third of a full one. The step is wrapped into the clip before the rock's sine is taken, so the closing frame is the opening one exactly rather than to within the last bit of a sine of two pi. On the page the pointer still rocks the cube through the same span, and pressing declares a reading — first one, then the other, then neither — so a reader can hold the cube whichever way round they like instead of waiting to be told.
+The interruption stops short of the whole line, which is a decision rather than the truth. The truth is that the whole edge is hidden; a line rubbed out entirely leaves nine lines and no argument, and what the figure has to show is a corner being pushed back rather than a corner being deleted. Left hanging at the far end is the cue a draughtsman uses, and it keeps all twelve lines in the picture.
+
+The cube does not move, and neither does the reader. It used to rock, and the pointer used to turn it; both were mistakes of the same kind. Motion gives a drawing a depth cue it is not entitled to — parallax says at once which corner is nearer, and there is nothing left to reverse — and a figure that answers the hand is a figure the hand can be blamed for. A Necker cube reverses in the person looking at it, so nothing here is asked of anybody and the page runs the same plan the clip does.
+
+It stands corner-on, an eighth of a turn round, a quarter turn clear of the face-on views where four faces project to lines and there is no near corner to read either way. There the shadow is symmetric about both axes and the two interior corners fall symmetrically about the centre, so neither reading is the easier one to take — which is what makes the reversal a reversal rather than a correction. The smallest face on the wall keeps better than a third of a full one, and since the figure never moves the clip closes because there was never anything to close.
 
 The figure repeats every quarter turn, which is the cube's own symmetry rather than a fault in the sampling, and a test pins it. Between those positions the cube flattens to a plain rectangle divided in three, which is the moment a face comes square to the viewer.
 
@@ -648,7 +652,7 @@ The check is aimed at [the sketch exactly as it shipped](test/fixtures/invisible
 
 ### Telling the reader what there is to do
 
-Nine artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
+Eight artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
 
 | Artwork | Control | The line it prints |
 | --- | --- | --- |
@@ -656,7 +660,6 @@ Nine artworks answer to the reader, and none of them said so, which left the int
 | `windmill` | K | `K` hold to raise the wind · `release` let it fall |
 | `electric-fan` | K | `K` hold to run the fan · `release` let it coast down |
 | `atan2` | pointer | `move` the pointer carries the point |
-| `necker-cube` | pointer | `move` the pointer turns the cube |
 | `pulse-button` | click | `click` the bell tolls |
 | `spring-polygon` | drag | `drag` pull a bob; the ring answers |
 | `moire-rings` | pointer | `move` the pointer carries the second centre |

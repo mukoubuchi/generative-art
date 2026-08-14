@@ -1,16 +1,12 @@
-import { hintMode } from "../shared/hint-mode.js";
-import { drawKeyHint } from "../shared/key-hint.js";
 import {
+  BREAK_SHARE,
   EDGES,
-  FACES,
-  REST_TURNS,
-  ROCK_TURNS,
   STEPS_PER_SECOND,
   TOTAL_STEPS,
+  VIEW_TURNS,
   declarationAt,
-  frontFace,
-  shadowAt,
-  turnsAt
+  hiddenEdges,
+  shadowAt
 } from "./cube.js";
 
 const LOGICAL_WIDTH = 680;
@@ -21,11 +17,6 @@ const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
-const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
-const HINT_LEGEND = [
-  { cap: "move", text: "turns the cube" },
-  { cap: "press", text: "declares a reading" }
-];
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -34,65 +25,76 @@ const STROKE_WEIGHT = BASE_DIMENSION * (2.6 / 600);
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
 const TOTAL_FRAMES = TOTAL_STEPS / STEPS_PER_FRAME;
 
-/** The wall, the firelight the shadow is cast in, and a tint for each reading. */
-const WALL = [26, 22, 20];
-const SHADOW = [238, 226, 200];
-const FIRST_READING = [236, 152, 68];
-const SECOND_READING = [96, 190, 208];
+/** Paper and ink, as the gallery's other classical illusion is drawn. */
+const PAPER = [226, 220, 206];
+const INK = [22, 20, 26];
 
-let liveTurns = 0;
-let liveReading = 0;
-let pressCount = 0;
+/** The corners of the figure, which never move: it is one drawing for the whole clip. */
+const CORNERS = shadowAt(VIEW_TURNS, HALF_EDGE);
 
 const P5 = window.p5;
 
 new P5((p) => {
   /**
-   * The shadow, and — only when a reading is being declared — the one thing the two
-   * readings disagree about: which face is nearest. The wireframe itself is identical
-   * either way and is never touched, which is the artwork's whole claim.
+   * Twelve lines, one weight, one ink. Nothing here turns, nothing is shaded, and nothing
+   * answers to the reader — a Necker cube reverses in the person looking at it, and any
+   * of those would do the reversing for them.
+   *
+   * What happens instead is that three of the twelve are interrupted at one end and then
+   * healed. They are the three that meet the corner a reading puts furthest away, which a
+   * cube of wood would hide, and they are the only thing in the drawing the two readings
+   * disagree about. So the figure is ambiguous, then it is not, then it is again, then it
+   * is not the other way, and the only thing that ever changes is where the lines stop.
    */
-  function drawStep(turns, declaration) {
-    const corners = shadowAt(turns, HALF_EDGE);
-
+  function drawStep(declaration) {
     p.push();
     p.scale(RENDER_SCALE);
-    p.background(...WALL);
+    p.background(...PAPER);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-
-    if (declaration.reading !== 0 && declaration.amount > 0) {
-      const tint = declaration.reading > 0 ? FIRST_READING : SECOND_READING;
-      const face = FACES[frontFace(turns, declaration.reading, HALF_EDGE)];
-      p.noStroke();
-      p.fill(tint[0], tint[1], tint[2], 132 * declaration.amount);
-      p.beginShape();
-      for (const corner of face) {
-        p.vertex(corners[corner].x, corners[corner].y);
-      }
-      p.endShape(p.CLOSE);
-    }
-
-    p.noFill();
-    p.stroke(...SHADOW);
+    p.stroke(...INK);
     p.strokeWeight(STROKE_WEIGHT);
-    for (const [from, to] of EDGES) {
-      p.line(corners[from].x, corners[from].y, corners[to].x, corners[to].y);
-    }
+    p.strokeCap(p.ROUND);
+
+    const broken = declaration.reading === 0
+      ? []
+      : hiddenEdges(declaration.reading, VIEW_TURNS, HALF_EDGE);
+    const far = broken.length === 0
+      ? -1
+      : EDGES[broken[0]].find((corner) => EDGES[broken[1]].includes(corner));
+    const share = BREAK_SHARE * declaration.amount;
+
+    EDGES.forEach(([from, to], index) => {
+      const start = CORNERS[from];
+      const end = CORNERS[to];
+      if (!broken.includes(index) || share <= 0) {
+        p.line(start.x, start.y, end.x, end.y);
+        return;
+      }
+      // Cut from the far end inwards, so the corner the reading pushes back is the one
+      // left with nothing meeting it.
+      const [near, hidden] = from === far ? [end, start] : [start, end];
+      p.line(
+        near.x,
+        near.y,
+        near.x + (hidden.x - near.x) * (1 - share),
+        near.y + (hidden.y - near.y) * (1 - share)
+      );
+    });
     p.pop();
 
-    if (HINT.shown) {
-      drawKeyHint(p, HINT_LEGEND, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
-    }
+    return { broken, far };
   }
 
-  function publishState(frameIndex, turns, declaration) {
+  function publishState(frameIndex, declaration, drawn) {
     const publishedState = {
       kind: "video",
       frameIndex,
       totalFrames: TOTAL_FRAMES,
-      turns,
+      turns: VIEW_TURNS,
       reading: declaration.reading,
       declared: declaration.amount,
+      brokenEdges: drawn.broken,
+      farCorner: drawn.far,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
@@ -115,38 +117,22 @@ new P5((p) => {
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();
-      // Every frame is a pure function of its index: the cube turns once over the clip
-      // and the declarations follow the plan, so any frame can be drawn on its own.
+      // Every frame is a pure function of its index: the figure does not move, and the
+      // declarations follow the plan, so any frame can be drawn on its own.
       window.__renderFrame = (frameIndex) => {
-        const step = frameIndex * STEPS_PER_FRAME;
-        const turns = turnsAt(step);
-        const declaration = declarationAt(step);
-        drawStep(turns, declaration);
-        return Promise.resolve(publishState(frameIndex, turns, declaration));
+        const declaration = declarationAt(frameIndex * STEPS_PER_FRAME);
+        return Promise.resolve(publishState(frameIndex, declaration, drawStep(declaration)));
       };
     }
-    drawStep(turnsAt(0), { reading: 0, amount: 0 });
-    publishState(0, turnsAt(0), { reading: 0, amount: 0 });
+    publishState(0, declarationAt(0), drawStep(declarationAt(0)));
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
       return;
     }
-    // The pointer turns the cube, as it always has. Crossing the canvas rocks it
-    // through the same span the clip does, so the page never flattens it either.
-    const across = p.constrain(p.mouseX, 0, LOGICAL_WIDTH) / LOGICAL_WIDTH;
-    liveTurns = REST_TURNS + ROCK_TURNS * (2 * across - 1);
-    const declaration = { reading: liveReading, amount: liveReading === 0 ? 0 : 1 };
-    drawStep(liveTurns, declaration);
-    publishState(p.frameCount, liveTurns, declaration);
-  };
-
-  // Pressing declares a reading, and pressing again declares the other one — so the
-  // reader can hold the cube either way round instead of waiting to be told.
-  p.mousePressed = () => {
-    pressCount += 1;
-    liveReading = pressCount % 3 === 0 ? 0 : (pressCount % 3 === 1 ? 1 : -1);
-    return true;
+    // The page runs the same plan the clip does. There is nothing to point at.
+    const declaration = declarationAt(p.frameCount * STEPS_PER_FRAME);
+    publishState(p.frameCount, declaration, drawStep(declaration));
   };
 });
