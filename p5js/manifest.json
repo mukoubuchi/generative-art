@@ -206,8 +206,8 @@
       "entry": "p5js/artworks/toggle-color-ball/index.html",
       "interactivePath": "toggle-color-ball/",
       "canvas": {
-        "width": 680,
-        "height": 680
+        "width": 800,
+        "height": 600
       },
       "quoteIds": [
         "yijing-yin-yang-dao"

@@ -21,18 +21,28 @@ export const TURN_STEPS = 600;
 const FULL_TURN = Math.PI * 2;
 
 /**
- * The ring and the discs, as fractions of the canvas's shorter side. The Processing
- * sketch swung by 200 on a 600 px canvas and drew discs of 280, so the discs were larger
- * than their own swing and ran past the canvas edge. These keep that crowding — the discs
- * still overlap deeply, which is what makes the order they are painted in the whole
- * subject — but give back enough room for the ring itself to be a shape rather than a row.
+ * The ring and the discs, as fractions of the canvas's shorter side — which on the
+ * canvas they are drawn at is six hundred, so these are also their sizes in pixels. The
+ * Processing sketch swung by 200 on a 600 px canvas and drew discs of 280, so the discs
+ * were larger than their own swing and ran past the canvas edge. These keep that
+ * crowding, which is what makes the order they are painted in the whole subject.
+ *
+ * How crowded is settled by one comparison. The nearest disc and the furthest sit at
+ * opposite ends of the ring, so they meet only if a disc's radius beats the ring's own
+ * half-height, which perspective leaves the same for both of them:
+ *
+ *   disc radius > ring radius * sin(lean)
+ *
+ * At a lean of forty-eight degrees that wants a radius over 0.743 of the ring, and 136
+ * against 160 gives it with room to spare. It failed before, by four pixels, which is
+ * why the two ends of the ring had come apart.
  *
  * They live here rather than in the sketch because what the figure covers is a question
  * about the ring, and the tests have to be able to ask it of the same numbers the page
  * draws with.
  */
-export const RING_RADIUS_RATIO = 175 / 600;
-export const DISC_DIAMETER_RATIO = 252 / 600;
+export const RING_RADIUS_RATIO = 160 / 600;
+export const DISC_DIAMETER_RATIO = 272 / 600;
 
 /**
  * How far the ring is leaned back from edge-on. At zero the four discs would slide
