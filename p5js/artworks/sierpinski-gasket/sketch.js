@@ -1,22 +1,34 @@
 import { mulberry32 } from "../shared/random.js";
 import {
   BUILD_FRAMES,
-  RAIN_FRAMES,
+  FILM_SATURATION,
   RAIN_POINTS,
   RAIN_SEED,
   TOTAL_FRAMES,
   buildGasket,
   chaosPoints,
-  gasketDepth
+  deepestCells,
+  dropFallAt,
+  fallenAt,
+  gasketDepth,
+  isDrawnFalling,
+  rippleAt,
+  wetting
 } from "./geometry.js";
 
 /**
- * Two constructions that never mention each other, agreeing. First the skeleton is
+ * Two constructions that never mention each other, agreeing. First the pyramid is
  * built the way this artwork has always built it — three half-size triangles ringing
  * every parent, seven generations deep — and then the rain begins: a wanderer jumping
- * halfway to a random corner, forever, its trail drawn where it lands. No rule tells
- * the rain about the lace, and it can land nowhere else; the ember points fill
- * exactly the steel skeleton, which is the gasket's whole argument.
+ * halfway to a random corner, forever, falling where it lands. No rule tells the rain
+ * about the stone, and it can land nowhere else; the water fills exactly the figure
+ * that was built, which is the gasket's whole argument.
+ *
+ * What the rain leaves is a film rather than a scatter of grains. Each landing wets
+ * the smallest triangle that holds it, and three thousand two hundred landings wet
+ * seven hundred and twenty of the seven hundred and twenty-nine there are — so the
+ * water gathers into the shape of the figure instead of speckling it. The film is the
+ * evidence; the drops and their rings are how a single landing reads.
  */
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
@@ -32,14 +44,41 @@ const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const CUTOFF_RATIO = 1 / 64;
 const FILL_RATIO = 0.92;
 
+/**
+ * Night, the stone, and the water.
+ *
+ * The temperatures are the other way round from how this artwork first stood. The
+ * figure is read as a pyramid, so it takes the settled gold the sun-side ball of
+ * Toggle Color Ball is painted in — the quietest of the collection's golds, because
+ * stone that outshone the rain falling on it would put the living thing behind the
+ * still one. The rain is Bounding Spots' star blue, light enough to be seen on the
+ * night this artwork already stood on, and it is one colour for all three of its
+ * states: the drop in the air, the ring where it lands, the film it leaves.
+ */
 const GROUND = [12, 15, 20];
-const LACE = [172, 194, 214];
-const EMBER = [255, 178, 92];
-const RAIN_DOT_PX = 1.6;
+const STONE = [214, 152, 58];
+const WATER = [128, 176, 236];
+
+/**
+ * The weather, in canvas pixels. The fall is a fifth of the canvas high and takes
+ * DROP_FRAMES, so a drop crosses the picture too quickly to be followed and slowly
+ * enough to be seen leaving somewhere. The ring's reach is about two cells wide,
+ * which is enough to be found and too little to cover the stone it opens on.
+ */
+const FALL_PX = 120;
+const DROP_PX = 13;
+const DROP_WEIGHT_PX = 1.7;
+const RIPPLE_PX = 10;
+const RIPPLE_WEIGHT_PX = 1.3;
+/** How dark the film is on a cell's first landing, and once it can take no more. */
+const FILM_FIRST = 48;
+const FILM_FULL = 150;
 
 const GASKET = buildGasket({ x: 0, y: 0 }, 1, CUTOFF_RATIO);
 const DEPTH = gasketDepth(GASKET);
 const RAIN = chaosPoints({ x: 0, y: 0 }, 1, RAIN_POINTS, mulberry32(RAIN_SEED));
+const CELLS = deepestCells(GASKET);
+const WETTING = wetting(GASKET, RAIN);
 
 /** Every node with its generation, walked once; the draw stagger needs the depth. */
 const NODES = [];
@@ -78,6 +117,18 @@ new P5((p) => {
     });
   }
 
+  /** How many landings each cell has taken by now, in the order they landed. */
+  function wetnessBy(fallen) {
+    const counts = new Map();
+    for (let index = 0; index < fallen; index += 1) {
+      const landing = WETTING[index];
+      if (landing.cell !== -1) {
+        counts.set(landing.cell, landing.hits);
+      }
+    }
+    return counts;
+  }
+
   function drawScene(frameIndex) {
     p.push();
     p.scale(RENDER_SCALE);
@@ -85,7 +136,21 @@ new P5((p) => {
     p.translate(OFFSET_X, OFFSET_Y);
     p.scale(SCALE);
 
-    // The skeleton, level by level: a generation gets its moment before the next.
+    // The water that has gathered, under the stone so the edges stay sharp. A cell
+    // darkens with every landing it takes rather than switching on at the first, so
+    // the film keeps deepening long after it has finished spreading: three quarters
+    // of the cells are wet by a third of the way through the rain.
+    const fallen = fallenAt(frameIndex);
+    const wetness = wetnessBy(fallen);
+    p.noStroke();
+    for (const [cell, hits] of wetness) {
+      const depth = Math.min(hits / FILM_SATURATION, 1);
+      p.fill(...WATER, FILM_FIRST + (FILM_FULL - FILM_FIRST) * depth);
+      const [a, b, c] = trianglePoints(CELLS[cell]);
+      p.triangle(a.x, a.y, b.x, b.y, c.x, c.y);
+    }
+
+    // The stone, level by level: a generation gets its moment before the next.
     const levelSpan = BUILD_FRAMES / (DEPTH + 1);
     p.noFill();
     let laceCount = 0;
@@ -96,24 +161,54 @@ new P5((p) => {
         continue;
       }
       laceCount += 1;
-      p.stroke(...LACE, (168 - node.depth * 13) * reveal);
+      p.stroke(...STONE, (168 - node.depth * 13) * reveal);
       p.strokeWeight(1.1 / SCALE);
       const [a, b, c] = trianglePoints(node);
       p.triangle(a.x, a.y, b.x, b.y, c.x, c.y);
     }
 
-    // The rain, in the order the wanderer landed.
-    const fallen = Math.min(
-      Math.max(Math.floor(((frameIndex - BUILD_FRAMES) / RAIN_FRAMES) * RAIN.length), 0),
-      RAIN.length
-    );
-    p.noStroke();
-    p.fill(...EMBER, 205);
+    // The rings. Only a landing that finds a dry cell rings, so the rain grows
+    // quieter as the figure fills: the sound is the sound of somewhere new.
+    let ringing = 0;
+    p.noFill();
+    p.strokeWeight(RIPPLE_WEIGHT_PX / SCALE);
     for (let index = 0; index < fallen; index += 1) {
-      p.circle(RAIN[index].x, RAIN[index].y, (2 * RAIN_DOT_PX) / SCALE);
+      if (!WETTING[index].first) {
+        continue;
+      }
+      const open = rippleAt(index, frameIndex);
+      if (open === null) {
+        continue;
+      }
+      ringing += 1;
+      p.stroke(...WATER, 235 * (1 - open));
+      p.circle(RAIN[index].x, RAIN[index].y, (2 * RIPPLE_PX * open) / SCALE);
     }
+
+    // The drops still in the air. One landing in eight is drawn falling — every one
+    // of them wets its cell, but drawn all together they are a sheet of water rather
+    // than rain with drops in it. Each falls from rest, so it is longest and quickest
+    // just before it arrives.
+    let falling = 0;
+    p.strokeWeight(DROP_WEIGHT_PX / SCALE);
+    p.stroke(...WATER, 225);
+    for (let index = 0; index < RAIN_POINTS; index += 1) {
+      if (!isDrawnFalling(index)) {
+        continue;
+      }
+      const dropped = dropFallAt(index, frameIndex);
+      if (dropped === null) {
+        continue;
+      }
+      falling += 1;
+      const above = (FALL_PX * (1 - dropped ** 2)) / SCALE;
+      const length = (DROP_PX * dropped) / SCALE;
+      const { x, y } = RAIN[index];
+      p.line(x, y - above - length, x, y - above);
+    }
+
     p.pop();
-    return { laceCount, fallen };
+    return { laceCount, fallen, wet: wetness.size, ringing, falling };
   }
 
   function publishState(frameIndex, drawn) {
@@ -125,6 +220,9 @@ new P5((p) => {
       triangles: NODES.length,
       laceDrawn: drawn.laceCount,
       rainFallen: drawn.fallen,
+      cellsWet: drawn.wet,
+      ringsOpen: drawn.ringing,
+      dropsFalling: drawn.falling,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
