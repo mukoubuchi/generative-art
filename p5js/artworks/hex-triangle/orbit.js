@@ -89,6 +89,11 @@ export function pathCorners(pathIndex, pathRadius) {
  * equilateral triangle being half its circumradius — and back out to the next corner.
  * All six share this distance at every step, because both paths are the same triangle
  * and all six walk in step, so it is a property of the moment rather than of a triangle.
+ *
+ * The drawing once read this, through a normalised `gatheringAt` that mapped the corners
+ * to nought and the meeting to one, and keyed the triangles' shade to it. There is one ink
+ * now, so the ramp went with the shade it existed for. The measurement stays: it is the
+ * walk's own property, and the tests hold the closing and the opening against it.
  */
 export function radiusAt(step) {
   const progress = (((step % STEPS_PER_CYCLE) + STEPS_PER_CYCLE) % STEPS_PER_CYCLE)
@@ -102,16 +107,4 @@ export function radiusAt(step) {
     from.x + (to.x - from.x) * progress,
     from.y + (to.y - from.y) * progress
   );
-}
-
-/**
- * The same thing as a share of the journey, for the drawing to key colour to: nought
- * with the six standing furthest apart, at the corners, and one at the moment they are
- * closest, halfway along their edges. This is the artwork's own geometry and not an
- * index into a list of triangles — the six are identical, and what changes is how
- * gathered they are.
- */
-export function gatheringAt(step) {
-  const nearest = 0.5;
-  return (1 - radiusAt(step)) / (1 - nearest);
 }

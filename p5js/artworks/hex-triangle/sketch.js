@@ -1,13 +1,11 @@
 import {
   CYCLES,
-  PATH_COUNT,
   PATH_RADIUS_RATIO,
   STEPS_PER_CYCLE,
   STEPS_PER_SECOND,
   TOTAL_STEPS,
   TRIANGLE_COUNT,
   TRIANGLE_RADIUS_RATIO,
-  gatheringAt,
   trianglesAt,
   triangleShape
 } from "./orbit.js";
@@ -32,29 +30,24 @@ const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
 const TOTAL_FRAMES = TOTAL_STEPS / STEPS_PER_FRAME;
 
 /**
- * Two colours on paper, and they are two of Toggle Color Ball's: the warm one its yang
- * discs wear and the cool one its yin discs do, which is the same opposition this figure
- * is made of — one family of triangles rising, one falling.
+ * Paper and ink, and both are Kanizsa Square's: the same off-white it is drawn on, and now
+ * the same near-black its bites are cut in. One ink, on every triangle, at every step.
  *
- * Each family is one colour and shows twice. Which shade a triangle wears is not its
- * number in a list: it is how gathered the six are at that moment, a distance the module
- * measures. Washed into the paper while they stand apart at the corners, full-strength as
- * they close, so the figure's colour is its own convergence and there are still two of
- * them. The ground is the paper Kanizsa Square is drawn on.
+ * The colour used to say two things at once — a warm family and a cool one, each washed
+ * into the paper while the six stood apart and at full strength as they closed. Neither is
+ * a thing the paint has to carry. The two families already point opposite ways, which is
+ * visible in the shapes themselves, and the convergence is the walk. What the paint was
+ * doing instead was keeping the six apart at the one moment they are not: six marks of one
+ * black tile into a black hexagon, where six marks of two colours stay six marks arranged
+ * in a ring.
+ *
+ * The numbers are written out rather than imported. Each artwork here stands on its own,
+ * so a borrowed colour is a borrowed value with a note saying whose it is.
  */
 const GROUND = [226, 220, 206];
-const RISING = [[214, 155, 138], [198, 66, 45]];
-const FALLING = [[155, 160, 167], [56, 78, 112]];
+const INK = [22, 20, 26];
 /** Half a pixel of paint, so shapes that meet exactly do not show the ground between. */
 const SEAM_CLOSE = 1 + 0.5 / TRIANGLE_RADIUS;
-
-function mix(from, to, amount) {
-  return [
-    from[0] + (to[0] - from[0]) * amount,
-    from[1] + (to[1] - from[1]) * amount,
-    from[2] + (to[2] - from[2]) * amount
-  ];
-}
 
 const P5 = window.p5;
 
@@ -71,17 +64,15 @@ new P5((p) => {
    * one a pixel wide, and it was the guides' own last call that used to turn it off.
    */
   function drawStep(step) {
-    const gathering = gatheringAt(step);
-
     p.push();
     p.scale(RENDER_SCALE);
     p.noStroke();
     p.background(...GROUND);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-    trianglesAt(step, PATH_RADIUS).forEach((placed, index) => {
-      const family = index < TRIANGLE_COUNT / PATH_COUNT ? RISING : FALLING;
-      const [red, green, blue] = mix(family[0], family[1], gathering);
-      p.fill(red, green, blue);
+    // Set once, outside the walk: there is no longer anything in here that picks a colour,
+    // neither from a triangle's place in the list nor from where the six have got to.
+    p.fill(...INK);
+    for (const placed of trianglesAt(step, PATH_RADIUS)) {
       p.beginShape();
       for (const vertex of triangleShape(TRIANGLE_RADIUS, placed.rotation)) {
         // Drawn a whisker larger than it is. The six meet exactly, and two shapes that
@@ -92,7 +83,7 @@ new P5((p) => {
         p.vertex(placed.x + vertex.x * SEAM_CLOSE, placed.y + vertex.y * SEAM_CLOSE);
       }
       p.endShape(p.CLOSE);
-    });
+    }
     p.pop();
   }
 
@@ -104,7 +95,6 @@ new P5((p) => {
       step,
       cycleSteps: STEPS_PER_CYCLE,
       cycles: CYCLES,
-      gathering: gatheringAt(step),
       triangleCount: TRIANGLE_COUNT,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }

@@ -10,7 +10,6 @@ import {
   TRIANGLES_PER_PATH,
   TRIANGLE_COUNT,
   TRIANGLE_RADIUS_RATIO,
-  gatheringAt,
   pathCorners,
   radiusAt,
   trianglesAt,
@@ -126,26 +125,26 @@ test("they meet but never trespass: no two triangles ever overlap", () => {
   }
 });
 
-test("the gathering is a distance, measured, not a number given to each triangle", () => {
-  // Colour keys to this, so it has to be the geometry: a walk carries a triangle from a
-  // corner at the full path radius to the midpoint of an edge at exactly half of it,
-  // the inradius of an equilateral triangle being half its circumradius.
+test("the six close in and open out, and how far they have come is measured", () => {
+  // A walk carries a triangle from a corner at the full path radius to the midpoint of an
+  // edge at exactly half of it, the inradius of an equilateral triangle being half its
+  // circumradius. All six share the distance at every step, so it belongs to the moment
+  // rather than to a triangle -- which is why the module measures it instead of handing
+  // each triangle a number.
   assert.ok(Math.abs(radiusAt(0) - 1) < 1e-12);
   assert.ok(Math.abs(radiusAt(GATHERED_STEP) - 0.5) < 1e-12);
-  assert.ok(Math.abs(gatheringAt(0)) < 1e-12);
-  assert.ok(Math.abs(gatheringAt(GATHERED_STEP) - 1) < 1e-12);
 
   // It closes in on the meeting and opens out again, without a kink or a plateau.
   for (let step = 1; step <= GATHERED_STEP; step += 1) {
     assert.ok(radiusAt(step) < radiusAt(step - 1), `the six stopped closing at ${step}`);
-    assert.ok(gatheringAt(step) > gatheringAt(step - 1));
   }
   for (let step = GATHERED_STEP + 1; step < STEPS_PER_CYCLE; step += 1) {
     assert.ok(radiusAt(step) > radiusAt(step - 1), `the six stopped opening at ${step}`);
   }
-  // Every step of the walk is somewhere on the journey, so the colour never runs off it.
+  // And the corners and the midpoints are the two ends of it: nowhere in the walk do the
+  // six stand further out than a corner or closer in than the meeting.
   for (let step = 0; step < STEPS_PER_CYCLE; step += 1) {
-    assert.ok(gatheringAt(step) >= -1e-12 && gatheringAt(step) <= 1 + 1e-12);
+    assert.ok(radiusAt(step) >= 0.5 - 1e-12 && radiusAt(step) <= 1 + 1e-12);
   }
 });
 
@@ -273,6 +272,86 @@ test("the scan finds the guides in the sketch that shipped with them", async () 
   assert.equal([...specimen.matchAll(/\bp\.beginShape\s*\(/gu)].length, 2, "guides and triangles");
 });
 
+/**
+ * One ink, and whose ink it is.
+ *
+ * The figure used to be painted in two colours borrowed from Toggle Color Ball, each of
+ * them washed into the paper while the six stood apart and at full strength as they
+ * closed. It is one near-black now, on every triangle at every step, and the black is
+ * Kanizsa Square's — the same value its bites are cut in, on the same paper it is drawn
+ * on. That is a decision about the two artworks together, and the artworks do not import
+ * from one another here, so the only thing holding the two ends of it together is a
+ * written number in each file. A number nothing compares is a number that drifts, so the
+ * comparison is made here, from the two sources.
+ *
+ * The rest of the ruling — one ink rather than several, and no ramp keying it to anything
+ * — is a claim about what the sketch is able to paint, so it is read the same way the
+ * guides are, out of the file.
+ */
+const COLOUR_CONSTANT = /^const ([A-Z][A-Z_]*) = \[(\d{1,3}), (\d{1,3}), (\d{1,3})\];$/gmu;
+
+function namedColours(source) {
+  return new Map([...source.matchAll(COLOUR_CONSTANT)]
+    .map((match) => [match[1], match.slice(2, 5).map(Number)]));
+}
+
+async function sketchSource(artworkId) {
+  return readFile(new URL(`../artworks/${artworkId}/sketch.js`, import.meta.url), "utf8");
+}
+
+test("the triangles are Kanizsa Square's ink, on Kanizsa Square's paper", async () => {
+  const hex = namedColours(await sketchSource("hex-triangle"));
+  const kanizsa = namedColours(await sketchSource("kanizsa-square"));
+
+  // Both files really do declare the colours the comparison is about, so a rename that
+  // slipped past would fail here rather than pass on two undefineds.
+  assert.deepEqual([...hex.keys()].sort(), ["GROUND", "INK"], "the palette changed");
+  for (const name of ["PAPER", "INK"]) {
+    assert.ok(kanizsa.has(name), `Kanizsa Square no longer declares ${name}`);
+  }
+
+  assert.deepEqual(hex.get("GROUND"), kanizsa.get("PAPER"), "the two papers have parted");
+  assert.deepEqual(hex.get("INK"), kanizsa.get("INK"), "the two inks have parted");
+  // And it is a dark ink on a light ground, which is the direction the borrowing assumes.
+  const lightness = (colour) => colour.reduce((total, channel) => total + channel, 0);
+  assert.ok(lightness(hex.get("INK")) < lightness(hex.get("GROUND")) / 4);
+});
+
+test("one ink: nothing in the sketch chooses a colour", async () => {
+  const sketch = await sketchSource("hex-triangle");
+
+  // Exactly one fill and one background, and each takes a named colour whole. A fill whose
+  // argument were computed could differ from triangle to triangle or step to step even
+  // while there was only one call to make it.
+  assert.deepEqual(
+    [...sketch.matchAll(/\bp\.(fill|background)\s*\(([^)]*)\)/gu)].map((match) =>
+      [match[1], match[2]]),
+    [["background", "...GROUND"], ["fill", "...INK"]]
+  );
+  // The colour is set before the walk rather than inside it.
+  assert.ok(sketch.indexOf("p.fill(") < sketch.indexOf("trianglesAt("));
+});
+
+test("the scan finds the two colours in the sketch that had them", async () => {
+  // The negative control, and it is the same frozen specimen the guides are read out of:
+  // the sketch as it shipped, in two families of colour keyed to how gathered the six
+  // were. Nothing about it was invented for this test.
+  const specimen = await readFile(
+    new URL("./fixtures/hex-triangle-guides/sketch.js", import.meta.url),
+    "utf8"
+  );
+  const colours = namedColours(specimen);
+  // Its ground, and the faint colour the guides were stroked in. No ink: the near-black
+  // is exactly what this artwork did not have.
+  assert.deepEqual([...colours.keys()].sort(), ["GROUND", "GUIDE"],
+    "the specimen no longer carries its palette");
+  assert.ok(!colours.has("INK"), "the specimen has been given the ink it never had");
+  // Its families are pairs of colours rather than single ones, which is why they are not
+  // among the names above, and its fill is computed between them for every triangle.
+  assert.ok(/^const RISING = \[\[/mu.test(specimen), "the specimen lost its two families");
+  assert.ok(specimen.includes("p.fill(red, green, blue)"), "the specimen lost its computed fill");
+});
+
 test("the clip is five gatherings, three hundred frames, ten seconds", () => {
   assert.equal(TOTAL_STEPS, CYCLES * STEPS_PER_CYCLE);
   assert.equal(TOTAL_STEPS % STEPS_PER_FRAME, 0);
@@ -280,5 +359,5 @@ test("the clip is five gatherings, three hundred frames, ten seconds", () => {
   assert.equal(TOTAL_STEPS / STEPS_PER_SECOND, 10);
   // The clip is a whole number of walks, so it ends on the figure it opened with.
   assert.equal(TOTAL_STEPS % STEPS_PER_CYCLE, 0);
-  assert.ok(Math.abs(gatheringAt(TOTAL_STEPS) - gatheringAt(0)) < 1e-12);
+  assert.ok(Math.abs(radiusAt(TOTAL_STEPS) - radiusAt(0)) < 1e-12);
 });
