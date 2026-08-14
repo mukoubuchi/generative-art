@@ -191,17 +191,41 @@ export function breakAt(edgeIndex, reading, amount, turns = VIEW_TURNS, half = 1
 export const BREAK_SHARE = 0.44;
 
 /**
- * The clip's plan, in steps: a reading is declared, let go of, the other is declared,
- * and let go of again — while the cube turns evenly throughout, so nothing about the
- * shadow itself is disturbed by any of it.
+ * The clip's plan, in steps: four states, each held perfectly still, joined by short
+ * transitions.
+ *
+ * The stillness is the whole of it. A Necker cube reverses in the person looking at it,
+ * and that reversal is a reorganisation of what is being seen — it only starts on a
+ * figure that is standing still, and it takes seconds. The clip used to ramp the
+ * interruption up and down across the whole of a reading, so the ends of three lines
+ * were creeping at every step of it and there was no still frame anywhere; what a reader
+ * saw first was some of the lines moving, which is the one thing this figure must not be.
+ *
+ * The time is not shared out evenly, and that is the point. The ambiguous state is where
+ * the reader's own reversal happens, so it takes the most; a declared reading is the
+ * drawing's answer, legible the moment it arrives, so it takes less. The two ambiguous
+ * holds together are 336 steps of the 600.
+ *
+ * The clip also begins in the middle of an ambiguous hold: the eighty-four steps at the
+ * end and the eighty-four at the start are two halves of one still stretch, so the seam
+ * where the clip loops falls inside stillness rather than across a transition.
  */
 export const PLAN = [
-  { name: "ambiguous", steps: 60 },
-  { name: "first", steps: 150 },
-  { name: "ambiguous", steps: 90 },
-  { name: "second", steps: 150 },
-  { name: "ambiguous", steps: 150 }
+  { name: "ambiguous", reading: 0, from: 0, to: 0, steps: 84 },
+  { name: "cut", reading: READINGS[0], from: 0, to: 1, steps: 16 },
+  { name: "first", reading: READINGS[0], from: 1, to: 1, steps: 100 },
+  { name: "heal", reading: READINGS[0], from: 1, to: 0, steps: 16 },
+  { name: "ambiguous", reading: 0, from: 0, to: 0, steps: 168 },
+  { name: "cut", reading: READINGS[1], from: 0, to: 1, steps: 16 },
+  { name: "second", reading: READINGS[1], from: 1, to: 1, steps: 100 },
+  { name: "heal", reading: READINGS[1], from: 1, to: 0, steps: 16 },
+  { name: "ambiguous", reading: 0, from: 0, to: 0, steps: 84 }
 ];
+
+/** A phase holds its state when it begins and ends on the same amount. */
+export function isHold(phase) {
+  return phase.from === phase.to;
+}
 
 function smoothstep(value) {
   return value * value * (3 - 2 * value);
@@ -210,19 +234,23 @@ function smoothstep(value) {
 /**
  * How firmly a reading is being declared at `step`, and which one. Nought is the bare
  * shadow, with nothing to say which way the cube is turning.
+ *
+ * A transition's progress is counted so that its last step lands exactly on its target:
+ * the step before a cut is exactly nought and its final step exactly one, so the hold on
+ * either side of it begins where the transition left off and no step jumps.
  */
 export function declarationAt(step) {
   const wrapped = ((step % TOTAL_STEPS) + TOTAL_STEPS) % TOTAL_STEPS;
   let start = 0;
   for (const phase of PLAN) {
     if (wrapped < start + phase.steps) {
-      if (phase.name === "ambiguous") {
-        return { reading: 0, amount: 0 };
+      if (isHold(phase)) {
+        return { reading: phase.reading, amount: phase.from };
       }
-      const progress = (wrapped - start) / phase.steps;
+      const progress = (wrapped - start + 1) / phase.steps;
       return {
-        reading: phase.name === "first" ? READINGS[0] : READINGS[1],
-        amount: smoothstep(1 - Math.abs(2 * progress - 1))
+        reading: phase.reading,
+        amount: phase.from + (phase.to - phase.from) * smoothstep(progress)
       };
     }
     start += phase.steps;

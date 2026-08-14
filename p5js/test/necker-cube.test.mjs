@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  BREAK_SHARE,
   CORNERS,
   DEPTH_SWAP,
   EDGES,
@@ -10,18 +11,18 @@ import {
   STEPS_PER_SECOND,
   TILT,
   TOTAL_STEPS,
+  VIEW_TURNS,
   declarationAt,
+  farCorner,
   frontFace,
+  hiddenEdges,
+  isHold,
   mirrorDepth,
   orient,
   otherReading,
   project,
   sceneAt,
-  shadowAt,
-  BREAK_SHARE,
-  VIEW_TURNS,
-  farCorner,
-  hiddenEdges
+  shadowAt
 } from "../artworks/necker-cube/cube.js";
 
 const PLAYBACK_FPS = 30;
@@ -174,6 +175,120 @@ test("nothing is interrupted while the figure is ambiguous", () => {
   assert.ok(ambiguous > 90, `only ${ambiguous} steps are ambiguous`);
   assert.ok(broken > 90, `only ${broken} steps interrupt anything`);
   assert.ok(BREAK_SHARE > 0 && BREAK_SHARE < 1, "a whole line rubbed out is not an interruption");
+});
+
+/** Two figures are the same figure when the same lines stop in the same places. */
+function deepEquals(first, second) {
+  return JSON.stringify(first) === JSON.stringify(second);
+}
+
+test("a held state is held: every step of it draws the identical figure", () => {
+  // The reason the clip has holds at all. A Necker cube reverses in the person looking at
+  // it, and that only starts on a figure standing still; the interruption used to ramp
+  // across the whole of a reading, so three line-ends were creeping at every step and a
+  // first-time reader saw moving lines rather than an ambiguous cube. What is measured
+  // here is not that the plan says "hold" but that nothing a hold hands the drawing ever
+  // changes inside it -- the reading, the amount, the three edges, and where they stop.
+  let start = 0;
+  let heldSteps = 0;
+  for (const phase of PLAN) {
+    if (isHold(phase)) {
+      const opening = declarationAt(start);
+      const edges = opening.reading === 0 ? [] : hiddenEdges(opening.reading, VIEW_TURNS, HALF);
+      for (let step = start; step < start + phase.steps; step += 1) {
+        const declaration = declarationAt(step);
+        assert.deepEqual(declaration, opening, `the hold at ${start} moved at step ${step}`);
+        assert.deepEqual(
+          declaration.reading === 0 ? [] : hiddenEdges(declaration.reading, VIEW_TURNS, HALF),
+          edges
+        );
+        heldSteps += 1;
+      }
+    }
+    start += phase.steps;
+  }
+  assert.equal(start, TOTAL_STEPS);
+  // And the holds are most of the clip, with the ambiguous state taking the largest share
+  // of them, because that is the state the reversal happens in.
+  const ambiguousSteps = PLAN
+    .filter((phase) => isHold(phase) && phase.reading === 0)
+    .reduce((sum, phase) => sum + phase.steps, 0);
+  assert.ok(heldSteps / TOTAL_STEPS > 0.75, `only ${heldSteps} of ${TOTAL_STEPS} steps are still`);
+  assert.ok(ambiguousSteps > heldSteps - ambiguousSteps, "the declared states are held longer");
+});
+
+test("the figure only ever changes inside a transition, and the seam is not one", () => {
+  // The complement of the claim above: every step at which the drawing differs from the
+  // step before it falls inside one of the four windows the plan declares, so there is no
+  // creep anywhere else. The windows are read off the plan rather than written down here.
+  const windows = [];
+  let start = 0;
+  for (const phase of PLAN) {
+    if (!isHold(phase)) {
+      windows.push([start, start + phase.steps]);
+    }
+    start += phase.steps;
+  }
+  assert.equal(windows.length, 4, "the plan no longer has four transitions");
+
+  // What is compared is the figure the drawing is handed, not the declaration behind it:
+  // which lines are interrupted and by how much. A reading that is being held at nought
+  // draws the same twelve whole lines as no reading at all, and the step where one gives
+  // way to the other is not a change in the picture.
+  const figureAt = (step) => {
+    const declaration = declarationAt(step);
+    const share = BREAK_SHARE * declaration.amount;
+    return {
+      share,
+      edges: share > 0 ? hiddenEdges(declaration.reading, VIEW_TURNS, HALF) : []
+    };
+  };
+
+  let moved = 0;
+  for (let step = 0; step < TOTAL_STEPS; step += 1) {
+    if (deepEquals(figureAt(step), figureAt(step - 1))) {
+      continue;
+    }
+    moved += 1;
+    assert.ok(
+      windows.some(([from, to]) => step >= from && step < to),
+      `the figure changed at step ${step}, outside every transition`
+    );
+  }
+  // The scan is scanning: something really does move inside the windows.
+  assert.equal(moved, windows.reduce((sum, [from, to]) => sum + (to - from), 0));
+
+  // The clip loops inside a still stretch. Step 599 and step 0 are two steps of one
+  // ambiguous hold that the wrap happens to fall in the middle of, so the seam draws the
+  // same twelve whole lines on both sides of itself.
+  assert.deepEqual(declarationAt(TOTAL_STEPS - 1), declarationAt(0));
+  assert.equal(declarationAt(0).amount, 0);
+  assert.deepEqual(figureAt(TOTAL_STEPS - 1), figureAt(0));
+});
+
+test("the card is a declared reading, standing still", async () => {
+  // A card taken in a transition would show three lines caught halfway through being
+  // interrupted, which is neither of the two things the figure has to say. It is taken
+  // inside a hold, and inside one where a reading is actually declared -- the ambiguous
+  // holds are the longer stretches, but a card of them is a plain wireframe.
+  const { readFileSync } = await import("node:fs");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
+  );
+  const frame = manifest.artworks.find((entry) => entry.id === "necker-cube").thumbnail.frame;
+  const step = frame * (STEPS_PER_SECOND / 30);
+  const declaration = declarationAt(step);
+  assert.notEqual(declaration.reading, 0, `frame ${frame} declares nothing`);
+  assert.equal(declaration.amount, 1, `frame ${frame} catches the interruption at ${declaration.amount}`);
+
+  // And it is a hold rather than the instant a transition happens to touch one.
+  let start = 0;
+  const phase = PLAN.find((candidate) => {
+    const holds = step >= start && step < start + candidate.steps;
+    start += candidate.steps;
+    return holds;
+  });
+  assert.ok(isHold(phase), `frame ${frame} falls in the ${phase.name} transition`);
 });
 
 test("the figure never flattens: it is a Necker cube", () => {
