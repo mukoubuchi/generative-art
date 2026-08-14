@@ -27,22 +27,34 @@ const FULL_TURN = Math.PI * 2;
  * were larger than their own swing and ran past the canvas edge. These keep that
  * crowding, which is what makes the order they are painted in the whole subject.
  *
- * How crowded is settled by one comparison. The nearest disc and the furthest sit at
- * opposite ends of the ring, so they meet only if a disc's radius beats the ring's own
- * half-height, which perspective leaves the same for both of them:
+ * The proportion between them is not free, and the lean decides how unfree. Two things
+ * are wanted of it, and each is one comparison:
  *
- *   disc radius > ring radius * sin(lean)
+ *   the ends meet      diameter >= 2 * ring radius * sin(lean)
+ *   the handover hides diameter is near ring radius * root two
  *
- * At a lean of forty-eight degrees that wants a radius over 0.743 of the ring, and 136
- * against 160 gives it with room to spare. It failed before, by four pixels, which is
- * why the two ends of the ring had come apart.
+ * The first is the near disc and the far one, at opposite ends of the ring, meeting in
+ * the middle of the figure — perspective magnifies their distance and their size alike,
+ * so it cancels out of the comparison. The second is two neighbours at the moment they
+ * stand equally far away and trade places: they are a quarter turn apart, so their
+ * centres are the ring's radius times root two apart, and whatever their circles overlap
+ * by at that moment changes hands in a single frame.
+ *
+ * The two want the same number only while 2 sin(lean) <= root two, which is to say only
+ * while the lean is forty-five degrees or less. This ring is leaned forty-eight, so they
+ * cannot both be had, and the choice is made for the handover: 230.8 against 160 is
+ * 1.4425 of the ring, the proportion this artwork used at the shallower lean, and it
+ * leaves the overlap at the handover 5.4 pixels deep — a thread, where holding the ends
+ * together would need 48. What it costs is the ends, which pass 7.4 pixels clear of each
+ * other instead of meeting; the figure stays one cluster regardless, since neighbours
+ * never stop overlapping.
  *
  * They live here rather than in the sketch because what the figure covers is a question
  * about the ring, and the tests have to be able to ask it of the same numbers the page
  * draws with.
  */
 export const RING_RADIUS_RATIO = 160 / 600;
-export const DISC_DIAMETER_RATIO = 272 / 600;
+export const DISC_DIAMETER_RATIO = 230.8 / 600;
 
 /**
  * How far the ring is leaned back from edge-on. At zero the four discs would slide
@@ -122,210 +134,6 @@ export function sweptBounds(ringRadius, discRadius) {
 export function sweptCentreY(ringRadius, discRadius) {
   const { top, bottom } = sweptBounds(ringRadius, discRadius);
   return (top + bottom) / 2;
-}
-
-/**
- * A disc as a ball, in the terms the drawing itself uses.
- *
- * The sketch does not draw a sphere's true outline: it draws a circle at the projected
- * centre, widened by the perspective the same way any length at that depth is widened.
- * The true silhouette of a ball this close would sit twenty pixels wider and further out,
- * and the artwork has always been the simpler figure. So the ball this returns is the one
- * the reader is actually looking at — the circle on the canvas, taken as a ball's outline
- * — and its depth is put in the same magnified units, because everything at that depth is
- * magnified alike. Nothing about the drawn circle changes; this only gives it a surface.
- */
-export function ballAt(index, turns, ringRadius, discRadius) {
-  const { x, y, depth, scale } = discPlace(index, turns, ringRadius);
-  return { x, y, radius: discRadius * scale, height: depth * ringRadius * scale };
-}
-
-/**
- * How near a ball's surface comes at a point of the canvas — larger is nearer the eye —
- * or minus infinity where the ball is not there at all.
- */
-export function surfaceHeight(ball, point) {
-  const reach = ball.radius * ball.radius
-    - ((point.x - ball.x) ** 2 + (point.y - ball.y) ** 2);
-  return reach < 0 ? -Infinity : ball.height + Math.sqrt(reach);
-}
-
-/**
- * Where two balls pass through one another, if they do: a circle, and the boundary
- * between the two colours is its shadow on the canvas.
- *
- * They always do, and that is not a fault to be tuned out — it is what crowding the ring
- * means. A disc shows past the far one only if its radius beats the ring's own
- * half-height, which wants more than 118.9 here; two neighbours' circles stand 268.6
- * apart at the moment they are equally far away, so they would clear each other only at
- * 113.2 or less. No radius both crowds the ring and leaves the balls apart, so the jump a
- * reader photographed is the crowding itself: flat discs cannot draw two things passing
- * through each other, and the whole overlap has to change hands at once.
- *
- * Where the two are equally far away the circle stands edge-on and its shadow is the
- * straight line halfway between the centres; as one draws ahead the circle turns and the
- * shadow opens out and sweeps clear. That is the sweep, and it takes about a second and a
- * third. Returns null when the two do not reach each other.
- */
-export function meetingCircle(first, second) {
-  const apart = Math.hypot(
-    second.x - first.x,
-    second.y - first.y,
-    second.height - first.height
-  );
-  if (apart >= first.radius + second.radius || apart <= Math.abs(first.radius - second.radius)) {
-    return null;
-  }
-  // The radical plane: how far along the line of centres the two surfaces meet.
-  const along = (apart * apart + first.radius ** 2 - second.radius ** 2) / (2 * apart);
-  return {
-    centre: {
-      x: first.x + ((second.x - first.x) * along) / apart,
-      y: first.y + ((second.y - first.y) * along) / apart,
-      height: first.height + ((second.height - first.height) * along) / apart
-    },
-    radius: Math.sqrt(Math.max(first.radius ** 2 - along * along, 0)),
-    apart
-  };
-}
-
-/** Whether ball `here` is the one a reader sees at `point`, of the two. */
-function nearerAt(here, there, point) {
-  return surfaceHeight(here, point) > surfaceHeight(there, point);
-}
-
-/**
- * The line on the canvas where ball `index` stops being the one in front of ball `other`,
- * as a run of points crossing the whole figure.
- *
- * It is found rather than derived. Rows are laid across the two balls at right angles to
- * the line joining them, and along each row the two surfaces are asked which is nearer;
- * where the answer changes, the crossing is bisected to a hundredth of a pixel. What
- * comes back is exact in the only sense that matters — every point on it is a point where
- * the reader would see the two balls' surfaces at the same distance — and it is the same
- * comparison the reader's eye makes rather than a formula standing in for it.
- *
- * In space the crossing points all lie on the balls' meeting circle, which is what makes
- * the boundary a curve that sweeps rather than a lens that changes hands: the circle is
- * fixed to the pair and turns with them, and its projection opens continuously from a
- * straight line at the moment the two are equally far away. The tests hold that.
- *
- * Rows where one ball wins outright get the boundary pushed off the end, so the run is a
- * single unbroken line from one side of the figure to the other and can be closed into a
- * region. Returns null when the two do not overlap at all.
- */
-/** How far past the figure the cut region is closed off, in pixels. */
-const OFF_THE_CANVAS = 4000;
-/** How far inside the other ball's outline a cut stops, so no paper can show through. */
-const SEAM_BIAS = 1;
-
-export function coveringEdge(here, there, rows = 96) {
-  const apart = Math.hypot(here.x - there.x, here.y - there.y);
-  if (apart >= here.radius + there.radius || apart === 0) {
-    return null;
-  }
-  // Along the line joining them, and across it. Positive `along` is towards `here`.
-  const along = { x: (here.x - there.x) / apart, y: (here.y - there.y) / apart };
-  const across = { x: -along.y, y: along.x };
-  const span = here.radius + apart;
-  const at = (forward, sideways) => ({
-    x: there.x + along.x * forward + across.x * sideways,
-    y: there.y + along.y * forward + across.y * sideways
-  });
-
-  const crossings = [];
-  for (let row = 0; row <= rows; row += 1) {
-    const sideways = -span + (2 * span * row) / rows;
-    // The search stays inside the ball being drawn: outside it there is nothing to cover.
-    // A hair inside, in fact -- asked exactly on the outline, whether the ball is there at
-    // all comes down to the last bit of a square root, and a row can come back saying the
-    // ball is nowhere when it is simply standing at its own edge.
-    const reach = here.radius * here.radius - sideways * sideways;
-    if (reach <= 0) {
-      continue;
-    }
-    const half = Math.sqrt(reach) * (1 - 1e-9);
-    if (nearerAt(here, there, at(apart - half, sideways))) {
-      // This ball is in front from its own near edge onwards: nothing of it is covered
-      // along this row, so the row contributes nothing to cut away.
-      continue;
-    }
-    let low = apart - half;
-    let high = apart + half;
-    for (let refinement = 0; refinement < 30; refinement += 1) {
-      const middle = (low + high) / 2;
-      if (nearerAt(here, there, at(middle, sideways))) {
-        high = middle;
-      } else {
-        low = middle;
-      }
-    }
-    const forward = (low + high) / 2;
-    const point = at(forward, sideways);
-    // Two quite different things can end the cut along a row. Either the surfaces really
-    // do come to the same height -- the balls passing through one another, and the point
-    // stands on the circle they share -- or one of the two outlines is reached, and the
-    // answer changes because a ball stops rather than because it is overtaken. Which it
-    // is has to be asked of the bracket rather than of the point: near an outline a
-    // surface climbs like a square root, so at a true crossing that happens to fall close
-    // to one, the two heights can still be far apart a millionth of a pixel to either
-    // side. Both balls present on both sides of the bracket means they crossed.
-    const meets = [low, high].every((edge) => [here, there].every(
-      (ball) => Number.isFinite(surfaceHeight(ball, at(edge, sideways)))
-    ));
-    if (meets) {
-      crossings.push({ ...point, meets });
-      continue;
-    }
-    // Where the cut ends on the other ball's own outline, it is nudged a pixel inside it.
-    // Both are painted, so the far ball's edge is antialiased against the paper it was
-    // laid on, and a cut landing exactly there would ask two half-covered pixels to add
-    // up to one -- which is how a hairline of paper appears between two things that meet
-    // exactly. This one is covered instead, by the ball painted second.
-    crossings.push({ ...at(forward - SEAM_BIAS, sideways), meets });
-  }
-  if (crossings.length < 2) {
-    return null;
-  }
-  return { crossings, along, across };
-}
-
-/**
- * The part of `here` that `there` stands in front of, as one closed shape.
- *
- * The far side of it is the crossing run — the real boundary, and the only edge of this
- * shape that lands anywhere near the drawing. The rest is closed off well outside the
- * canvas, on the far ball's side, where cutting costs nothing: past the crossing there is
- * nothing of `here` left to cut, and no row was ever found in which the far ball covered
- * this one outright, so the shape never has to reach round anything.
- */
-export function coveringRegion(here, there, rows = 96) {
-  const edge = coveringEdge(here, there, rows);
-  if (edge === null) {
-    return null;
-  }
-  const { crossings, along } = edge;
-  const back = (point) => ({
-    x: point.x - along.x * OFF_THE_CANVAS,
-    y: point.y - along.y * OFF_THE_CANVAS
-  });
-  return [...crossings, back(crossings.at(-1)), back(crossings[0])];
-}
-
-/** Whether a point falls inside a closed shape, by the crossing count. */
-export function insideRegion(region, point) {
-  let inside = false;
-  for (let index = 0, last = region.length - 1; index < region.length; last = index, index += 1) {
-    const from = region[last];
-    const to = region[index];
-    if ((to.y > point.y) !== (from.y > point.y)) {
-      const crossing = from.x + ((point.y - to.y) / (from.y - to.y)) * (to.x - from.x);
-      if (point.x < crossing) {
-        inside = !inside;
-      }
-    }
-  }
-  return inside;
 }
 
 /** The discs, furthest first, which is the order they have to be painted in. */
