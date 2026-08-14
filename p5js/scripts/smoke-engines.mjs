@@ -99,9 +99,11 @@ const INK_FLOOR = 0.002;
  * How far the two engines may disagree about how much ink a work puts down.
  *
  * They never agree exactly, because they antialias differently. Measured across all
- * thirty-eight works at matched frames, the ratio sits between 0.970 and 1.088, so the band
- * below holds every sound work several times over and is still nowhere near the fault it was
- * written for: a work WebKit draws not at all sits at 0.
+ * thirty-eight works at matched frames, the ratio sits between 0.939 and 1.095 — and the
+ * spread is a property of the machine as much as of the works, since the same run on a
+ * laptop comes in narrower, between 0.970 and 1.088. So the band below holds every sound
+ * work several times over on either, and is still nowhere near the fault it was written
+ * for: a work WebKit draws not at all sits at 0.
  */
 const RATIO_AT_LEAST = 0.75;
 const RATIO_AT_MOST = 1.4;
