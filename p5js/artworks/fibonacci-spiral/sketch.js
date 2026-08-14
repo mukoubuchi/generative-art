@@ -3,6 +3,7 @@ import { drawKeyIndicator } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import { captureFrameCount, captureState } from "./capture.js";
 import { buildSections, convergence, goldenRectangle } from "./geometry.js";
+import { NOTHING_HELD, applyHold, keyDown, keyUp } from "./repeat.js";
 
 const LOGICAL_WIDTH = 1010;
 const LOGICAL_HEIGHT = 640;
@@ -55,6 +56,9 @@ function mix(from, to, amount) {
 // Processing sketch did. The capture starts complete: its scenario is in capture.js, and
 // its opening frame — which is also the clip's timeline still — is the finished spiral.
 let visibleSections = CAPTURE_MODE ? sections.length : 1;
+// Which arrow the reader is leaning on, and since when. The capture never touches this:
+// its presses are written out frame by frame in capture.js.
+let hold = NOTHING_HELD;
 const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
 const TOTAL_FRAMES = captureFrameCount(sections.length);
 const KEY_HINT = [
@@ -135,6 +139,14 @@ new P5((p) => {
       p.pixelDensity(1);
     }
     p.noLoop();
+    if (!CAPTURE_MODE) {
+      // A window that loses focus never sends the key up. Without this the spiral would
+      // go on believing the arrow is down and refuse the next press of it.
+      window.addEventListener("blur", () => {
+        hold = NOTHING_HELD;
+        p.noLoop();
+      });
+    }
     if (CAPTURE_MODE) {
       // Every frame is a pure function of its index — the scenario lives in capture.js —
       // so any frame can be rebuilt on its own.
@@ -159,31 +171,59 @@ new P5((p) => {
     }
   };
 
+  // The sketch rests between presses. While an arrow is down it runs, so that the hold
+  // is ticked against the clock rather than against however often the browser decides to
+  // repeat a key.
   p.draw = () => {
+    const advanced = applyHold(hold, p.millis(), visibleSections, sections.length);
+    hold = advanced.hold;
+    // Unlike the Processing sketch, the whole list is redrawn on a cleared background,
+    // so removing a section actually erases it.
+    visibleSections = advanced.count;
     drawSpiral(visibleSections);
     if (HINT.shown) {
       drawKeyHint(p, KEY_HINT, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
     }
     publishState(0, visibleSections);
+    if (hold.direction === 0) {
+      p.noLoop();
+    }
   };
 
-  p.keyPressed = () => {
+  // p5 hands both handlers the keyboard event. Its own `key` is not what is wanted here:
+  // on the way up it still holds whatever is down, because p5 only updates it after this
+  // returns. The event names the key this is actually about.
+  p.keyPressed = (event) => {
     if (CAPTURE_MODE) {
       return true;
     }
     // p5 2.x reports arrow keys through `key`, where LEFT_ARROW and RIGHT_ARROW are the
     // KeyboardEvent names. `keyCode` still holds the legacy number, so comparing it
     // against these constants never matches.
-    if (p.key === p.RIGHT_ARROW) {
-      visibleSections = Math.min(sections.length, visibleSections + 1);
-    } else if (p.key === p.LEFT_ARROW) {
-      visibleSections = Math.max(1, visibleSections - 1);
-    } else {
+    const direction = event.key === p.RIGHT_ARROW ? 1 : event.key === p.LEFT_ARROW ? -1 : 0;
+    if (direction === 0) {
       return true;
     }
-    // Unlike the Processing sketch, the whole list is redrawn on a cleared background,
-    // so removing a section actually erases it.
+    hold = keyDown(hold, event.key, direction, p.millis());
+    // Drawn now rather than at the next frame, so that a tap answers as immediately as it
+    // did before there was any repeating at all.
     p.redraw();
+    if (hold.direction !== 0) {
+      p.loop();
+    }
+    return false;
+  };
+
+  p.keyReleased = (event) => {
+    if (CAPTURE_MODE) {
+      return true;
+    }
+    const released = keyUp(hold, event.key);
+    if (released === hold) {
+      return true;
+    }
+    hold = released;
+    p.noLoop();
     return false;
   };
 });
