@@ -257,8 +257,7 @@
         "thompson-stir-a-flower"
       ],
       "thumbnail": {
-        "frame": 0
-      },
+        "frame": 82    },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/SpringPolygon.mp4",

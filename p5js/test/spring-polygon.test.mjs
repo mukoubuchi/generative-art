@@ -272,11 +272,12 @@ test("the clip is a whole number of frames and ten seconds long", () => {
   assert.equal(TOTAL_STEPS / STEPS_PER_SECOND, 10);
 });
 
-test("the card shows the ring before the hand: nothing pulled, nothing stored", async () => {
-  // The gallery card was a frame of the pull -- the top bob already drawn a long way out
-  // of the ring, on its way to the release. That is the one moment of the clip in which a
-  // hand nobody can see is doing the work, so a still of it reads as a broken pentagon
-  // rather than as a pentagon about to be disturbed. The card is the equilibrium instead.
+test("the card is taken the moment after the letting go, with the ring loaded", async () => {
+  // The card catches the clip where its subject is: the hand has just opened, the top bob
+  // still stands well out of the pentagon, and the network is holding nearly all the
+  // energy it will ever hold -- which is the thing about to be sent around the ring. The
+  // card was moved to the resting pentagon and moved back here, because a still of the
+  // rest is a plain pentagon with nothing happening in it.
   const { readFileSync } = await import("node:fs");
   const manifest = JSON.parse(
     readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
@@ -284,24 +285,29 @@ test("the card shows the ring before the hand: nothing pulled, nothing stored", 
   const frame = manifest.artworks.find((entry) => entry.id === "spring-polygon").thumbnail.frame;
   const steps = frame * STEPS_PER_FRAME;
 
-  // Stated about the drawing rather than about the frame number: at that moment no bob has
-  // moved off the pentagon and the network holds none of the hand's energy, so the stars
-  // are all at their dimmest and the rigging is straight.
+  // Stated about the drawing rather than about the frame number: the hand has let go, the
+  // pulled bob is far enough out that the pentagon reads as pulled, and what the rigging
+  // holds is most of the peak.
   const shown = networkAfter(steps, OPTIONS);
   const opening = createNetwork(OPTIONS);
-  shown.bobs.forEach((bob, index) => {
+  assert.ok(steps > RELEASE_STEP, `the card is ${RELEASE_STEP - steps} steps before the release`);
+  assert.ok(shown.bobs.every((bob) => !bob.dragging), "the hand is still holding the card's bob");
+  const drawnOut = Math.hypot(
+    shown.bobs[0].x - opening.bobs[0].x,
+    shown.bobs[0].y - opening.bobs[0].y
+  );
+  assert.ok(drawnOut > 40, `the pulled bob stands only ${drawnOut.toFixed(1)} out of the ring`);
+  assert.ok(totalEnergy(shown) > 0.8 * scenarioEnergyPeak(OPTIONS),
+    `the card holds ${totalEnergy(shown)} of a peak ${scenarioEnergyPeak(OPTIONS)}`);
+
+  // The resting frame, held as the negative: it is a pentagon and nothing else.
+  const resting = networkAfter(0, OPTIONS);
+  assert.ok(totalEnergy(resting) < 1e-12, `the resting ring holds ${totalEnergy(resting)}`);
+  resting.bobs.forEach((bob, index) => {
     assert.ok(Math.abs(bob.x - opening.bobs[index].x) < 1e-6, `bob ${index} has been moved`);
     assert.ok(Math.abs(bob.y - opening.bobs[index].y) < 1e-6, `bob ${index} has been moved`);
   });
-  assert.ok(totalEnergy(shown) < 1e-12, `the card already holds ${totalEnergy(shown)}`);
-  // And the hand has not arrived, so no bob is being held either.
-  assert.ok(shown.bobs.every((bob) => !bob.dragging));
-  assert.ok(steps <= REST_STEPS, `the pull begins ${steps - REST_STEPS} steps before the card`);
-
-  // The old card, held as the negative: it really was a frame of the pull.
-  const before = networkAfter(82 * STEPS_PER_FRAME, OPTIONS);
-  assert.ok(totalEnergy(before) > 0, "frame 82 no longer catches the ring mid-pull");
-  assert.ok(Math.abs(before.bobs[0].y - opening.bobs[0].y) > 1);
+  assert.ok(REST_STEPS > 0);
 });
 
 test("the scenario holds, eases the bob out, then lets go for good", () => {
