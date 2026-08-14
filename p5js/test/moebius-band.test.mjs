@@ -1,13 +1,18 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   STAGE_TURNS,
+  backToFront,
   bandNormal,
   bandPoint,
   bandRows,
+  cellCentres,
   edgePoint,
+  glassShade,
   markerState,
-  sceneState
+  sceneState,
+  viewDirection
 } from "../artworks/moebius-band/geometry.js";
 
 /**
@@ -124,6 +129,146 @@ test("the marker returns after one lap the wrong way up, after two the right way
   assertClose(home.position, start.position, 1e-9 * radius, "two laps must come home");
   assertClose(home.normal, start.normal, 1e-6, "home must be the same way up");
   assert.equal(home.side, 1);
+});
+
+const STAGE_TILT = 0.9;
+const GLASS = [168, 206, 198];
+
+/** The stage's rotation, written out again here rather than borrowed from the module. */
+function staged(point, tilt, spin) {
+  const turned = [
+    point[0] * Math.cos(spin) - point[1] * Math.sin(spin),
+    point[0] * Math.sin(spin) + point[1] * Math.cos(spin),
+    point[2]
+  ];
+  return [
+    turned[0],
+    turned[1] * Math.cos(tilt) - turned[2] * Math.sin(tilt),
+    turned[1] * Math.sin(tilt) + turned[2] * Math.cos(tilt)
+  ];
+}
+
+test("the eye's direction is the stage's own, and it is a direction", () => {
+  for (const spin of [0, 0.7, Math.PI, 4.9, 2 * Math.PI]) {
+    const view = viewDirection(STAGE_TILT, spin);
+    assert.ok(Math.abs(Math.hypot(...view) - 1) < 1e-12, "the view must be a unit direction");
+    // How far along the eye a point stands is what the stage's rotation makes of its
+    // depth, and the test builds that rotation itself rather than asking for it back.
+    for (const point of [[185, 0, 0], [-40, 90, 22], [0, 0, 62], [12, -200, -7]]) {
+      const alongTheEye = point[0] * view[0] + point[1] * view[1] + point[2] * view[2];
+      assert.ok(Math.abs(alongTheEye - staged(point, STAGE_TILT, spin)[2]) < 1e-9,
+        `the view direction disagrees with the stage at spin ${spin}`);
+    }
+  }
+});
+
+test("nothing in the glass reads which way the normal points", () => {
+  // The band's one-sidedness is not a claim the shading is allowed to contradict: carry a
+  // normal round the ring and it comes back negated, so a model that reads its sign would
+  // paint the same piece of surface two ways and tear the band along a seam. Every term
+  // is folded in absolute value, and this is the check that says so.
+  const rows = bandRows(60, 6, 190, 60);
+  const view = viewDirection(STAGE_TILT, 1.3);
+  let tested = 0;
+  for (const row of rows) {
+    for (const { normal } of row) {
+      const flipped = normal.map((component) => -component);
+      assert.deepEqual(glassShade(normal, view, GLASS), glassShade(flipped, view, GLASS));
+      tested += 1;
+    }
+  }
+  assert.equal(tested, 61 * 7);
+
+  // Negative control: the same model with the folds taken out -- which is the ordinary
+  // way to shade a surface, and exactly the defect the band cannot survive.
+  const signed = (normal) => {
+    const key = normal[0] * -0.37 + normal[1] * 0.45 + normal[2] * -0.81;
+    return GLASS.map((component) => component * (0.24 + 0.57 * key));
+  };
+  const seam = rows[17][2].normal;
+  assert.notDeepEqual(signed(seam), signed(seam.map((component) => -component)));
+});
+
+test("the glass is glass: what shows is what is turned away from the eye", () => {
+  const view = [0, 0, 1];
+  const facing = glassShade([0, 0, 1], view, GLASS);
+  const grazing = glassShade([1, 0, 0], view, GLASS);
+  // Face on it is nearly invisible; edge on it turns bright and nearly solid. Between
+  // them the transparency only ever moves one way.
+  assert.ok(facing.at(-1) < 60, `face on it is ${facing.at(-1)} opaque`);
+  assert.ok(grazing.at(-1) > 200, `edge on it is only ${grazing.at(-1)} opaque`);
+  assert.ok(grazing[1] > facing[1], "the grazing edge must be the brighter one");
+  let last = -Infinity;
+  for (let step = 0; step <= 20; step += 1) {
+    const angle = (step / 20) * (Math.PI / 2);
+    const alpha = glassShade([Math.sin(angle), 0, Math.cos(angle)], view, GLASS).at(-1);
+    assert.ok(alpha >= last, "the transparency must not wobble as the surface turns");
+    last = alpha;
+  }
+  // Over the real mesh, through the whole turn, the band is mostly see-through -- which
+  // is what retired the marker's ghost, since the glass shows the far half by itself.
+  // Measured over 120 stations of the stage: at its most solid 54.5 per cent of the
+  // surface is less than half opaque, at its clearest 93.5. The claim is the floor.
+  const surface = bandRows(180, 8, 185, 62).flat();
+  let solidest = 1;
+  for (let station = 0; station < 120; station += 1) {
+    const view = viewDirection(STAGE_TILT, (station / 120) * 2 * Math.PI);
+    const clear = surface.filter(({ normal }) =>
+      glassShade(normal, view, GLASS).at(-1) < 128).length;
+    solidest = Math.min(solidest, clear / surface.length);
+  }
+  assert.ok(solidest > 0.5, `at its most solid only ${(solidest * 100).toFixed(1)}% is clear`);
+});
+
+test("the band is painted from the back, cell by cell", () => {
+  // Transparency has no depth buffer to fall back on -- what is drawn later is mixed
+  // over what is there -- so the paint order has to be the depth order.
+  const rows = bandRows(180, 8, 185, 62);
+  const centres = cellCentres(rows);
+  assert.equal(centres.length, 180 * 8);
+  for (const spin of [0, 1.9, 4.4]) {
+    const view = viewDirection(STAGE_TILT, spin);
+    const order = backToFront(centres, view);
+    assert.equal(new Set(order).size, centres.length, "every cell must be painted once");
+    const depths = order.map((index) => {
+      const [x, y, z] = centres[index].point;
+      return x * view[0] + y * view[1] + z * view[2];
+    });
+    for (let step = 1; step < depths.length; step += 1) {
+      assert.ok(depths[step] >= depths[step - 1], `cell ${step} is painted out of order`);
+    }
+    // Negative control: the order the mesh happens to be built in is not that order.
+    const asBuilt = centres.map((centre) => {
+      const [x, y, z] = centre.point;
+      return x * view[0] + y * view[1] + z * view[2];
+    });
+    assert.ok(asBuilt.some((depth, index) => index > 0 && depth < asBuilt[index - 1]),
+      "the mesh order would already be sorted, so the test proves nothing");
+  }
+});
+
+test("the opaque traveller is laid down first and the see-through things over it", async () => {
+  // The pipeline the picture depends on. The traveller is the only solid thing on the
+  // stage, so it is drawn first and writes its depth; the glass then goes over it with
+  // the depth test on and the writing off, which is what lets the band cover the far
+  // half of the journey instead of the marker always winning.
+  const sketch = await readFile(
+    new URL("../artworks/moebius-band/sketch.js", import.meta.url), "utf8");
+  const scene = sketch.slice(sketch.indexOf("function drawScene"));
+  const order = ["drawMarker(", "gl.depthMask(false)", "drawBand(", "drawEdge()", "gl.depthMask(true)"];
+  let at = -1;
+  for (const step of order) {
+    const next = scene.indexOf(step);
+    assert.ok(next > at, `${step} is out of order in drawScene`);
+    at = next;
+  }
+  // The depth test is never turned off. Turning it off is how the marker used to be
+  // drawn twice, and the second copy is what the glass replaced.
+  assert.equal((sketch.match(/DEPTH_TEST/gu) ?? []).length, 0);
+  assert.equal((sketch.match(/depthMask/gu) ?? []).length, 2);
+  // Three colours, and the traveller is one colour rather than a pair.
+  assert.equal((sketch.match(/^const (BACKGROUND|GLASS|PIN) = \[/gmu) ?? []).length, 3);
+  assert.equal((sketch.match(/\.\.\.PIN/gu) ?? []).length, 2);
 });
 
 test("the clip's last frame hands back to its first", () => {

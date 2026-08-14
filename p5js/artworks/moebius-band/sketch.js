@@ -1,4 +1,13 @@
-import { STAGE_TURNS, bandRows, edgePoint, sceneState } from "./geometry.js";
+import {
+  STAGE_TURNS,
+  backToFront,
+  bandRows,
+  cellCentres,
+  edgePoint,
+  glassShade,
+  sceneState,
+  viewDirection
+} from "./geometry.js";
 
 /**
  * The first WEBGL artwork in the collection. The staging conventions are the 2D ones —
@@ -38,60 +47,47 @@ const PIN_LENGTH = 40;
 const PIN_TIP_RADIUS = 4.5;
 
 /**
- * A dark ground and one linen, with the traveller in the collection's terracotta. Three
- * colours, where there were seven: the band had a warm face and a cool one, a gold rim, a
- * white centre line, a pale bead and a red pin, and between them the half twist — which is
- * the whole of what the artwork claims — was the hardest thing in the picture to find. The
- * band is modelled in the lightness of its own linen and nothing else, so the twist reads
- * as a turn of a surface rather than as a change of paint.
+ * A dark water, the glass, and one gold. Three colours, where there were seven: the band
+ * had a warm face and a cool one, a gold rim, a white centre line, a pale bead and a red
+ * pin, and between them the half twist — which is the whole of what the artwork claims —
+ * was the hardest thing in the picture to find. The band is modelled in the lightness of
+ * its own glass and nothing else, so the twist reads as a turn of a surface rather than
+ * as a change of paint.
+ *
+ * The ground is Nautilus's abyss teal taken down to night, so the collection's two
+ * artworks of glass and water stand on the same dark; the band is that shell's sea glass
+ * brought up until one thickness of it is pale and two are readable. The traveller is
+ * Toggle Color Ball's settled gold, warm against a cold band and legible on both arcs —
+ * where the old terracotta was loud enough to be the first thing seen.
  */
-const BACKGROUND = [26, 30, 37];
-const LINEN = [228, 220, 200];
-const MARK = [198, 66, 45];
-
-// Directions light arrives from, unit length, in the band's own frame.
-const KEY_LIGHT = [-0.37, 0.45, -0.81];
-const FILL_LIGHT = [0.63, -0.36, 0.68];
+const BACKGROUND = [8, 22, 24];
+const GLASS = [168, 206, 198];
+const PIN = [214, 152, 58];
 
 const EDGE_SAMPLES = 2 * SEGMENTS_AROUND;
 const ROWS = bandRows(SEGMENTS_AROUND, SEGMENTS_ACROSS, RING_RADIUS, HALF_WIDTH);
+const CENTRES = cellCentres(ROWS);
 
 const P5 = window.p5;
 
-/**
- * Shading computed here, not by the renderer's lights, and folded in |N . L|: on a
- * one-sided surface "which way the normal points" is not a fact about the surface — carry
- * a normal around the ring and it comes back negated — so any shading that reads the sign
- * of the normal must tear somewhere, and a lit Möbius band shows that tear as a seam.
- * The absolute value is exactly the part of the lighting that is well defined on the
- * band, and shading with it is what lets the surface look like one unbroken thing.
- */
-function shade(normal) {
-  const key = Math.abs(
-    normal[0] * KEY_LIGHT[0] + normal[1] * KEY_LIGHT[1] + normal[2] * KEY_LIGHT[2]
-  );
-  const fill = Math.abs(
-    normal[0] * FILL_LIGHT[0] + normal[1] * FILL_LIGHT[1] + normal[2] * FILL_LIGHT[2]
-  );
-  return LINEN.map((component) => component * (0.24 + 0.57 * key + 0.19 * fill));
-}
-
 new P5((p) => {
-  function drawBand() {
+  function drawBand(view) {
+    // Painted from the back, cell by cell, because transparency has no depth buffer to
+    // fall back on: what is drawn later is simply mixed over what is already there. The
+    // order is recomputed every frame, and it is still a pure function of the frame.
     p.noStroke();
     p.beginShape(p.TRIANGLES);
-    for (let i = 0; i < SEGMENTS_AROUND; i += 1) {
-      for (let j = 0; j < SEGMENTS_ACROSS; j += 1) {
-        // Two triangles per cell, each vertex carrying its own shade so the twist reads
-        // as one smooth gradient instead of facet by facet.
-        const cell = [
-          ROWS[i][j], ROWS[i + 1][j], ROWS[i + 1][j + 1],
-          ROWS[i][j], ROWS[i + 1][j + 1], ROWS[i][j + 1]
-        ];
-        for (const { point, normal } of cell) {
-          p.fill(...shade(normal));
-          p.vertex(...point);
-        }
+    for (const index of backToFront(CENTRES, view)) {
+      const { i, j } = CENTRES[index];
+      // Two triangles per cell, each vertex carrying its own shade so the twist reads
+      // as one smooth gradient instead of facet by facet.
+      const cell = [
+        ROWS[i][j], ROWS[i + 1][j], ROWS[i + 1][j + 1],
+        ROWS[i][j], ROWS[i + 1][j + 1], ROWS[i][j + 1]
+      ];
+      for (const { point, normal } of cell) {
+        p.fill(...glassShade(normal, view, GLASS));
+        p.vertex(...point);
       }
     }
     p.endShape();
@@ -99,9 +95,11 @@ new P5((p) => {
 
   function drawEdge() {
     // One closed stroke, deliberately: the rim needs both laps to come home, and drawing
-    // it as a single 4 PI curve is the claim that the band has a single edge.
+    // it as a single 4 PI curve is the claim that the band has a single edge. On glass it
+    // is also the brightest thing in the picture, which is how a pane of glass is found:
+    // by its edge, where the light it has been carrying comes out.
     p.noFill();
-    p.stroke(...LINEN);
+    p.stroke(...GLASS.map((component) => Math.min(255, component * 1.22)));
     p.strokeWeight(2 * RENDER_SCALE);
     p.beginShape();
     for (let i = 0; i < EDGE_SAMPLES; i += 1) {
@@ -110,37 +108,30 @@ new P5((p) => {
     p.endShape(p.CLOSE);
   }
 
-  function drawMarkerShapes(marker, pinColor, markerColor) {
+  function drawMarker(marker) {
+    // Once, solid, and first of everything. The traveller is the only opaque thing on the
+    // stage, so it goes down before the glass and writes its depth; the band then covers
+    // whatever stands behind it and lets the rest read through. What the band hides is no
+    // longer painted twice to be readable — the glass itself does that now, and the
+    // hidden half is the story: the point of the journey is exactly the part that happens
+    // on the other side.
     const [x, y, z] = marker.position;
     const tip = marker.position.map(
       (component, index) => component + marker.normal[index] * PIN_LENGTH
     );
-    p.stroke(...pinColor);
+    p.stroke(...PIN);
     p.strokeWeight(2.5 * RENDER_SCALE);
     p.line(x, y, z, ...tip);
     p.noStroke();
-    p.fill(...pinColor);
+    p.fill(...PIN);
     p.push();
     p.translate(...tip);
     p.sphere(PIN_TIP_RADIUS, 12, 8);
     p.pop();
-    p.fill(...markerColor);
     p.push();
     p.translate(x, y, z);
     p.sphere(MARKER_RADIUS, 16, 12);
     p.pop();
-  }
-
-  function drawMarker(marker) {
-    // Twice: first as a ghost with the depth test off, then solid with it on. Whatever
-    // the band hides — the pin through to the far side, the whole traveller on the far
-    // arc — stays readable as a dim silhouette, and that hidden half is the story: the
-    // point of the journey is exactly the part that happens on the other side.
-    const gl = p.drawingContext;
-    gl.disable(gl.DEPTH_TEST);
-    drawMarkerShapes(marker, [...MARK, 88], [...MARK, 72]);
-    gl.enable(gl.DEPTH_TEST);
-    drawMarkerShapes(marker, MARK, MARK);
   }
 
   function drawScene(state) {
@@ -153,9 +144,16 @@ new P5((p) => {
     // A turntable turn, about the ring's own axis: the tilted silhouette holds still
     // while the twist — which is not a rotational symmetry — sweeps visibly around.
     p.rotateZ(state.spin);
-    drawBand();
-    drawEdge();
+
+    // The opaque thing first, writing depth; then everything see-through over it with
+    // the depth test still on and the writing off, so no transparent surface can hide
+    // another one behind it.
+    const gl = p.drawingContext;
     drawMarker(state.marker);
+    gl.depthMask(false);
+    drawBand(viewDirection(STAGE_TILT, state.spin));
+    drawEdge();
+    gl.depthMask(true);
   }
 
   function publishState(frameIndex, state) {

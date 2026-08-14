@@ -80,6 +80,88 @@ export function bandRows(segmentsAround, segmentsAcross, radius, width) {
 }
 
 /**
+ * Where the camera stands, written in the band's own frame.
+ *
+ * The stage tilts about x and then turns about z, so the direction the viewer looks from
+ * is the last row of that rotation carried back onto the band. Having it here rather than
+ * in the sketch is what lets the glass be shaded and sorted by pure functions: both need
+ * to know which way is towards the eye, and neither should have to ask the renderer.
+ */
+export function viewDirection(tilt, spin) {
+  return [
+    Math.sin(tilt) * Math.sin(spin),
+    Math.sin(tilt) * Math.cos(spin),
+    Math.cos(tilt)
+  ];
+}
+
+const KEY_LIGHT = [-0.37, 0.45, -0.81];
+const FILL_LIGHT = [0.63, -0.36, 0.68];
+
+function dot(first, second) {
+  return first[0] * second[0] + first[1] * second[1] + first[2] * second[2];
+}
+
+/**
+ * The glass, as a colour and a transparency for one point of the surface.
+ *
+ * Every term is folded in absolute value, and that is not a convenience: on a one-sided
+ * surface "which way the normal points" is not a fact about the surface — carry a normal
+ * around the ring and it comes back negated — so any shading that reads the sign of the
+ * normal must tear somewhere, and a lit Mobius band shows that tear as a seam. What is
+ * well defined is how nearly the surface lies along a direction, which is what |N . L|
+ * measures, so the whole model is built from those.
+ *
+ * The view term is the glass. A surface seen face-on lets the light through and barely
+ * shows; seen edge-on it turns bright and nearly solid. That is how glass behaves, and it
+ * is also an ally of the artwork's claim: the band cannot have a hidden far side if the
+ * near side is transparent, so the traveller's whole journey stays readable.
+ */
+export function glassShade(normal, view, colour) {
+  const key = Math.abs(dot(normal, KEY_LIGHT));
+  const fill = Math.abs(dot(normal, FILL_LIGHT));
+  const facing = Math.abs(dot(normal, view));
+  const grazing = (1 - facing) ** 3;
+  const body = 0.24 + 0.57 * key + 0.19 * fill + 0.75 * grazing;
+  return [
+    ...colour.map((component) => Math.min(255, component * body)),
+    58 + 150 * grazing
+  ];
+}
+
+/** The centre of every quad cell of the mesh, in the band's own frame. */
+export function cellCentres(rows) {
+  const centres = [];
+  for (let i = 0; i < rows.length - 1; i += 1) {
+    for (let j = 0; j < rows[i].length - 1; j += 1) {
+      const corners = [rows[i][j], rows[i + 1][j], rows[i + 1][j + 1], rows[i][j + 1]];
+      centres.push({
+        i,
+        j,
+        point: [0, 1, 2].map((axis) =>
+          corners.reduce((total, corner) => total + corner.point[axis], 0) / 4)
+      });
+    }
+  }
+  return centres;
+}
+
+/**
+ * The order to paint the cells in: furthest from the eye first.
+ *
+ * Transparency has no depth buffer to fall back on — what is drawn later is simply mixed
+ * over what is there — so the only way a see-through band can be right is to paint it
+ * from the back. The band turns, so the order is recomputed every frame; it is still a
+ * pure function of the frame, since the spin is.
+ */
+export function backToFront(centres, view) {
+  return centres
+    .map((centre, index) => ({ index, depth: dot(centre.point, view) }))
+    .sort((first, second) => first.depth - second.depth)
+    .map((entry) => entry.index);
+}
+
+/**
  * Where the travelling marker is, `progress` running 0 to 1 over the whole journey.
  *
  * The marker walks the centre line, whose points repeat every lap — but it carries a pin
