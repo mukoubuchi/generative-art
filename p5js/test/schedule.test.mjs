@@ -26,6 +26,7 @@ test("the committed schedule names artworks the manifest has, once each", async 
  * finished work missing from both would be work nobody will ever post, silently.
  */
 const AWAITING_SCHEDULE = [
+  "electric-fan",
   "moebius-band",
   "ulam-spiral",
   "hilbert-curve",

@@ -56,7 +56,7 @@ const ARTWORK_MAIN = '<main id="artwork">';
 
 /**
  * Where the build's marker goes. The first line of every page's head, which is the one piece
- * of markup all thirty-seven share and the one no artwork has a reason to move.
+ * of markup all thirty-eight share and the one no artwork has a reason to move.
  */
 const HEAD_ANCHOR = '<meta charset="utf-8">';
 

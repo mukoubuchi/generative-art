@@ -99,7 +99,7 @@ const INK_FLOOR = 0.002;
  * How far the two engines may disagree about how much ink a work puts down.
  *
  * They never agree exactly, because they antialias differently. Measured across all
- * thirty-seven works at matched frames, the ratio sits between 0.970 and 1.088, so the band
+ * thirty-eight works at matched frames, the ratio sits between 0.970 and 1.088, so the band
  * below holds every sound work several times over and is still nowhere near the fault it was
  * written for: a work WebKit draws not at all sits at 0.
  */
@@ -491,5 +491,5 @@ if (failures.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  note("\nBoth engines draw the same thirty-seven pictures.");
+  note("\nBoth engines draw the same thirty-eight pictures.");
 }

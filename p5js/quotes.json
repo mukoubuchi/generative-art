@@ -370,6 +370,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://www.sefaria.org/Pirkei_Avot.5.22"
+    },
+    {
+      "id": "aristoteles-organon-keleusthen",
+      "text": "εἰ γὰρ ἠδύνατο ἕκαστον τῶν ὀργάνων κελευσθὲν ἢ προαισθανόμενον ἀποτελεῖν τὸ αὑτοῦ ἔργον",
+      "lang": "grc",
+      "author": "Ἀριστοτέλης",
+      "source": "Politica I 1253b",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.01.0057:book=1:section=1253b"
     }
   ]
 }

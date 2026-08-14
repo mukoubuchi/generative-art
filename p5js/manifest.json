@@ -160,6 +160,25 @@
       }
     },
     {
+      "id": "electric-fan",
+      "title": "Electric Fan",
+      "entry": "p5js/artworks/electric-fan/index.html",
+      "interactivePath": "electric-fan/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "aristoteles-organon-keleusthen"
+      ],
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/ElectricFan.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
+    },
+    {
       "id": "atan2",
       "title": "Atan2",
       "entry": "p5js/artworks/atan2/index.html",
