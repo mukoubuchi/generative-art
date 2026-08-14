@@ -1,125 +1,173 @@
-import { hintMode, indicatorShown } from "../shared/hint-mode.js";
-import { drawKeyIndicator } from "../shared/input-indicator.js";
-import { drawKeyHint } from "../shared/key-hint.js";
-import { captureFrameCount, captureState } from "./capture.js";
-import { buildSections, convergence, goldenRectangle } from "./geometry.js";
-import { NOTHING_HELD, applyHold, keyDown, keyUp } from "./repeat.js";
+import {
+  DISSOLVE_FRAMES,
+  HOLD_FRAMES,
+  LAY_FRAMES,
+  TOTAL_FRAMES,
+  arcPoint,
+  buildSections,
+  sectionCut,
+  travelAt
+} from "./geometry.js";
 
 const LOGICAL_WIDTH = 1010;
 const LOGICAL_HEIGHT = 640;
+const PLAYBACK_FPS = 30;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
-const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const MARGIN = BASE_DIMENSION * 0.03125;
-// The Processing sketch drew at the default weight of 1 px on a 500 px short side.
-const STROKE_WEIGHT = BASE_DIMENSION * 0.002;
 const QUARTER_TURN = Math.PI / 2;
 
-/** The dark table, the convergence's two ends, and the ivory the spiral is drawn in. */
-const GROUND = [14, 12, 10];
-const EMBER = [158, 74, 44];
+/**
+ * Night, the lines that divide, and the gold that travels.
+ *
+ * Three voices, where there were five. The night is Bounding Spots', because this is the
+ * other artwork in the collection made of one small light on a dark ground and they should
+ * be standing on the same dark. The dividing lines take that artwork's baseline — the rail
+ * its arcs are struck from — since these are the frame these arcs are struck in. The gold
+ * is this artwork's own, the colour its rectangles used to gild towards; of the five it is
+ * the one left, and now it is the whole subject rather than the end of a gradient.
+ */
+const GROUND = [6, 7, 12];
+const DIVIDE = [70, 82, 110];
 const GOLD = [246, 198, 98];
-const ARC_IVORY = [248, 234, 202];
-const SKELETON = [204, 192, 168, 88];
 
-// The tiling is integers — 987 by 610 units — scaled to the canvas in one transform.
-// The exact golden rectangle stays as the skeleton: the limit the convergents close on,
-// missing the integer root's aspect by about one part in a million.
+// The tiling is integers -- 987 by 610 units -- scaled to the canvas in one transform.
 const sections = buildSections();
-const ROOT_UNITS = { width: sections[0].width, height: sections[0].height };
+const ROOT = sections[0];
 const UNIT_SCALE = Math.min(
-  (LOGICAL_WIDTH - 2 * MARGIN) / ROOT_UNITS.width,
-  (LOGICAL_HEIGHT - 2 * MARGIN) / ROOT_UNITS.height
+  (LOGICAL_WIDTH - 2 * MARGIN) / ROOT.width,
+  (LOGICAL_HEIGHT - 2 * MARGIN) / ROOT.height
 );
-const TILING_LEFT = (LOGICAL_WIDTH - ROOT_UNITS.width * UNIT_SCALE) / 2;
-const TILING_TOP = (LOGICAL_HEIGHT - ROOT_UNITS.height * UNIT_SCALE) / 2;
-const SKELETON_RECT = goldenRectangle(
-  LOGICAL_WIDTH - 2 * MARGIN,
-  LOGICAL_HEIGHT - 2 * MARGIN
-);
+const TILING_LEFT = (LOGICAL_WIDTH - ROOT.width * UNIT_SCALE) / 2;
+const TILING_TOP = (LOGICAL_HEIGHT - ROOT.height * UNIT_SCALE) / 2;
+const LINE_WEIGHT = 1.2 / UNIT_SCALE;
+const TRACK_WEIGHT = 1.8 / UNIT_SCALE;
 
-function mix(from, to, amount) {
-  return [
-    from[0] + (to[0] - from[0]) * amount,
-    from[1] + (to[1] - from[1]) * amount,
-    from[2] + (to[2] - from[2]) * amount
-  ];
-}
-
-// The page starts from one section so the arrow keys build the spiral up the way the
-// Processing sketch did. The capture starts complete: its scenario is in capture.js, and
-// its opening frame — which is also the clip's timeline still — is the finished spiral.
-let visibleSections = CAPTURE_MODE ? sections.length : 1;
-// Which arrow the reader is leaning on, and since when. The capture never touches this:
-// its presses are written out frame by frame in capture.js.
-let hold = NOTHING_HELD;
-const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
-const TOTAL_FRAMES = captureFrameCount(sections.length);
-const KEY_HINT = [
-  { cap: "→", text: "add a section" },
-  { cap: "←", text: "remove the newest" }
-];
+/**
+ * How large the travelling mark is drawn, as a share of the arc it is riding, and how
+ * small it is allowed to get. Keyed to the arc rather than fixed, so the mark and its arc
+ * are the same picture at all fifteen scales — which is the self-similarity, made visible
+ * on a canvas that does not move. The floor matters only for the last five arcs, and the
+ * mark spends a twentieth of a second on all five of them together.
+ */
+const MARK_RATIO = 0.022;
+const MARK_FLOOR = 2.5;
+const HALO_REACH = 2.8;
+const HALO_LAYERS = 5;
 
 const P5 = window.p5;
 
 new P5((p) => {
-  function drawSpiral(count) {
-    p.background(...GROUND);
+  /**
+   * A golden mark drawing the spiral, on a field of the lines that divide it.
+   *
+   * The rectangles used to be filled, each in a shade of how far its own ratio still stood
+   * from phi, and the arcs drawn over them in ivory. Nothing is filled now: a region is
+   * shown by what cuts it off from the next one, so the picture is the root's outline and
+   * the fourteen cuts inside it, and every cut arrives at the moment the mark finishes
+   * going round the square it closes. The mark itself is Bounding Spots' light — an added
+   * halo with a core inside it — and what it leaves behind is the spiral.
+   *
+   * The exact golden rectangle used to be stroked underneath as a skeleton, to stand
+   * against the integer tiling's own root. At this size the two are 0.02 of a pixel apart,
+   * which is not a comparison but a second copy of the same line, so it is gone. That the
+   * root's aspect misses phi by about one part in a million is still true, still measured,
+   * and now said in the tests and the readme rather than drawn twice.
+   */
+  function drawFrame(frameIndex) {
+    const laying = Math.min(frameIndex / LAY_FRAMES, 1);
+    const travel = travelAt(laying);
+    const fade = 1 - Math.max(0, frameIndex - LAY_FRAMES - HOLD_FRAMES) / DISSOLVE_FRAMES;
+
     p.push();
     p.scale(RENDER_SCALE);
-    // The skeleton first: the exact golden rectangle the integer tiling converges to.
-    p.noFill();
-    p.stroke(...SKELETON);
-    p.strokeWeight(STROKE_WEIGHT);
-    p.rect(
-      (LOGICAL_WIDTH - SKELETON_RECT.width) / 2,
-      (LOGICAL_HEIGHT - SKELETON_RECT.height) / 2,
-      SKELETON_RECT.width,
-      SKELETON_RECT.height
-    );
+    p.background(...GROUND);
     p.translate(TILING_LEFT, TILING_TOP);
     p.scale(UNIT_SCALE);
-    for (const section of sections.slice(0, count)) {
+    p.noFill();
+
+    // What is being divided, and then the cuts that have been made so far.
+    p.stroke(...DIVIDE, 150);
+    p.strokeWeight(LINE_WEIGHT);
+    p.rect(0, 0, ROOT.width, ROOT.height);
+    for (let index = 0; index < travel.index; index += 1) {
+      const cut = sectionCut(sections[index]);
+      if (cut !== null) {
+        p.line(cut.from.x, cut.from.y, cut.to.x, cut.to.y);
+      }
+    }
+
+    // The track: every arc the mark has finished, and the part of the one it is on.
+    p.stroke(...GOLD, 210);
+    p.strokeWeight(TRACK_WEIGHT);
+    for (let index = 0; index <= travel.index; index += 1) {
+      const section = sections[index];
+      const along = index < travel.index ? 1 : travel.along;
+      if (along <= 0) {
+        continue;
+      }
       p.push();
       p.translate(section.x, section.y);
       p.rotate(section.rotation);
-      p.noStroke();
-      // Colour is the convergence: the rough inner convergents in ember, the sections
-      // whose ratio has all but reached phi in gold. Adding a section gilds the spiral.
-      p.fill(...mix(EMBER, GOLD, convergence(section)));
-      p.rect(0, 0, section.width, section.height);
-      // The quarter arc is inscribed in the square half of the rectangle, so its two
-      // radii lie exactly on edges the neighbouring rectangles already draw.
-      p.noFill();
-      p.stroke(...ARC_IVORY);
-      p.strokeWeight(STROKE_WEIGHT / UNIT_SCALE);
       p.arc(
         section.height,
         section.height,
         2 * section.height,
         2 * section.height,
         Math.PI,
-        Math.PI + QUARTER_TURN,
+        Math.PI + QUARTER_TURN * along,
         p.OPEN
       );
       p.pop();
     }
+
+    // The mark, in the units the canvas is measured in rather than the tiling's, so its
+    // size follows the arc and not the transform.
     p.pop();
+    p.push();
+    p.scale(RENDER_SCALE);
+    const head = {
+      x: TILING_LEFT + travel.point.x * UNIT_SCALE,
+      y: TILING_TOP + travel.point.y * UNIT_SCALE
+    };
+    const size = Math.max(travel.radius * UNIT_SCALE * MARK_RATIO, MARK_FLOOR);
+    p.noStroke();
+    // The halo is stacked rather than laid on in one go. A single added circle has an edge,
+    // and an edge is a disc rather than a glow; several of them, each smaller than the
+    // last, add up to something that falls off instead of stopping.
+    p.blendMode(p.ADD);
+    for (let layer = HALO_LAYERS; layer >= 1; layer -= 1) {
+      p.fill(GOLD[0], GOLD[1], GOLD[2], 16);
+      p.circle(head.x, head.y, size * HALO_REACH * 2 * (layer / HALO_LAYERS));
+    }
+    p.blendMode(p.BLEND);
+    p.fill(GOLD[0], GOLD[1], GOLD[2], 246);
+    p.circle(head.x, head.y, size);
+
+    // Letting go, so the loop returns to the night it opened in.
+    if (fade < 1) {
+      p.fill(GROUND[0], GROUND[1], GROUND[2], 255 * (1 - fade));
+      p.rect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    }
+    p.pop();
+
+    return travel;
   }
 
-  function publishState(frameIndex, count) {
+  function publishState(frameIndex, travel) {
     window.__ARTWORK_STATE__ = {
-      kind: CAPTURE_MODE ? "video" : "image",
+      kind: "video",
       frameIndex,
       totalFrames: TOTAL_FRAMES,
       sectionCount: sections.length,
-      visibleSections: count,
+      arcsDrawn: travel.index + 1,
+      travel: travel.along,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
@@ -138,92 +186,21 @@ new P5((p) => {
     if (CAPTURE_MODE) {
       p.pixelDensity(1);
     }
-    p.noLoop();
-    if (!CAPTURE_MODE) {
-      // A window that loses focus never sends the key up. Without this the spiral would
-      // go on believing the arrow is down and refuse the next press of it.
-      window.addEventListener("blur", () => {
-        hold = NOTHING_HELD;
-        p.noLoop();
-      });
-    }
+    p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
-      // Every frame is a pure function of its index — the scenario lives in capture.js —
-      // so any frame can be rebuilt on its own.
-      window.__renderFrame = (frameIndex) => {
-        const state = captureState(frameIndex, sections.length);
-        drawSpiral(state.visibleSections);
-        if (INDICATOR) {
-          // The two keys of the page's legend, in the legend's order, each lit while the
-          // scenario is pressing it.
-          p.push();
-          p.scale(RENDER_SCALE);
-          drawKeyIndicator(p, [
-            { label: "→", active: state.rightActive },
-            { label: "←", active: state.leftActive }
-          ], LOGICAL_WIDTH, LOGICAL_HEIGHT);
-          p.pop();
-        } else if (HINT.shown) {
-          drawKeyHint(p, KEY_HINT, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
-        }
-        return Promise.resolve(publishState(frameIndex, state.visibleSections));
-      };
-    }
-  };
-
-  // The sketch rests between presses. While an arrow is down it runs, so that the hold
-  // is ticked against the clock rather than against however often the browser decides to
-  // repeat a key.
-  p.draw = () => {
-    const advanced = applyHold(hold, p.millis(), visibleSections, sections.length);
-    hold = advanced.hold;
-    // Unlike the Processing sketch, the whole list is redrawn on a cleared background,
-    // so removing a section actually erases it.
-    visibleSections = advanced.count;
-    drawSpiral(visibleSections);
-    if (HINT.shown) {
-      drawKeyHint(p, KEY_HINT, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
-    }
-    publishState(0, visibleSections);
-    if (hold.direction === 0) {
       p.noLoop();
+      // Every frame is a pure function of its index, so any one can be drawn on its own.
+      window.__renderFrame = (frameIndex) =>
+        Promise.resolve(publishState(frameIndex, drawFrame(frameIndex)));
     }
+    publishState(0, drawFrame(0));
   };
 
-  // p5 hands both handlers the keyboard event. Its own `key` is not what is wanted here:
-  // on the way up it still holds whatever is down, because p5 only updates it after this
-  // returns. The event names the key this is actually about.
-  p.keyPressed = (event) => {
+  p.draw = () => {
     if (CAPTURE_MODE) {
-      return true;
+      return;
     }
-    // p5 2.x reports arrow keys through `key`, where LEFT_ARROW and RIGHT_ARROW are the
-    // KeyboardEvent names. `keyCode` still holds the legacy number, so comparing it
-    // against these constants never matches.
-    const direction = event.key === p.RIGHT_ARROW ? 1 : event.key === p.LEFT_ARROW ? -1 : 0;
-    if (direction === 0) {
-      return true;
-    }
-    hold = keyDown(hold, event.key, direction, p.millis());
-    // Drawn now rather than at the next frame, so that a tap answers as immediately as it
-    // did before there was any repeating at all.
-    p.redraw();
-    if (hold.direction !== 0) {
-      p.loop();
-    }
-    return false;
-  };
-
-  p.keyReleased = (event) => {
-    if (CAPTURE_MODE) {
-      return true;
-    }
-    const released = keyUp(hold, event.key);
-    if (released === hold) {
-      return true;
-    }
-    hold = released;
-    p.noLoop();
-    return false;
+    const frameIndex = p.frameCount % TOTAL_FRAMES;
+    publishState(frameIndex, drawFrame(frameIndex));
   };
 });

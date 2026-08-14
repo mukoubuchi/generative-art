@@ -3,6 +3,17 @@ const QUARTER_TURN = Math.PI / 2;
 
 export { PHI };
 
+/**
+ * The clip's plan, in frames at thirty a second: the mark travels the whole spiral, the
+ * finished figure is held, and then it is let go of, so the loop returns to the night it
+ * opened in. The mark rests at the centre through the hold — the end of its journey is
+ * the eye of the spiral, and it stays there — and fades with everything else.
+ */
+export const LAY_FRAMES = 210;
+export const HOLD_FRAMES = 60;
+export const DISSOLVE_FRAMES = 30;
+export const TOTAL_FRAMES = LAY_FRAMES + HOLD_FRAMES + DISSOLVE_FRAMES;
+
 /** Fifteen sections: the rectangles 987x610 down to 1x1, every side a Fibonacci number. */
 export const SECTION_COUNT = 15;
 
@@ -13,18 +24,6 @@ export function fibonacciNumbers() {
     numbers.push(numbers.at(-1) + numbers.at(-2));
   }
   return numbers;
-}
-
-/**
- * The largest exact golden rectangle that fits the available area: the limit the
- * integer tiling converges to, kept as the artwork's skeleton. The tiling's own root
- * is 987 by 610, whose aspect misses phi by about one part in a million — closer than
- * any pixel — and the tests pin that closeness rather than letting it pass as
- * coincidence.
- */
-export function goldenRectangle(availableWidth, availableHeight) {
-  const width = Math.min(availableWidth, PHI * availableHeight);
-  return { width, height: width / PHI };
 }
 
 /**
@@ -81,18 +80,77 @@ export function sectionCorners(section) {
 }
 
 /**
- * How far a section's convergent stands from phi, as a share of the journey: zero for
- * the roughest ratio the tiling holds (one over one), one at the limit. Logarithmic,
- * because the error falls geometrically and a linear scale would spend the whole
- * palette on the first two sections.
+ * Where a section's square is cut off from the rest of it: the line from one long side
+ * to the other, a short side's distance along. Fourteen of these are the whole drawing
+ * of the tiling — the regions are shown by what divides them rather than by being
+ * filled — and the last section, which is a square already, has nothing to divide.
  */
-export function convergence(section) {
-  const fibonacci = fibonacciNumbers();
-  const worst = Math.abs(1 - PHI);
-  const finest = Math.abs(fibonacci.at(-1) / fibonacci.at(-2) - PHI);
-  const error = Math.abs(section.ratio - PHI);
-  if (error <= finest) {
-    return 1;
+export function sectionCut(section) {
+  if (section.width === section.height) {
+    return null;
   }
-  return Math.max(Math.min(Math.log(worst / error) / Math.log(worst / finest), 1), 0);
+  const cosine = Math.cos(section.rotation);
+  const sine = Math.sin(section.rotation);
+  const place = (localX, localY) => ({
+    x: section.x + localX * cosine - localY * sine,
+    y: section.y + localX * sine + localY * cosine
+  });
+  return { from: place(section.height, 0), to: place(section.height, section.height) };
+}
+
+/**
+ * A point of a section's quarter arc, `along` of the way round it from start to end.
+ * The arc is inscribed in the square half, so it runs from one corner of that square to
+ * the next and hands the following section's arc a start exactly where it stops.
+ */
+export function arcPoint(section, along) {
+  const angle = Math.PI + QUARTER_TURN * Math.min(Math.max(along, 0), 1);
+  const localX = section.height * (1 + Math.cos(angle));
+  const localY = section.height * (1 + Math.sin(angle));
+  const cosine = Math.cos(section.rotation);
+  const sine = Math.sin(section.rotation);
+  return {
+    x: section.x + localX * cosine - localY * sine,
+    y: section.y + localX * sine + localY * cosine
+  };
+}
+
+/** How long each quarter arc is, in the units the tiling is built in. */
+export function arcLengths() {
+  return buildSections().map((section) => QUARTER_TURN * section.height);
+}
+
+/**
+ * Where a mark travelling the whole spiral at one steady speed stands, `share` of the
+ * way along it.
+ *
+ * Steady along the curve, rather than a quarter turn to every beat. The quarter-turn
+ * pacing is the one that makes the motion self-similar — scale the picture and shift the
+ * clock and it is the same motion again — but that similarity can only be seen by a
+ * camera that scales with it, and this one does not move. What a reader would see instead
+ * is the mark stopping: five of the fifteen arcs are under five pixels across, and at a
+ * quarter turn a beat they would take a fifth of the clip, spent on a mark that appears
+ * to be standing still at the centre. At a steady speed they take a twentieth of a second
+ * between them, and the self-similarity is carried by the mark's own size instead — it is
+ * drawn in proportion to the arc it is on, so the mark and its arc make the same picture
+ * at every one of the fifteen scales.
+ */
+export function travelAt(share) {
+  const sections = buildSections();
+  const lengths = sections.map((section) => QUARTER_TURN * section.height);
+  const whole = lengths.reduce((total, length) => total + length, 0);
+  let left = Math.min(Math.max(share, 0), 1) * whole;
+  for (let index = 0; index < sections.length; index += 1) {
+    if (left < lengths[index] || index === sections.length - 1) {
+      const along = Math.min(left / lengths[index], 1);
+      return {
+        index,
+        along,
+        radius: sections[index].height,
+        point: arcPoint(sections[index], along)
+      };
+    }
+    left -= lengths[index];
+  }
+  return null;
 }
