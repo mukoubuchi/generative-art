@@ -12,9 +12,9 @@ import {
 /**
  * Order as arrangement: the tile walls go up first, quickly, along the diagonal sweep;
  * then the squares the walls have made — large and small, found by flooding the plan,
- * never placed — take their sits one by one, terracotta for the great and gold for the
- * small, each in the spot the construction left for it. The whole holds, then lets go,
- * so the loop returns to the bare ground.
+ * never placed — take their sits one by one, one russet at full strength for the great
+ * and washed for the small, each in the spot the construction left for it. The whole
+ * holds, then lets go, so the loop returns to the bare ground.
  */
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
@@ -32,10 +32,19 @@ const UNIT = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT) / GRID_SIZE;
 const DRIVE_FRAMES = 6;
 const SEAT_FRAMES = 8;
 
-const GROUND = [15, 13, 11];
-const WALL_SAND = [204, 194, 172];
-const LARGE_TERRACOTTA = [186, 98, 70];
-const SMALL_GOLD = [232, 186, 104];
+/**
+ * The paving, in one colour at two strengths.
+ *
+ * Herringbone next door is two directions in opposition and takes two hues for it. What
+ * this construction leaves behind is not an opposition but two sizes of the same thing —
+ * squares of side two and squares of side one — so one hue answers, at full strength for
+ * the large family and washed towards the paper for the small. The walls are the paper
+ * darkened a shade, which is what a joint between paving stones is.
+ */
+const GROUND = [230, 224, 208];
+const WALL_JOINT = [205, 196, 178];
+const LARGE_RUSSET = [166, 110, 66];
+const SMALL_RUSSET = [206, 158, 96];
 const WALL_WEIGHT = 0.07;
 
 const TILES = layingOrder();
@@ -62,7 +71,7 @@ new P5((p) => {
         return;
       }
       seated += 1;
-      const family = square.size === 2 ? LARGE_TERRACOTTA : SMALL_GOLD;
+      const family = square.size === 2 ? LARGE_RUSSET : SMALL_RUSSET;
       const grown = 0.55 + 0.45 * seat;
       const centreX = square.x + square.size / 2;
       const centreY = square.y + square.size / 2;
@@ -86,7 +95,7 @@ new P5((p) => {
         return;
       }
       laid += 1;
-      p.stroke(...WALL_SAND, 255 * fade);
+      p.stroke(...WALL_JOINT, 255 * fade);
       p.line(
         tile.x1,
         tile.y1,

@@ -11,9 +11,9 @@ import {
  * A weave laid before the eyes. Two families of tiles — one running with the warp,
  * one against it — arrive together along a diagonal sweep, each plank driven in along
  * its own axis beside the crosswise planks it locks with. The opposition is the
- * fabric: neither family alone is anything but stripes. Warm ochre runs one way,
- * cool slate the other, on a dark loom; the weave holds a while when it is whole,
- * then lets go, so the clip returns to the empty loom it began on.
+ * fabric: neither family alone is anything but stripes. A warm russet runs one way and
+ * a cool steel the other, on paper; the weave holds a while when it is whole, then lets
+ * go, so the clip returns to the bare floor it began on.
  */
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
@@ -30,10 +30,18 @@ const UNIT = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT) / GRID_SIZE;
 /** How long one plank takes to drive in along its own axis. */
 const DRIVE_FRAMES = 9;
 
-/** The loom, and the two directions' voices. */
-const GROUND = [16, 14, 12];
-const WARP_OCHRE = [224, 170, 100];
-const WEFT_SLATE = [112, 148, 198];
+/**
+ * The floor, and the two directions' voices.
+ *
+ * A weave is a thing of a room, so it is laid on the paper the other indoor works are
+ * drawn on rather than on a dark loom, and the two families are timbers rather than
+ * paints: a russet and a steel, dark enough to read against the paper and quiet enough
+ * to sit beside it. Two colours, because the artwork's line from Heraclitus is about two
+ * directions in opposition and nothing else here has to be told apart.
+ */
+const GROUND = [230, 224, 208];
+const WARP_RUSSET = [166, 110, 66];
+const WEFT_STEEL = [88, 104, 124];
 /** Plank thickness in grid units: stout enough to read as timber, not hairline. */
 const PLANK_WEIGHT = 0.3;
 
@@ -60,7 +68,7 @@ new P5((p) => {
         return;
       }
       laid += 1;
-      const family = tile.horizontal ? WARP_OCHRE : WEFT_SLATE;
+      const family = tile.horizontal ? WARP_RUSSET : WEFT_STEEL;
       p.stroke(...family, 255 * fade);
       p.line(
         tile.x1,

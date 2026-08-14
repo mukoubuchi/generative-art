@@ -33,15 +33,20 @@ const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
 const TOTAL_FRAMES = TOTAL_STEPS / STEPS_PER_FRAME;
 
 /**
- * Two families for the two paths, each with a cold end and a warm one. Which end a
- * triangle wears is not its number in a list: it is how gathered the six are at that
- * moment, which is a distance the module measures. They are dark and apart at the
- * corners and lit as they close, so the figure's colour is its own convergence.
+ * Two colours on paper, and they are two of Toggle Color Ball's: the warm one its yang
+ * discs wear and the cool one its yin discs do, which is the same opposition this figure
+ * is made of — one family of triangles rising, one falling.
+ *
+ * Each family is one colour and shows twice. Which shade a triangle wears is not its
+ * number in a list: it is how gathered the six are at that moment, a distance the module
+ * measures. Washed into the paper while they stand apart at the corners, full-strength as
+ * they close, so the figure's colour is its own convergence and there are still two of
+ * them. The ground is the paper Kanizsa Square is drawn on.
  */
-const GROUND = [10, 12, 20];
-const RISING = [[74, 58, 96], [232, 176, 92]];
-const FALLING = [[46, 74, 92], [130, 216, 214]];
-const GUIDE = [120, 130, 160];
+const GROUND = [226, 220, 206];
+const RISING = [[214, 155, 138], [198, 66, 45]];
+const FALLING = [[155, 160, 167], [56, 78, 112]];
+const GUIDE = [154, 148, 134];
 /** Half a pixel of paint, so shapes that meet exactly do not show the ground between. */
 const SEAM_CLOSE = 1 + 0.5 / TRIANGLE_RADIUS;
 
@@ -59,7 +64,7 @@ new P5((p) => {
   /** The two triangles the six walk around, which together are the hexagram. */
   function drawGuides() {
     p.noFill();
-    p.stroke(GUIDE[0], GUIDE[1], GUIDE[2], 42);
+    p.stroke(GUIDE[0], GUIDE[1], GUIDE[2], 60);
     p.strokeWeight(1);
     for (let pathIndex = 0; pathIndex < PATH_COUNT; pathIndex += 1) {
       p.beginShape();

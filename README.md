@@ -34,8 +34,8 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Spring Polygon](p5js/artworks/spring-polygon/) | A ring of five stars lit by the energy one pulled star sends around it, rendered as an MP4 |
 | [Nautilus](p5js/artworks/nautilus/) | A chambered shell built room by room, coloured by age from abyss teal to pearl, rendered as a static PNG |
 | [Ammonite](p5js/artworks/ammonite/) | A radius-doubling spiral that grows forever without changing shape, looping one doubling per clip, rendered as an MP4 |
-| [Herringbone](p5js/artworks/herringbone/) | Two families of planks laid together into a diagonal weave, ochre one way and slate the other, rendered as an MP4 |
-| [Pinwheel](p5js/artworks/pinwheel/) | Walls go up and squares of two sizes take the places left for them, terracotta and gold, rendered as an MP4 |
+| [Herringbone](p5js/artworks/herringbone/) | Two families of planks laid together into a diagonal weave, russet one way and steel the other, rendered as an MP4 |
+| [Pinwheel](p5js/artworks/pinwheel/) | Walls go up and squares of two sizes take the places left for them, one russet at two strengths, rendered as an MP4 |
 | [Hex Triangle](p5js/artworks/hex-triangle/) | Six walking triangles that close into one exact hexagon and open out again, rendered as an MP4 |
 | [Kanizsa Square](p5js/artworks/kanizsa-square/) | A square drawn by nothing, starved and turned away until it goes, then made real, rendered as an MP4 |
 | [Eyes Pattern](p5js/artworks/eyes-pattern/) | Two circle lattices on indigo; the eyes open only when the second family arrives, rendered as an MP4 |
