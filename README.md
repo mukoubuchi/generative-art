@@ -26,7 +26,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Fibonacci Spiral](p5js/artworks/fibonacci-spiral/) | Fifteen integer Fibonacci rectangles closing on the golden ratio, ember into gold, rendered as an MP4 |
 | [Bounding Spots](p5js/artworks/bounding-spots/) | Twenty nested pendulums whose cadences differ by exactly one, waving and realigning, rendered as an MP4 |
 | [Loader](p5js/artworks/loader/) | A spinning arc that relays the same ring forever over its own fading track, rendered as an MP4 |
-| [Windmill](p5js/artworks/windmill/) | A mill on a dusk plain, turned by gusts a held key raises and stopped by its own friction, rendered as an MP4 |
+| [Windmill](p5js/artworks/windmill/) | A mill with framed sails, turned by gusts a held key raises and stopped by its own friction, rendered as an MP4 |
 | [Atan2](p5js/artworks/atan2/) | A field of needles all answering atan2 toward one probe, torn along a single ray, rendered as an MP4 |
 | [Toggle Color Ball](p5js/artworks/toggle-color-ball/) | Four discs on a turning ring, the nearest one forward, warm and cool by turns, rendered as an MP4 |
 | [Temple Bell](p5js/artworks/pulse-button/) | A struck bell whose sound crosses the dark and dies away exponentially, rendered as an MP4 |

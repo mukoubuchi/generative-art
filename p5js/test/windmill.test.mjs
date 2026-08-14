@@ -11,17 +11,20 @@ import {
   RELEASE_STEP,
   STEPS_PER_SECOND,
   TOTAL_STEPS,
-  BLADE_COUNT,
+  SAIL_COUNT,
+  SAIL_INNER_RATIO,
+  SAIL_PANES,
+  SAIL_WIDTH_RATIO,
   accelerationAt,
   advanceMill,
-  bladeTriangles,
   captureWindAt,
   createMill,
   envelopeAt,
   equilibriumSpeed,
   gustTrack,
   integrateStep,
-  millAfter
+  millAfter,
+  sailBars
 } from "../artworks/windmill/mill.js";
 
 const PLAYBACK_FPS = 30;
@@ -163,29 +166,58 @@ test("a sampled video frame turns less than the sails' quarter-turn symmetry", (
     "frames this far apart could read as stalling or running backwards");
 });
 
-test("four blades, each the previous one turned a quarter, which is what seals the loop", () => {
-  // The clip closes because the wheel comes to rest three whole revolutions on, and a
-  // wheel with four-fold symmetry is back on its own silhouette a quarter turn sooner
+test("four sails, each the previous one turned a quarter, which is what seals the loop", () => {
+  // The clip closes because the rotor comes to rest three whole revolutions on, and a
+  // rotor with four-fold symmetry is back on its own silhouette a quarter turn sooner
   // than that. This is the symmetry that claim leans on, taken straight from the figure.
   const radius = 272;
-  const blades = bladeTriangles(radius);
-  assert.equal(blades.length, BLADE_COUNT);
+  const sails = sailBars(radius);
+  assert.equal(sails.length, SAIL_COUNT);
   const cosine = Math.cos(QUARTER_TURN);
   const sine = Math.sin(QUARTER_TURN);
-  for (let blade = 0; blade < BLADE_COUNT; blade += 1) {
-    const next = blades[(blade + 1) % BLADE_COUNT];
-    blades[blade].forEach((point, index) => {
-      const x = point.x * cosine - point.y * sine;
-      const y = point.x * sine + point.y * cosine;
-      assert.ok(Math.abs(x - next[index].x) < 1e-9);
-      assert.ok(Math.abs(y - next[index].y) < 1e-9);
+  for (let sail = 0; sail < SAIL_COUNT; sail += 1) {
+    const next = sails[(sail + 1) % SAIL_COUNT];
+    assert.equal(sails[sail].length, next.length);
+    sails[sail].forEach((bar, index) => {
+      assert.equal(bar.kind, next[index].kind, "the sails are not built the same way");
+      for (const end of ["from", "to"]) {
+        const x = bar[end].x * cosine - bar[end].y * sine;
+        const y = bar[end].x * sine + bar[end].y * cosine;
+        assert.ok(Math.abs(x - next[index][end].x) < 1e-9);
+        assert.ok(Math.abs(y - next[index][end].y) < 1e-9);
+      }
     });
   }
-  // Each blade runs from the hub to the rim and back to a shorter vertex, so the wheel
-  // reaches exactly the radius it is given and reads as turning rather than as a disc.
-  for (const blade of blades) {
-    const reaches = blade.map((point) => Math.hypot(point.x, point.y));
-    assert.ok(Math.abs(Math.max(...reaches) - radius) < 1e-9);
-    assert.equal(Math.min(...reaches), 0);
+});
+
+test("a sail is a frame with air through it, offset from the stock that carries it", () => {
+  // This is the whole of what separates the mill's sail from the fan's blade, and the
+  // module has no way to say anything else: everything it emits is a bar between two
+  // points, so there is nothing here that could be filled in.
+  const radius = 272;
+  const sails = sailBars(radius);
+  const width = radius * SAIL_WIDTH_RATIO;
+  const inner = radius * SAIL_INNER_RATIO;
+  for (const sail of sails) {
+    // Four frame bars, the bar along the cloth, and one across at every pane boundary.
+    assert.equal(sail.filter((bar) => bar.kind === "frame").length, 4);
+    assert.equal(sail.filter((bar) => bar.kind === "bar").length, SAIL_PANES);
+    assert.equal(sail.length, 4 + SAIL_PANES);
+    for (const bar of sail) {
+      assert.ok(["frame", "bar"].includes(bar.kind), `a sail carries a ${bar.kind}`);
+      assert.deepEqual(Object.keys(bar).sort(), ["from", "kind", "to"]);
+    }
+    const reaches = sail.flatMap(({ from, to }) => [from, to].map((p) => Math.hypot(p.x, p.y)));
+    // Nothing reaches the windshaft: the sails begin clear of the cap, unlike the fan's
+    // blades, which meet at their hub.
+    assert.ok(Math.abs(Math.min(...reaches) - inner) < 1e-9, `a sail reaches ${Math.min(...reaches)}`);
+    // And the far corner is the stock's own reach with the cloth's width beside it.
+    assert.ok(Math.abs(Math.max(...reaches) - Math.hypot(radius, width)) < 1e-9);
   }
+  // The cloth stands entirely to one side of the stock, which is what makes a sail a
+  // sail: a shape symmetric about its own axis would be a paddle.
+  const [firstSail] = sails;
+  const across = firstSail.flatMap(({ from, to }) => [from.y, to.y]);
+  assert.equal(Math.min(...across), 0, "the cloth crosses to the other side of the stock");
+  assert.ok(Math.abs(Math.max(...across) - width) < 1e-9);
 });

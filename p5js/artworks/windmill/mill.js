@@ -41,29 +41,53 @@ export const INERTIA = 6;
 /** The wind below which thrust on a resting mill cannot beat the dry friction. */
 export const BREAKAWAY_WIND = Math.sqrt(BREAKAWAY_TORQUE / THRUST);
 
-export const BLADE_COUNT = 4;
-const EIGHTH_TURN = Math.PI / 4;
-const INNER_RADIUS_RATIO = 1 / Math.SQRT2;
+export const SAIL_COUNT = 4;
+const QUARTER_TURN = Math.PI / 2;
 
 /**
- * Four blades, each a triangle from the hub out to a long vertex and back to the short
- * vertex an eighth of a turn later. The Processing sketch built this as a TRIANGLE_FAN
- * over eight alternating vertices and toggled the fill between them, which left the
- * filled triangles implicit; naming the four blades directly says the same thing.
- *
- * This is the whole figure. Turning one blade a quarter gives the next, so the wheel
- * carries the four-fold symmetry the clip's loop closes on.
+ * A sail begins clear of the cap and ends at the mill's reach; the cloth stands to one
+ * side of the stock that carries it, and the bars that hold the cloth cross it at even
+ * intervals. Those three numbers are the whole difference between a mill's sail and the
+ * pitched blade of the fan that stands beside it in this gallery: a sail is a frame with
+ * air through it, and it is offset from its own axis rather than symmetric about it.
  */
-export function bladeTriangles(outerRadius) {
-  const innerRadius = outerRadius * INNER_RADIUS_RATIO;
-  return Array.from({ length: BLADE_COUNT }, (unused, index) => {
-    const longAngle = 2 * index * EIGHTH_TURN;
-    const shortAngle = longAngle + EIGHTH_TURN;
-    return [
-      { x: 0, y: 0 },
-      { x: outerRadius * Math.cos(longAngle), y: outerRadius * Math.sin(longAngle) },
-      { x: innerRadius * Math.cos(shortAngle), y: innerRadius * Math.sin(shortAngle) }
-    ];
+export const SAIL_INNER_RATIO = 0.22;
+export const SAIL_WIDTH_RATIO = 0.2;
+export const SAIL_PANES = 6;
+
+/**
+ * The four sails, each as a list of bars — pairs of endpoints, in the rotor's own
+ * coordinates with the windshaft at the origin.
+ *
+ * Every sail is the one before it turned a quarter, so the rotor carries the four-fold
+ * symmetry the clip's loop closes on: the mill comes to rest three whole revolutions
+ * from where it started, and a quarter turn would already have sufficed.
+ */
+export function sailBars(outerRadius) {
+  const inner = outerRadius * SAIL_INNER_RATIO;
+  const width = outerRadius * SAIL_WIDTH_RATIO;
+  const paneLength = (outerRadius - inner) / SAIL_PANES;
+  const local = [
+    // The frame: the stock the cloth hangs from, the cloth's outer edge, and the two ends.
+    { kind: "frame", from: [inner, 0], to: [outerRadius, 0] },
+    { kind: "frame", from: [inner, width], to: [outerRadius, width] },
+    { kind: "frame", from: [inner, 0], to: [inner, width] },
+    { kind: "frame", from: [outerRadius, 0], to: [outerRadius, width] },
+    // The bar that runs the length of the cloth, halfway across it.
+    { kind: "bar", from: [inner, width / 2], to: [outerRadius, width / 2] }
+  ];
+  for (let pane = 1; pane < SAIL_PANES; pane += 1) {
+    const along = inner + pane * paneLength;
+    local.push({ kind: "bar", from: [along, 0], to: [along, width] });
+  }
+  const place = (cosine, sine) => ([along, across]) => ({
+    x: along * cosine - across * sine,
+    y: along * sine + across * cosine
+  });
+  return Array.from({ length: SAIL_COUNT }, (unused, index) => {
+    const angle = index * QUARTER_TURN;
+    const at = place(Math.cos(angle), Math.sin(angle));
+    return local.map(({ kind, from, to }) => ({ kind, from: at(from), to: at(to) }));
   });
 }
 

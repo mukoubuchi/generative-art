@@ -8,11 +8,11 @@ import {
   STEPS_PER_SECOND,
   TOTAL_STEPS,
   advanceMill,
-  bladeTriangles,
   captureWindAt,
   createMill,
   gustTrack,
-  millAfter
+  millAfter,
+  sailBars
 } from "./mill.js";
 
 const LOGICAL_WIDTH = 680;
@@ -29,8 +29,18 @@ const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const BASE_DIMENSION = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 // The Processing sketch reached 200 px on a 500 px canvas; 0.4 of the canvas keeps that
-// proportion and leaves a tenth of the canvas as margin for the blade tips.
+// proportion and leaves a tenth of the canvas as margin for the sail tips.
 const OUTER_RADIUS = BASE_DIMENSION * 0.4;
+// The windshaft stands above the middle of the canvas, because a mill is a thing on a
+// tower and the tower has to have somewhere to stand. Everything else is measured from it.
+const SHAFT_X = LOGICAL_WIDTH / 2;
+const SHAFT_Y = LOGICAL_HEIGHT * 0.45;
+const CAP_RADIUS = BASE_DIMENSION * 0.075;
+const TOWER_TOP = CAP_RADIUS * 0.35;
+const TOWER_TOP_HALF = BASE_DIMENSION * 0.062;
+const TOWER_BASE_HALF = BASE_DIMENSION * 0.165;
+const FRAME_WEIGHT = BASE_DIMENSION * 0.0072;
+const BAR_WEIGHT = BASE_DIMENSION * 0.004;
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
 const TOTAL_FRAMES = TOTAL_STEPS / STEPS_PER_FRAME;
 const ACCELERATE_KEY = "k";
@@ -39,7 +49,17 @@ const KEY_HINT = [
   { cap: "release", text: "let it fall" }
 ];
 
-const blades = bladeTriangles(OUTER_RADIUS);
+/**
+ * A cool dark ground with pale linen on it, which is the Electric Fan's palette turned
+ * over: that one is a dark rotor on warm paper, indoors. The two stand as a pair, and the
+ * pair is the point — one machine drives its own wind, the other waits for weather.
+ */
+const GROUND = [26, 30, 37];
+const STONE = [78, 82, 90];
+const CAP_STONE = [98, 101, 108];
+const LINEN = [228, 220, 200];
+
+const sails = sailBars(OUTER_RADIUS);
 
 const LIVE_TRACK = gustTrack(GUST_SEED);
 const liveMill = createMill();
@@ -51,28 +71,59 @@ const P5 = window.p5;
 
 new P5((p) => {
   /**
-   * Four black triangles on white, and nothing else. What the artwork is about is what
-   * the wheel does — that it will not start until the wind is worth more than the
-   * friction, that it settles where thrust and loss agree, that it stops truly and does
-   * not creep — and none of that is easier to see for the wheel being dressed as a mill.
+   * A mill: a tower, the cap on top of it, and four framed sails on the windshaft. What
+   * the artwork is about is still what the rotor does — that it will not start until the
+   * wind is worth more than the friction, that it settles where thrust and loss agree,
+   * that it stops truly and does not creep — and the figure is dressed only as far as it
+   * takes to be read as a mill rather than as the fan next door. There is no weather
+   * drawn here and no landscape: the mill stands in the frame and nothing else does.
    */
-  function drawWheel(mill) {
+  function drawMill(mill) {
     p.push();
     p.scale(RENDER_SCALE);
-    p.background(255);
-    p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-    p.rotate(mill.angle);
+    p.background(...GROUND);
+    p.translate(SHAFT_X, SHAFT_Y);
+
+    // The tower, tapering to the cap, running off the bottom of the canvas rather than
+    // standing on a drawn ground.
     p.noStroke();
-    p.fill(0);
-    for (const blade of blades) {
-      p.triangle(blade[0].x, blade[0].y, blade[1].x, blade[1].y, blade[2].x, blade[2].y);
+    p.fill(...STONE);
+    p.quad(
+      -TOWER_TOP_HALF, TOWER_TOP,
+      TOWER_TOP_HALF, TOWER_TOP,
+      TOWER_BASE_HALF, LOGICAL_HEIGHT - SHAFT_Y,
+      -TOWER_BASE_HALF, LOGICAL_HEIGHT - SHAFT_Y
+    );
+
+    // The cap the windshaft comes out of: a dome on a short collar.
+    p.fill(...CAP_STONE);
+    p.rect(-CAP_RADIUS, 0, 2 * CAP_RADIUS, TOWER_TOP);
+    p.arc(0, 0, 2 * CAP_RADIUS, 2 * CAP_RADIUS, Math.PI, 2 * Math.PI, p.CHORD);
+
+    // The sails. Every bar is a line, so the sail is a frame with air through it — which
+    // is the whole of what separates it from a fan's solid blade.
+    p.push();
+    p.rotate(mill.angle);
+    p.stroke(...LINEN);
+    p.strokeCap(p.ROUND);
+    for (const sail of sails) {
+      for (const { kind, from, to } of sail) {
+        p.strokeWeight(kind === "frame" ? FRAME_WEIGHT : BAR_WEIGHT);
+        p.line(from.x, from.y, to.x, to.y);
+      }
     }
+    p.pop();
+
+    // The end of the windshaft, which is where the four sails are pinned.
+    p.noStroke();
+    p.fill(...LINEN);
+    p.circle(0, 0, FRAME_WEIGHT * 2.6);
     p.pop();
   }
 
-  /** The wheel, and the note that it answers to a key wherever that note belongs. */
+  /** The mill, and the note that it answers to a key wherever that note belongs. */
   function drawFrame(mill) {
-    drawWheel(mill);
+    drawMill(mill);
     if (HINT.shown) {
       drawKeyHint(p, KEY_HINT, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
     }
