@@ -16,7 +16,7 @@ import {
   stateAfter,
   trackAges,
   visualSpan
-} from "../artworks/loader/simulation.js";
+} from "../artworks/under-the-sun/simulation.js";
 
 const PLAYBACK_FPS = 30;
 const CYCLES = 5;
@@ -164,8 +164,8 @@ test("the clip is five cycles, three hundred frames, ten seconds, and the manife
   const manifest = JSON.parse(
     readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
   );
-  const loader = manifest.artworks.find((artwork) => artwork.id === "loader");
-  assert.equal(loader.render.durationSeconds, totalSteps / STEPS_PER_SECOND);
+  const artwork = manifest.artworks.find((entry) => entry.id === "under-the-sun");
+  assert.equal(artwork.render.durationSeconds, totalSteps / STEPS_PER_SECOND);
 });
 
 test("the last frame hands back to the first: arc and track alike", () => {

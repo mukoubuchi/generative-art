@@ -119,10 +119,10 @@
       }
     },
     {
-      "id": "loader",
-      "title": "Loader",
-      "entry": "p5js/artworks/loader/index.html",
-      "interactivePath": "loader/",
+      "id": "under-the-sun",
+      "title": "Under the Sun",
+      "entry": "p5js/artworks/under-the-sun/index.html",
+      "interactivePath": "under-the-sun/",
       "canvas": {
         "width": 680,
         "height": 680
