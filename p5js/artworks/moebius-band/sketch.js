@@ -37,13 +37,17 @@ const MARKER_RADIUS = 9;
 const PIN_LENGTH = 40;
 const PIN_TIP_RADIUS = 4.5;
 
-const BACKGROUND = [13, 18, 27];
-const BAND_COLOR = [214, 148, 96];
-const BAND_COOL_COLOR = [96, 118, 152];
-const EDGE_COLOR = [252, 202, 92];
-const CENTER_LINE_COLOR = [255, 255, 255, 60];
-const MARKER_COLOR = [240, 244, 248];
-const PIN_COLOR = [244, 106, 90];
+/**
+ * A dark ground and one linen, with the traveller in the collection's terracotta. Three
+ * colours, where there were seven: the band had a warm face and a cool one, a gold rim, a
+ * white centre line, a pale bead and a red pin, and between them the half twist — which is
+ * the whole of what the artwork claims — was the hardest thing in the picture to find. The
+ * band is modelled in the lightness of its own linen and nothing else, so the twist reads
+ * as a turn of a surface rather than as a change of paint.
+ */
+const BACKGROUND = [26, 30, 37];
+const LINEN = [228, 220, 200];
+const MARK = [198, 66, 45];
 
 // Directions light arrives from, unit length, in the band's own frame.
 const KEY_LIGHT = [-0.37, 0.45, -0.81];
@@ -69,8 +73,7 @@ function shade(normal) {
   const fill = Math.abs(
     normal[0] * FILL_LIGHT[0] + normal[1] * FILL_LIGHT[1] + normal[2] * FILL_LIGHT[2]
   );
-  return BAND_COLOR.map((component, channel) =>
-    component * (0.26 + 0.62 * key) + BAND_COOL_COLOR[channel] * 0.30 * fill);
+  return LINEN.map((component) => component * (0.24 + 0.57 * key + 0.19 * fill));
 }
 
 new P5((p) => {
@@ -98,18 +101,11 @@ new P5((p) => {
     // One closed stroke, deliberately: the rim needs both laps to come home, and drawing
     // it as a single 4 PI curve is the claim that the band has a single edge.
     p.noFill();
-    p.stroke(...EDGE_COLOR);
-    p.strokeWeight(2.5 * RENDER_SCALE);
+    p.stroke(...LINEN);
+    p.strokeWeight(2 * RENDER_SCALE);
     p.beginShape();
     for (let i = 0; i < EDGE_SAMPLES; i += 1) {
       p.vertex(...edgePoint((i / EDGE_SAMPLES) * 4 * Math.PI, RING_RADIUS, HALF_WIDTH));
-    }
-    p.endShape(p.CLOSE);
-    p.stroke(...CENTER_LINE_COLOR);
-    p.strokeWeight(1 * RENDER_SCALE);
-    p.beginShape();
-    for (let i = 0; i < SEGMENTS_AROUND; i += 1) {
-      p.vertex(...edgePoint((i / SEGMENTS_AROUND) * 2 * Math.PI, RING_RADIUS, 0));
     }
     p.endShape(p.CLOSE);
   }
@@ -142,9 +138,9 @@ new P5((p) => {
     // point of the journey is exactly the part that happens on the other side.
     const gl = p.drawingContext;
     gl.disable(gl.DEPTH_TEST);
-    drawMarkerShapes(marker, [...PIN_COLOR, 88], [...MARKER_COLOR, 72]);
+    drawMarkerShapes(marker, [...MARK, 88], [...MARK, 72]);
     gl.enable(gl.DEPTH_TEST);
-    drawMarkerShapes(marker, PIN_COLOR, MARKER_COLOR);
+    drawMarkerShapes(marker, MARK, MARK);
   }
 
   function drawScene(state) {

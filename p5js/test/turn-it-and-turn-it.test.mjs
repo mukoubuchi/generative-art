@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import { P5JS_DIRECTORY } from "../lib/catalog.mjs";
+import { NUMBER_WORDS } from "./number-words.mjs";
 import {
   LONGEST,
   MIDDLE,
@@ -149,8 +150,11 @@ test("a colour means a length, at every stage including the two-length ones", ()
     const longest = ring.arcs.find((arc) => arc.role === LONGEST).gap;
     assert.ok(compare(shortest, longest) < 0, "the shortest was not shorter than the longest");
   }
-  // Three colours across the whole drawing, and no arc left without one.
-  assert.equal(RINGS.reduce((total, ring) => total + ring.arcs.length, 0), 4752);
+  // Three colours across the whole drawing, and no arc left without one. The count of
+  // arcs is the drawing's own: ring k carries k + 1 of them, because each turn adds one
+  // mark, so the total is fixed by how many rings are drawn and by nothing else.
+  const arcs = Number(STAGES) * (Number(STAGES) + 3) / 2;
+  assert.equal(RINGS.reduce((total, ring) => total + ring.arcs.length, 0), arcs);
   assert.equal(new Set(RINGS.flatMap((ring) => ring.arcs.map((arc) => arc.role))).size, 3);
 });
 
@@ -252,6 +256,12 @@ test("the README's list of rings that lose a colour is the module's own", async 
   // The sentence also says how much of the list the drawing shows, which is a fact about
   // the picture rather than about the sequence.
   const inside = measured.filter((arcs) => arcs - 1 <= Number(STAGES)).length;
-  assert.equal(inside, 10, `the drawing holds ${inside} of the two-length rings`);
-  assert.ok(readme.includes("the first ten are inside the drawing and the last three lie past its edge"));
+  const beyond = measured.length - inside;
+  assert.ok(inside > 0 && beyond > 0, "the drawing holds all of them or none, so the sentence has nothing to say");
+  assert.ok(
+    readme.includes(
+      `the first ${NUMBER_WORDS[inside]} are inside the drawing and the last ${NUMBER_WORDS[beyond]} lie past its edge`
+    ),
+    `the drawing holds ${inside} of the two-length rings and the README says otherwise`
+  );
 });

@@ -32,20 +32,37 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 
-const GROUND = [18, 17, 22];
-/** Shortest, middle, longest. The longest is the other two put together. */
+const GROUND = [230, 224, 208];
+/**
+ * Shortest, middle, longest, and the longest is the other two put together. Three
+ * weights of one ink rather than three hues, because what they stand for is an ordered
+ * quantity: a longer arc is a heavier mark, and the eye reads that without being told.
+ * Three colours of its own would have said the lengths were three unrelated kinds.
+ */
 const LENGTH_COLOURS = [
-  [238, 226, 202],
-  [206, 118, 62],
-  [72, 104, 158]
+  [190, 182, 166],
+  [110, 116, 126],
+  [38, 42, 52]
 ];
 const UNEXPECTED = [220, 60, 90];
 
-/** How many turns the drawing carries, and where the rings sit. */
-const STAGES = 96;
-const INNER_RADIUS = 46;
-const OUTER_RADIUS = 322;
+/**
+ * How many turns the drawing carries, and where the rings sit. Thirty, where there were
+ * ninety-six: at ninety-six each ring was under three pixels wide and the figure read as
+ * a wheel of confetti, which is no way to be shown that there are only ever three
+ * lengths. Wide enough to count is the whole of the choice.
+ */
+const STAGES = 30;
+const INNER_RADIUS = 52;
+const OUTER_RADIUS = 320;
 const RING_WIDTH = (OUTER_RADIUS - INNER_RADIUS) / STAGES;
+
+/**
+ * How far each band is drawn under the band already beside it, in pixels. One whole pixel,
+ * because anything less leaves a seam: it is the shape drawn second that has to cover the
+ * shared pixel outright, and it can only do that by starting a pixel inside its neighbour.
+ */
+const OVERLAP = 1;
 
 const FULL_TURN = Math.PI * 2;
 const RINGS = Array.from({ length: STAGES }, (unused, index) => ringAt(BigInt(index + 1)));
@@ -64,9 +81,16 @@ new P5((p5Instance) => {
   function drawArc(from, span, inner, outer, colour) {
     // Enough samples that no chord of the outer edge is longer than about a pixel.
     const steps = Math.max(2, Math.ceil(span * outer));
-    // Run a touch past the end, under where the next arc will be drawn, so that two arcs
-    // of the same colour do not show a hairline along the bearing they share.
-    span += 0.7 / outer;
+    // Start a pixel early, under the arc already drawn there, so that two arcs of the same
+    // colour do not show a hairline along the bearing they share.
+    //
+    // The overlap goes backwards and not forwards, which is the whole of the repair. Two
+    // antialiased edges meeting on a pixel do not add up to covering it: the first shape
+    // leaves the pixel part ground, and the second is itself part transparent there, so a
+    // tenth of the ground survives both and the seam shows as a lighter thread. Only the
+    // shape drawn second can close it, and only by covering the pixel outright.
+    from -= OVERLAP / outer;
+    span += OVERLAP / outer;
     p.noStroke();
     p.fill(...colour);
     p.beginShape();
@@ -82,10 +106,12 @@ new P5((p5Instance) => {
   }
 
   function drawRing(ring, index) {
-    const inner = INNER_RADIUS + RING_WIDTH * index;
-    // A third of a pixel of overlap outward, so that neighbouring rings of the same colour
-    // do not show a hairline where their edges meet.
-    const outer = inner + RING_WIDTH + 0.34;
+    const edge = INNER_RADIUS + RING_WIDTH * index;
+    // Inward, under the ring already drawn there, for the same reason and by the same
+    // pixel. The innermost ring keeps its true edge, so the hole at the centre stays where
+    // the construction puts it.
+    const inner = index === 0 ? edge : edge - OVERLAP;
+    const outer = edge + RING_WIDTH;
     for (const arc of ring.arcs) {
       drawArc(
         FULL_TURN * asTurn(arc.from),
