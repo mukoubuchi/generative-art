@@ -235,8 +235,9 @@ test("the README's account of the ring is the ring's", async () => {
 test("the whole figure stands on the canvas, sides included", () => {
   // The Processing sketch drew discs larger than their own swing and let them leave the
   // canvas at the sides, and that stayed true while the canvas was square. It is what the
-  // landscape canvas is for: the ring is half again as wide as it is tall, so the width it
-  // wanted was never the width it had. Nothing is cropped now, and this is what says so.
+  // landscape canvas is for: the lean compresses the ring's height by its own sine and
+  // leaves the width alone, so the ring is a third again as wide as it is tall and the
+  // width it wanted was never the width it had. Nothing is cropped now, and this says so.
   const rise = sweptCentreY(RING_RADIUS, DISC_RADIUS);
   let widest = 0;
   let lowest = -Infinity;

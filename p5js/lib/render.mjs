@@ -275,7 +275,7 @@ async function renderArtworkPage(browser, serverBaseUrl, manifest, artwork) {
 
 async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width) {
   // Thumbnails are taken at the logical size: a gallery card never needs the export scale,
-  // and for the eleven moving artworks it saves rendering a whole clip to keep one frame.
+  // and for a moving artwork it saves rendering a whole clip to keep one frame of it.
   //
   // Unlike an export, a thumbnail carries the key hint. It is a picture of a page that can
   // be typed at, and a reader deciding whether to open a card should be able to see that
