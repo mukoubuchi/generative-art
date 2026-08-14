@@ -70,8 +70,13 @@ const DROP_PX = 13;
 const DROP_WEIGHT_PX = 1.7;
 const RIPPLE_PX = 10;
 const RIPPLE_WEIGHT_PX = 1.3;
-/** How dark the film is on a cell's first landing, and once it can take no more. */
-const FILM_FIRST = 48;
+/**
+ * The film's range: the foot of the ramp, and how dark a cell gets once it can take no
+ * more. The foot itself is never drawn -- a cell with no landings is not drawn at all --
+ * so the faintest film on the canvas is a cell holding one landing, a fifth of the way
+ * up the ramp at 68 of 255.
+ */
+const FILM_FOOT = 48;
 const FILM_FULL = 150;
 
 const GASKET = buildGasket({ x: 0, y: 0 }, 1, CUTOFF_RATIO);
@@ -145,7 +150,7 @@ new P5((p) => {
     p.noStroke();
     for (const [cell, hits] of wetness) {
       const depth = Math.min(hits / FILM_SATURATION, 1);
-      p.fill(...WATER, FILM_FIRST + (FILM_FULL - FILM_FIRST) * depth);
+      p.fill(...WATER, FILM_FOOT + (FILM_FULL - FILM_FOOT) * depth);
       const [a, b, c] = trianglePoints(CELLS[cell]);
       p.triangle(a.x, a.y, b.x, b.y, c.x, c.y);
     }
