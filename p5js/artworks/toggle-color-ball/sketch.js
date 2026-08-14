@@ -10,8 +10,9 @@ import {
   sweptCentreY
 } from "./carousel.js";
 
-// A landscape canvas, because the ring is one: the discs ride an ellipse the lean makes
-// half again as wide as it is tall, and on a square the two ends of it ran off the sides.
+// A landscape canvas, because the ring is one: the discs ride an ellipse the lean makes a
+// third again as wide as it is tall -- it compresses the height by the sine of the lean
+// and leaves the width alone -- and on a square the two ends of it ran off the sides.
 const LOGICAL_WIDTH = 800;
 const LOGICAL_HEIGHT = 600;
 const PLAYBACK_FPS = 30;
