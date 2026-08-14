@@ -13,7 +13,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `sierpinski-gasket` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, the skeleton, then the rain |
 | `fibonacci-spiral` | 1010×640 | 2020×1280 MP4 at 30 fps | 10 seconds, one journey of the mark down the spiral |
 | `bounding-spots` | 960×480 | 1920×960 MP4 at 30 fps | 10 seconds, exactly one realignment of the ladder |
-| `loader` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, five relayings of the one ring |
+| `under-the-sun` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, five relayings of the one ring |
 | `windmill` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one afternoon of wind; interactive page |
 | `electric-fan` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one run up to speed and down again; interactive page |
 | `atan2` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one orbit of the probe; interactive page |

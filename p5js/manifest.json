@@ -132,7 +132,7 @@
       ],
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/Loader.mp4",
+        "artifact": "exports/p5js/UnderTheSun.mp4",
         "durationSeconds": 10,
         "scale": 2
       },
