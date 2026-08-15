@@ -316,8 +316,50 @@ test("the scan finds the traveller and the drawn rim in the sketch that shipped 
   assert.ok(specimen.includes("rotateX(STAGE_TILT)"), "the specimen is not on this stage");
 });
 
+test("the clip is one period of the figure rather than two", () => {
+  // The stage angle is the whole of the scene, and the band is a fixed body, so two
+  // frames that stand it at the same angle are the same picture. A clip is therefore
+  // only as long as the angles it visits are new, and this is the check that it is.
+  const frames = 150;
+  const stood = new Set();
+  for (let frame = 0; frame < frames; frame += 1) {
+    const turn = sceneState(frame, frames).spin / (2 * Math.PI);
+    stood.add((turn - Math.floor(turn)).toFixed(12));
+  }
+  assert.equal(stood.size, frames, "the stage stands somewhere twice inside one clip");
+
+  // The specimen, which is what shipped: two turns across the same span. Every angle in
+  // it comes round again, so half the frames are copies of the other half -- measured at
+  // the time as nought differing pixels of 480,000 between a frame and its twin.
+  const twoTurns = new Set(Array.from({ length: frames }, (_, frame) => {
+    const turn = (frame / frames) * 2;
+    return (turn - Math.floor(turn)).toFixed(12);
+  }));
+  assert.equal(twoTurns.size, frames / 2);
+});
+
+test("the clip's length is the manifest's, and the manifest says video", async () => {
+  // Two files have to agree about how long the clip is -- the sketch, which stops
+  // drawing, and the manifest, which tells the renderer how much to ask for. Nothing
+  // else compares them, so a change to one and not the other would ship a clip cut off
+  // or padded rather than fail.
+  const sketch = await readFile(
+    new URL("../artworks/moebius-band/sketch.js", import.meta.url), "utf8");
+  const seconds = Number(sketch.match(/^const DURATION_SECONDS = (\d+);$/mu)?.[1]);
+  const fps = Number(sketch.match(/^const PLAYBACK_FPS = (\d+);$/mu)?.[1]);
+  assert.equal(seconds * fps, 150);
+  const manifest = JSON.parse(
+    await readFile(new URL("../manifest.json", import.meta.url), "utf8"));
+  const artwork = manifest.artworks.find((entry) => entry.id === "moebius-band");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.durationSeconds, seconds);
+  // And the card is taken from a frame the clip still has.
+  assert.ok(artwork.thumbnail.frame < seconds * fps,
+    `the card is frame ${artwork.thumbnail.frame} of ${seconds * fps}`);
+});
+
 test("the clip's last frame hands back to its first", () => {
-  const frames = 300;
+  const frames = 150;
   assert.equal(sceneState(0, frames).spin, 0);
   assert.ok(Number.isInteger(STAGE_TURNS), "partial stage turns would put a seam in the loop");
   assert.ok(

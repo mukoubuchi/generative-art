@@ -18,7 +18,7 @@ import {
 const LOGICAL_WIDTH = 800;
 const LOGICAL_HEIGHT = 600;
 const PLAYBACK_FPS = 30;
-const DURATION_SECONDS = 10;
+const DURATION_SECONDS = 5;
 const TOTAL_FRAMES = DURATION_SECONDS * PLAYBACK_FPS;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";

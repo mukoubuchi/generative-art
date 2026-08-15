@@ -159,9 +159,11 @@ export function backToFront(centres, view) {
 /**
  * How many whole turns the stage makes over one clip. Whole, because the band is a fixed
  * body and a whole turn about the ring's axis puts every part of it back where it was:
- * that is what lets the last frame hand back to the first.
+ * that is what lets the last frame hand back to the first. And one, for the same reason
+ * read the other way — a second turn would stand the figure at angles it has already been
+ * seen at, which is a clip showing itself again rather than a longer clip.
  */
-export const STAGE_TURNS = 2;
+export const STAGE_TURNS = 1;
 
 /**
  * Everything a frame shows, as a function of nothing but the frame. Nothing accumulates

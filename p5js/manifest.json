@@ -574,7 +574,7 @@
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/MoebiusBand.mp4",
-        "durationSeconds": 10,
+        "durationSeconds": 5,
         "scale": 2
       }
     },
