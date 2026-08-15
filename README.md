@@ -46,7 +46,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Voronoi Bloom](p5js/artworks/voronoi-bloom/) | Voronoi boundaries lit from golden-angle sites, rendered as a static PNG |
 | [Clinamen](p5js/artworks/clinamen/) | Particle trails combed into streams by a noise field, rendered as a static PNG |
 | [De Jong Attractor](p5js/artworks/de-jong-attractor/) | A de Jong orbit accumulated into a luminous cloud, rendered as a static PNG |
-| [Möbius Band](p5js/artworks/moebius-band/) | A half-twisted band a traveller must lap twice to come home, rendered as an MP4 |
+| [Möbius Band](p5js/artworks/moebius-band/) | A half-twisted band of glass, one-sided and one-edged, rendered as an MP4 |
 | [Ulam Spiral](p5js/artworks/ulam-spiral/) | The primes alone on a square spiral of the counting numbers, rendered as a static PNG |
 | [Hilbert Curve](p5js/artworks/hilbert-curve/) | One unbroken line eased through six degrees of filling a square, rendered as an MP4 |
 | [Café Wall](p5js/artworks/cafe-wall/) | Horizontal courses bowed into wedges by an offset and a grey, rendered as an MP4 |

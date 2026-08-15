@@ -4,27 +4,22 @@ import test from "node:test";
 import {
   STAGE_TURNS,
   backToFront,
-  bandAcross,
   bandNormal,
   bandPoint,
   bandRows,
   cellCentres,
   edgePoint,
   glassShade,
-  markerState,
   sceneState,
-  solidShade,
-  travellerMesh,
   viewDirection
 } from "../artworks/moebius-band/geometry.js";
 
 /**
  * The band's famous properties are all consequences of one identity — going once around
  * glues the strip to itself with a flip — so that identity is tested first and each
- * consequence after it: one side, one edge, and a traveller who needs two laps to come
- * home. The properties hold for any radius and half-width with 0 < w < R, so they are
- * checked at two arbitrary sizes rather than at the sketch's own, which keeps the
- * mathematics and the staging separately replaceable.
+ * consequence after it: one side, and one edge. The properties hold for any radius and
+ * half-width with 0 < w < R, so they are checked at two arbitrary sizes rather than at
+ * the sketch's own, which keeps the mathematics and the staging separately replaceable.
  */
 const SIZES = [
   { radius: 190, width: 60 },
@@ -115,25 +110,6 @@ test("the mesh rows end on the seam row, which is the first row flipped", () => 
   }
 });
 
-test("the marker returns after one lap the wrong way up, after two the right way", () => {
-  const { radius } = SIZES[0];
-  const start = markerState(0, radius);
-  const halfway = markerState(0.5, radius);
-  const home = markerState(1, radius);
-
-  // Same place on the centre line, opposite normal: standing where it started with its
-  // pin through the band the other way is the artwork's whole argument.
-  assertClose(halfway.position, start.position, 1e-9 * radius, "half way must revisit the start");
-  assertClose(halfway.normal, start.normal.map((component) => -component), 1e-9,
-    "half way must arrive the other way up");
-  assert.equal(start.side, 1);
-  assert.equal(halfway.side, -1);
-
-  assertClose(home.position, start.position, 1e-9 * radius, "two laps must come home");
-  assertClose(home.normal, start.normal, 1e-6, "home must be the same way up");
-  assert.equal(home.side, 1);
-});
-
 const STAGE_TILT = 0.9;
 const GLASS = [168, 206, 198];
 
@@ -169,7 +145,8 @@ test("nothing in the glass reads which way the normal points", () => {
   // The band's one-sidedness is not a claim the shading is allowed to contradict: carry a
   // normal round the ring and it comes back negated, so a model that reads its sign would
   // paint the same piece of surface two ways and tear the band along a seam. Every term
-  // is folded in absolute value, and this is the check that says so.
+  // is folded in absolute value, and this is the check that says so. It is now the only
+  // shading model in the artwork, so it answers for the whole picture.
   const rows = bandRows(60, 6, 190, 60);
   const view = viewDirection(STAGE_TILT, 1.3);
   let tested = 0;
@@ -181,6 +158,21 @@ test("nothing in the glass reads which way the normal points", () => {
     }
   }
   assert.equal(tested, 61 * 7);
+
+  // The mesh's normals lie where the surface puts them, which is a sample with an axis
+  // in it. These have none: spread over the sphere by the golden angle, they ask the
+  // same question of directions the band never takes.
+  for (let i = 0; i < 64; i += 1) {
+    const z = 1 - (2 * i + 1) / 64;
+    const ring = Math.sqrt(1 - z * z);
+    const angle = i * Math.PI * (3 - Math.sqrt(5));
+    const normal = [ring * Math.cos(angle), ring * Math.sin(angle), z];
+    assert.deepEqual(
+      glassShade(normal, view, GLASS),
+      glassShade(normal.map((component) => -component), view, GLASS),
+      `the glass answered differently for [${normal}] and its opposite`
+    );
+  }
 
   // Negative control: the same model with the folds taken out -- which is the ordinary
   // way to shade a surface, and exactly the defect the band cannot survive.
@@ -208,10 +200,11 @@ test("the glass is glass: what shows is what is turned away from the eye", () =>
     assert.ok(alpha >= last, "the transparency must not wobble as the surface turns");
     last = alpha;
   }
-  // Over the real mesh, through the whole turn, the band is mostly see-through -- which
-  // is what retired the marker's ghost, since the glass shows the far half by itself.
-  // Measured over 120 stations of the stage: at its most solid 54.5 per cent of the
-  // surface is less than half opaque, at its clearest 93.5. The claim is the floor.
+  // Over the real mesh, through the whole turn, the band is mostly see-through, which is
+  // what keeps the far half of the surface showing through the near half instead of being
+  // hidden by it. Measured over 120 stations of the stage: at its most solid 54.5 per
+  // cent of the surface is less than half opaque, at its clearest 93.5. The claim is the
+  // floor.
   const surface = bandRows(180, 8, 185, 62).flat();
   let solidest = 1;
   for (let station = 0; station < 120; station += 1) {
@@ -250,261 +243,85 @@ test("the band is painted from the back, cell by cell", () => {
   }
 });
 
-test("the opaque traveller is laid down first and the see-through things over it", async () => {
-  // The pipeline the picture depends on. The traveller is the only solid thing on the
-  // stage, so it is drawn first and writes its depth; the glass then goes over it with
-  // the depth test on and the writing off, which is what lets the band cover the far
-  // half of the journey instead of the marker always winning.
+/**
+ * Every call the sketch makes that puts paint on the canvas or decides how paint is made,
+ * in the order it makes them. A fill through a shading model and a fill of a flat colour
+ * are different acts, so the two are told apart by what is handed to them.
+ */
+function paintingCalls(source) {
+  return [...source.matchAll(
+    /\bp\.(fill|stroke|strokeWeight|noFill|noStroke|line|beginShape|endShape)\s*\(\s*(\.\.\.)?(\w+)?/gu)]
+    .map(([, call, spread, argument]) =>
+      call === "fill" || call === "stroke"
+        ? `${call}(${spread ? "..." : ""}${argument ?? ""})`
+        : call);
+}
+
+/** Everything the sketch says to the renderer behind p5's back. */
+function rendererCalls(source) {
+  return [...source.matchAll(/\bgl\.(\w+)\s*\(([^)]*)\)/gu)]
+    .map(([, call, argument]) => `${call}(${argument})`);
+}
+
+/** The colours the sketch states, in the order it states them. */
+function colourNames(source) {
+  return [...source.matchAll(/^const (\w+) = \[[\d, ]+\];$/gmu)].map(([, name]) => name);
+}
+
+test("the picture is glass, and the only line in it is the band's own edge", async () => {
+  // What the artwork is, read out of the file it ships as: one surface of glass, painted
+  // once through the one shading model that can answer for a one-sided surface, and one
+  // stroke, which is the rim. Nothing is filled flat, since a flat fill is a shape rather
+  // than a body of glass, and no second colour is stated anywhere.
   const sketch = await readFile(
     new URL("../artworks/moebius-band/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(paintingCalls(sketch), [
+    "noStroke", "beginShape", "fill(...glassShade)", "endShape",
+    "noFill", "stroke(...GLASS)", "strokeWeight", "beginShape", "endShape"
+  ]);
+  assert.deepEqual(colourNames(sketch), ["BACKGROUND", "GLASS"]);
+  // The depth buffer is held off across the whole scene and handed back afterwards. With
+  // it written, a fragment the sort put late is thrown away instead of mixed in, and the
+  // band stops being see-through exactly where it runs through itself.
+  assert.deepEqual(rendererCalls(sketch), ["depthMask(false)", "depthMask(true)"]);
   const scene = sketch.slice(sketch.indexOf("function drawScene"));
-  const order = ["drawMarker(", "gl.depthMask(false)", "drawBand(", "drawEdge()", "gl.depthMask(true)"];
   let at = -1;
-  for (const step of order) {
+  for (const step of ["gl.depthMask(false)", "drawBand(", "drawEdge()", "gl.depthMask(true)"]) {
     const next = scene.indexOf(step);
     assert.ok(next > at, `${step} is out of order in drawScene`);
     at = next;
   }
-  // The depth test is never turned off. Turning it off is how the marker used to be
-  // drawn twice, and the second copy is what the glass replaced.
-  assert.equal((sketch.match(/DEPTH_TEST/gu) ?? []).length, 0);
-  assert.equal((sketch.match(/depthMask/gu) ?? []).length, 2);
-  // Three colours, and the traveller's is handed to its shading once. It used to be
-  // spread twice — a stroke for the pin and a fill for the two beads — which is the
-  // shape of a marker assembled out of parts rather than one body.
-  assert.equal((sketch.match(/^const (BACKGROUND|GLASS|GOLD) = \[/gmu) ?? []).length, 3);
-  assert.equal((sketch.match(/\bGOLD\b/gu) ?? []).length, 2);
-  // Nothing about the traveller is drawn in screen pixels. A stroke in WEBGL ignores the
-  // model transform, so a marker made of lines is a marker whose parts do not shrink
-  // with the distance they have travelled.
-  const marker = sketch.slice(sketch.indexOf("function drawMarker"),
-    sketch.indexOf("function drawScene"));
-  assert.equal((marker.match(/p\.(stroke|strokeWeight|line)\(/gu) ?? []).length, 0);
-  assert.match(marker, /p\.noStroke\(\)/u);
-  // The traveller is shaded rather than painted: its gold reaches the canvas only through
-  // the model that reads the sign of the normal. Filled flat it is a gold disc again,
-  // which is what it was, and no amount of shape makes a flat disc look like a body.
-  assert.equal((marker.match(/p\.fill\(/gu) ?? []).length, 1);
-  assert.match(marker, /p\.fill\(\.\.\.solidShade\(/u);
 });
 
-/**
- * The traveller's own numbers, which live in the sketch. Unlike the band's properties
- * these are not scale-free — whether a body clears the surface depends on how it sizes
- * against the ring — so they are checked at the size the artwork actually uses.
- */
-const TRAVELLER = { radius: 8.5, height: 38, taper: 0.72, rings: 16, sectors: 24 };
-const RING = 185;
-
-function bodyAt(marker, shape = TRAVELLER) {
-  return travellerMesh(marker.position, marker.normal, bandAcross(marker.u), shape);
-}
-
-/** How far a point stands off the surface, along the normal the traveller is standing on. */
-function standoff(point, marker) {
-  return [0, 1, 2].reduce(
-    (total, axis) => total + (point[axis] - marker.position[axis]) * marker.normal[axis], 0);
-}
-
-function centroidOf(mesh) {
-  return [0, 1, 2].map((axis) =>
-    mesh.reduce((total, vertex) => total + vertex.point[axis], 0) / mesh.length);
-}
-
-test("the traveller these tests measure is the one the sketch draws", async () => {
-  // The properties below are not scale-free, so they are only worth anything against the
-  // sizes that ship. This is the one line that ties the two together.
-  const sketch = await readFile(
-    new URL("../artworks/moebius-band/sketch.js", import.meta.url), "utf8");
-  const literal = sketch.match(/^const TRAVELLER = \{([^}]*)\};$/mu);
-  assert.ok(literal, "the sketch no longer states the traveller's size in one place");
-  assert.deepEqual(
-    Object.fromEntries(literal[1].split(",").map((entry) => {
-      const [name, value] = entry.split(":").map((part) => part.trim());
-      return [name, Number(value)];
-    })),
-    TRAVELLER
-  );
-});
-
-test("the traveller stands on the band and never breaks through it", () => {
-  // The constraint the shape was chosen for: touch only, whole body on one side. The
-  // foot is rounded, so it meets the surface tangentially at a point and lifts away
-  // faster than the ring curves out from under it.
-  //
-  // The negative control is not invented. The cone that was the second candidate stood
-  // on a flat disc, and a flat disc of radius r laid on a ring of radius R sinks into it
-  // by about r^2 / 2R; it was built and measured at 0.15 units through the surface,
-  // which is the specimen kept here.
-  const flatFooted = (marker) => bodyAt(marker, { ...TRAVELLER, taper: 0 }).map((vertex) => {
-    const lift = standoff(vertex.point, marker);
-    return lift < TRAVELLER.height / 2
-      ? { point: vertex.point.map((c, axis) => c - marker.normal[axis] * lift) }
-      : vertex;
-  });
-
-  // A patch of the surface under the traveller: a fourteenth of a radian either way,
-  // which reaches about fifteen units along the ring where the widest part of the body
-  // is six, and the full width of the strip because the ruling runs across it.
-  const REACH = 0.08;
-  const LOW = 6;
-  const patch = (marker) => {
-    const samples = [];
-    for (let i = -20; i <= 20; i += 1) {
-      const u = marker.u + (i / 20) * REACH;
-      for (let j = -12; j <= 12; j += 1) {
-        const v = (j / 12) * 62;
-        samples.push({ point: bandPoint(u, v, RING), normal: bandNormal(u, v, RING) });
-      }
-    }
-    return samples;
-  };
-
-  const deepest = (mesh, marker, samples) => {
-    let worst = 0;
-    for (const { point } of mesh) {
-      // Only the vertices low enough to reach the surface can cross it. Over this patch
-      // the surface stays inside LOW of the tangent plane, asserted below, so a vertex
-      // higher than that is clear of it by more than any crossing being looked for.
-      if (standoff(point, marker) > LOW) {
-        continue;
-      }
-      let nearest = null;
-      let reach = Infinity;
-      for (const sample of samples) {
-        const distance = Math.hypot(point[0] - sample.point[0],
-          point[1] - sample.point[1], point[2] - sample.point[2]);
-        if (distance < reach) {
-          reach = distance;
-          nearest = sample;
-        }
-      }
-      // Which side of the surface the vertex is on, read off the nearest patch of it and
-      // oriented to agree with the normal the traveller is standing on. The tangent plane
-      // will not do: the surface twists away from it, which is exactly the margin a flat
-      // foot loses.
-      const along = [0, 1, 2].reduce(
-        (total, axis) => total + (point[axis] - nearest.point[axis]) * nearest.normal[axis], 0);
-      const agrees = [0, 1, 2].reduce(
-        (total, axis) => total + nearest.normal[axis] * marker.normal[axis], 0);
-      worst = Math.min(worst, agrees >= 0 ? along : -along);
-    }
-    return -worst;
-  };
-
-  const sunk = [];
-  for (const frame of [0, 41, 88, 137, 190, 244]) {
-    const marker = sceneState(frame, 300, RING).marker;
-    const samples = patch(marker);
-    const lifts = samples.map(({ point }) => standoff(point, marker));
-    assert.ok(Math.max(...lifts) < LOW,
-      `the surface itself rises ${Math.max(...lifts)} into the room the shortcut assumes`);
-
-    const mesh = bodyAt(marker);
-    assert.ok(deepest(mesh, marker, samples) < 1e-6,
-      `the body breaks the surface at frame ${frame}`);
-    // It touches: a body floating clear would satisfy the line above and say nothing.
-    assert.ok(Math.min(...mesh.map(({ point }) => standoff(point, marker))) < 1e-9,
-      `the body does not reach the surface at frame ${frame}`);
-    // The specimen, measured the same way, fails the same test at every station. How far
-    // it sinks depends on how hard the strip is twisting there, which is why the worst
-    // case is asserted separately from the floor.
-    sunk.push(deepest(flatFooted(marker), marker, samples));
-  }
-  assert.ok(Math.min(...sunk) > 0.03,
-    `the flat-footed specimen came up clean somewhere: ${sunk.map((d) => d.toFixed(4))}`);
-  assert.ok(Math.max(...sunk) > 0.15,
-    `the specimen never sinks by a readable amount, so the check proves little`);
-});
-
-test("the flip carries the traveller, where it left the old bead exactly where it was", () => {
-  // Half the journey puts the marker back where it started on the other face, so the
-  // body is reflected through the surface — and a reflection moves a thing by twice its
-  // standoff. That is the whole reason the traveller stands up off the band. The bead
-  // this replaced was centred on the line the marker walks, standing off by nothing, so
-  // the same reflection carried it nowhere and only the thin pin ever moved.
-  for (const frame of [0, 37, 88, 121, 149]) {
-    const here = sceneState(frame, 300, RING).marker;
-    const over = sceneState(frame + 150, 300, RING).marker;
-    assertClose(over.position, here.position, 1e-9 * RING, "half a journey returns the place");
-    assertClose(over.normal, here.normal.map((c) => -c), 1e-9, "and turns the face over");
-
-    const stands = standoff(centroidOf(bodyAt(here)), here);
-    const moved = Math.hypot(...[0, 1, 2].map((axis) =>
-      centroidOf(bodyAt(here))[axis] - centroidOf(bodyAt(over))[axis]));
-    assert.ok(Math.abs(moved - 2 * stands) < 1e-9 * RING,
-      `the flip must move the body twice its standoff: ${moved} against ${2 * stands}`);
-    assert.ok(stands > TRAVELLER.height / 4,
-      `the body must stand off the surface to be carried: ${stands}`);
-    // The specimen: a sphere centred on the marker's position, which is what shipped
-    // until now. Its centroid is that position, and the flip returns that position.
-    const bead = Math.hypot(...[0, 1, 2].map((axis) =>
-      here.position[axis] - over.position[axis]));
-    assert.ok(bead < 1e-9 * RING,
-      "the old bead's centre would have to move for this measurement to mean anything");
-  }
-});
-
-test("the band cannot tell its two sides apart and the traveller can", () => {
-  // The asymmetry is the claim, not an oversight. A one-sided surface has no fact about
-  // which way it faces, so the band's shading folds every term and answers the same for
-  // a normal and its opposite. The traveller is an ordinary solid with an inside, so its
-  // normals mean something and its shading reads their sign.
-  const view = viewDirection(0.9, 0.7);
-  const glass = [168, 206, 198];
-  const gold = [214, 152, 58];
-  // Normals spread over the sphere by the golden angle, so the sample has no axis.
-  const normals = [];
-  for (let i = 0; i < 64; i += 1) {
-    const z = 1 - (2 * i + 1) / 64;
-    const ring = Math.sqrt(1 - z * z);
-    const angle = i * Math.PI * (3 - Math.sqrt(5));
-    normals.push([ring * Math.cos(angle), ring * Math.sin(angle), z]);
-  }
-
-  let toldApart = 0;
-  for (const normal of normals) {
-    const opposite = normal.map((component) => -component);
-    assert.deepEqual(glassShade(normal, view, glass), glassShade(opposite, view, glass),
-      "the band answered differently for a normal and its opposite");
-    const front = solidShade(normal, view, gold);
-    const back = solidShade(opposite, view, gold);
-    if (Math.abs(front[0] - back[0]) > 1e-9) {
-      toldApart += 1;
-    }
-    // One gold, at many strengths. Every colour it returns is this gold multiplied, so
-    // the highlight cannot drift to another hue the way a clipped channel does.
-    for (const [channel, component] of front.entries()) {
-      assert.ok(Math.abs(component / gold[channel] - front[0] / gold[0]) < 1e-12,
-        `the traveller returned [${front}], which is not this gold multiplied`);
-      assert.ok(component <= 255 + 1e-9, `the traveller returned ${component}`);
-    }
-  }
-  assert.equal(toldApart, normals.length, "the traveller failed to tell some sides apart");
-
-  // And it is brighter on the side the key light is on, which is what "reads the sign"
-  // buys: pick the normal most nearly facing the light and the one most nearly away.
-  const towards = [-0.37, 0.45, -0.81];
-  const scored = normals.map((normal) => ({
-    normal,
-    facing: normal.reduce((total, component, axis) => total + component * towards[axis], 0)
-  })).sort((first, second) => first.facing - second.facing);
-  const dark = solidShade(scored[0].normal, view, gold);
-  const lit = solidShade(scored.at(-1).normal, view, gold);
-  assert.ok(lit[0] > dark[0], "the lit side must be the brighter one");
+test("the scan finds the traveller in the sketch that shipped with it", async () => {
+  // The negative control, and it is the real thing rather than one invented for the
+  // occasion: the sketch as it stood through v1.7.0, when a gold body stood on the band
+  // and was the only opaque thing on the stage. What the scan rejects it for is that
+  // body -- a second colour, and a fill through a second shading model.
+  const specimen = await readFile(
+    new URL("./fixtures/moebius-band-traveller/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(paintingCalls(specimen), [
+    "noStroke", "beginShape", "fill(...glassShade)", "endShape",
+    "noFill", "stroke(...GLASS)", "strokeWeight", "beginShape", "endShape",
+    "noStroke", "beginShape", "fill(...solidShade)", "endShape"
+  ]);
+  assert.deepEqual(colourNames(specimen), ["BACKGROUND", "GLASS", "GOLD"]);
+  // And the specimen is otherwise this artwork, staged and shaded the same way, so what
+  // the scan rejects it for is the body and nothing else about it.
+  assert.deepEqual(rendererCalls(specimen), ["depthMask(false)", "depthMask(true)"]);
+  assert.ok(specimen.includes("bandRows(SEGMENTS_AROUND"), "the specimen is not this artwork");
+  assert.ok(specimen.includes("rotateX(STAGE_TILT)"), "the specimen is not on this stage");
 });
 
 test("the clip's last frame hands back to its first", () => {
-  const { radius } = SIZES[0];
   const frames = 300;
-  const first = sceneState(0, frames, radius);
-  const closing = sceneState(frames, frames, radius);
-  assert.equal(first.spin, 0);
+  assert.equal(sceneState(0, frames).spin, 0);
   assert.ok(Number.isInteger(STAGE_TURNS), "partial stage turns would put a seam in the loop");
   assert.ok(
-    Math.abs(closing.spin - STAGE_TURNS * 2 * Math.PI) < 1e-12,
+    Math.abs(sceneState(frames, frames).spin - STAGE_TURNS * 2 * Math.PI) < 1e-12,
     "the stage must end exactly where it began"
   );
-  assertClose(closing.marker.position, first.marker.position, 1e-9 * radius);
-  assertClose(closing.marker.normal, first.marker.normal, 1e-6);
+  // The frame is the only argument: ask twice for the same one and the same scene comes
+  // back, whatever was asked for in between.
+  assert.deepEqual(sceneState(97, frames), sceneState(97, frames));
 });
