@@ -245,10 +245,10 @@
       }
     },
     {
-      "id": "spring-polygon",
-      "title": "Spring Polygon",
-      "entry": "p5js/artworks/spring-polygon/index.html",
-      "interactivePath": "spring-polygon/",
+      "id": "troubling-of-a-star",
+      "title": "Troubling of a Star",
+      "entry": "p5js/artworks/troubling-of-a-star/index.html",
+      "interactivePath": "troubling-of-a-star/",
       "canvas": {
         "width": 680,
         "height": 680
@@ -260,7 +260,7 @@
         "frame": 82    },
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/SpringPolygon.mp4",
+        "artifact": "exports/p5js/TroublingOfAStar.mp4",
         "durationSeconds": 10,
         "scale": 2
       }

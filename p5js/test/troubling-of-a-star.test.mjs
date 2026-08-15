@@ -15,7 +15,7 @@ import {
   springForces,
   step,
   totalEnergy
-} from "../artworks/spring-polygon/network.js";
+} from "../artworks/troubling-of-a-star/network.js";
 import {
   DRAG_STEPS,
   RELEASE_STEP,
@@ -24,7 +24,7 @@ import {
   networkAfter,
   scenarioEnergyPeak,
   scenarioPointer
-} from "../artworks/spring-polygon/scenario.js";
+} from "../artworks/troubling-of-a-star/scenario.js";
 
 const PLAYBACK_FPS = 30;
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
@@ -282,7 +282,7 @@ test("the card is taken the moment after the letting go, with the ring loaded", 
   const manifest = JSON.parse(
     readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
   );
-  const frame = manifest.artworks.find((entry) => entry.id === "spring-polygon").thumbnail.frame;
+  const frame = manifest.artworks.find((entry) => entry.id === "troubling-of-a-star").thumbnail.frame;
   const steps = frame * STEPS_PER_FRAME;
 
   // Stated about the drawing rather than about the frame number: the hand has let go, the
