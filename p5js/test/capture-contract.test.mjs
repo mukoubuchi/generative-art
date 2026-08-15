@@ -94,7 +94,7 @@ function stopsForEverybody(body) {
  * browser, sampling until two readings agreed -- which is real motion but far too brief to
  * be worth a clip or to make good on what a "moving" mark promises a reader. It keeps the
  * animation because watching the shell wind is part of it, and it stays a still because
- * four tenths of a second is not a film. Circle Packing at seven seconds and DLA Frost at
+ * four tenths of a second is not a film. Kissing Circles at seven seconds and DLA Frost at
  * eight and a half were the other two, and both are clips now.
  *
  * The list stays because it is what closes the question: an artwork can be a still, or a

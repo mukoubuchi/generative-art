@@ -32,7 +32,7 @@ const AWAITING_SCHEDULE = [
   "hilbert-curve",
   "cafe-wall",
   "dla-frost",
-  "circle-packing",
+  "kissing-circles",
   "moire-rings",
   "lorenz-ribbon",
   "platonic-duals",

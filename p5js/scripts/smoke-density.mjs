@@ -66,10 +66,10 @@ const SPECIMEN_BARE_BANDS = 4;
  * they are all recent. Pinned so that a new one has to be added here on purpose.
  */
 const ACCUMULATING = [
-  "circle-packing",
   "clinamen",
   "de-jong-attractor",
   "dla-frost",
+  "kissing-circles",
   "ulam-spiral"
 ];
 

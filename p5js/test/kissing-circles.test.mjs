@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PACKING_PARAMETERS, coverage, packCircles } from "../artworks/circle-packing/packing.js";
+import { PACKING_PARAMETERS, coverage, packCircles } from "../artworks/kissing-circles/packing.js";
 
 /**
  * The packing has no aesthetic parameters to pin, only its two constraints and the

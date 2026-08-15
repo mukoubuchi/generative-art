@@ -666,10 +666,10 @@
       }
     },
     {
-      "id": "circle-packing",
-      "title": "Circle Packing",
-      "entry": "p5js/artworks/circle-packing/index.html",
-      "interactivePath": "circle-packing/",
+      "id": "kissing-circles",
+      "title": "Kissing Circles",
+      "entry": "p5js/artworks/kissing-circles/index.html",
+      "interactivePath": "kissing-circles/",
       "canvas": {
         "width": 680,
         "height": 680
@@ -679,7 +679,7 @@
       ],
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/CirclePacking.mp4",
+        "artifact": "exports/p5js/KissingCircles.mp4",
         "durationSeconds": 9,
         "scale": 2
       },
