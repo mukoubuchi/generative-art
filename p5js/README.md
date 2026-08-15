@@ -33,7 +33,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `truchet-tides` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, one drift of the current |
 | `voronoi-bloom` | 800×640 | 1600×1280 PNG | Static |
 | `clinamen` | 960×640 | 1920×1280 PNG | Static capture, interactive page |
-| `strange-attractor` | 680×680 | 1360×1360 PNG | Static |
+| `de-jong-attractor` | 680×680 | 1360×1360 PNG | Static |
 | `moebius-band` | 800×600 | 1600×1200 MP4 at 30 fps | 10 seconds, two laps of the marker, two turns of the stage |
 | `ulam-spiral` | 680×680 | 1360×1360 PNG | Static capture, animated page |
 | `hilbert-curve` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, degree one eased through degree six |
@@ -227,7 +227,7 @@ Its generators differ from py5's, so the field is a different one and the image 
 
 On the page the field fills in one step per frame, so the 900 steps the capture runs at once can be watched forming instead.
 
-Strange Attractor keeps the py5 sketch's Peter de Jong coefficients, its 336,000 points, its 1000-step warmup and its 32 colour bands. Every point is drawn at eight and a half per cent opacity into an additive layer, so the brightness of a place is the number of times the orbit has visited it: the image is a histogram of the attractor rather than a plot of it. The bands are keyed to a point's height within the cloud rather than to its position in the sequence, which is why the colour follows the figure's shape instead of scattering across it.
+De Jong Attractor was Strange Attractor, which named the kind rather than the thing: there are as many strange attractors as there are systems that have one, and this is Peter de Jong's. It keeps the py5 sketch's Peter de Jong coefficients, its 336,000 points, its 1000-step warmup and its 32 colour bands. Every point is drawn at eight and a half per cent opacity into an additive layer, so the brightness of a place is the number of times the orbit has visited it: the image is a histogram of the attractor rather than a plot of it. The bands are keyed to a point's height within the cloud rather than to its position in the sequence, which is why the colour follows the figure's shape instead of scattering across it.
 
 This is the one stochastic port whose image does not depend on the generators at all. The py5 sketch seeded a starting point within a hundredth of the origin, but the map pulls any start onto the same attractor and the first thousand iterations are discarded, so the figure is a property of the four coefficients. A test measures that directly: two starts far apart on that scale agree on the share of the cloud in every one of the 32 bands to within 0.4 per cent, and on the fitted scale to within one per cent. The port keeps the seeded start anyway, because that is how the sketch was written.
 
@@ -327,7 +327,7 @@ npm run thumbnails
 
 Generated media is written under `exports/p5js/` and is excluded from Git.
 
-`npm run thumbnails` writes one JPEG per artwork into `site/thumbnails/`, for the gallery to show. It is much cheaper than a full render: everything is captured at the logical size rather than the export scale, and a moving artwork gives up one frame instead of a whole encoded clip, so the whole set takes about twenty seconds and under a megabyte between them. The frame chosen is halfway through by default, because several clips open and close on a resting state; an artwork whose telling moment lies elsewhere sets `thumbnail.frame` in the manifest, and twenty-eight do — Recursive Pentagram is still drawing itself at its middle and is shown finished instead, Temple Bell is shown mid-toll with a ring in flight, Under the Sun is shown at its opening frontier with the bright arc standing over the oldest stretch of its own track, Troubling of a Star is shown at the instant of release, when the pulled star turns from strain to motion, The Love That Moves is shown a moment after the release, where the ladder has opened into a single clean fan, and Clinamen, Ulam Spiral, Strange Attractor, DLA Frost and Circle Packing are all shown on their last frame, since each clip lays its picture down once and the finished figure is the thing itself rather than a moment in it. A test counts them, because a number written in prose is a number nobody updates.
+`npm run thumbnails` writes one JPEG per artwork into `site/thumbnails/`, for the gallery to show. It is much cheaper than a full render: everything is captured at the logical size rather than the export scale, and a moving artwork gives up one frame instead of a whole encoded clip, so the whole set takes about twenty seconds and under a megabyte between them. The frame chosen is halfway through by default, because several clips open and close on a resting state; an artwork whose telling moment lies elsewhere sets `thumbnail.frame` in the manifest, and twenty-eight do — Recursive Pentagram is still drawing itself at its middle and is shown finished instead, Temple Bell is shown mid-toll with a ring in flight, Under the Sun is shown at its opening frontier with the bright arc standing over the oldest stretch of its own track, Troubling of a Star is shown at the instant of release, when the pulled star turns from strain to motion, The Love That Moves is shown a moment after the release, where the ladder has opened into a single clean fan, and Clinamen, Ulam Spiral, De Jong Attractor, DLA Frost and Circle Packing are all shown on their last frame, since each clip lays its picture down once and the finished figure is the thing itself rather than a moment in it. A test counts them, because a number written in prose is a number nobody updates.
 
 The renderer uses the Chromium build that `npx playwright install chromium` downloads, matching CI. Set `PLAYWRIGHT_CHANNEL` only to fall back to a locally installed browser channel; its antialiasing differs from CI's Chromium, so rendered output is no longer comparable.
 
@@ -347,7 +347,7 @@ names a different work before and after, and no one can read next week's posts o
 A queue is refilled by appending to the list; a run is paused by removing the days.
 
 ```json
-{ "date": "2026-08-12", "artwork": "strange-attractor" }
+{ "date": "2026-08-12", "artwork": "de-jong-attractor" }
 ```
 
 An entry may add `"quote"` to choose among an artwork's candidates. The first run covers all
@@ -355,7 +355,7 @@ twenty-five artworks, one a day. Their order is not the manifest's: each family 
 the spirals, the tilings, the illusions, the fields, the recursions, the moving toys — is
 spread evenly across the run rather than posted in a block, still and moving alternate as
 far as the counts allow, and no two consecutive days quote the same language. The day it
-opens on is Strange Attractor, whose Nietzsche is about chaos giving birth to a dancing star.
+opens on is De Jong Attractor, whose Nietzsche is about chaos giving birth to a dancing star.
 
 Nothing scheduled for today is not an error: the pipeline says so and stops. That is what
 the end of a run looks like from the inside, and it is what the cron finds every night until
@@ -650,7 +650,7 @@ What a green here means is worth stating exactly: **the most recent deployment i
 
 ### Drawing the same picture in both engines
 
-Everything above had only ever been opened in Chromium. On 2026-08-13 a reader opened Strange Attractor on a phone and was shown an empty square.
+Everything above had only ever been opened in Chromium. On 2026-08-13 a reader opened De Jong Attractor on a phone and was shown an empty square.
 
 Its points were drawn the way a point is usually drawn on a 2D canvas — a round-capped stroke whose two ends are the same place. Chromium paints that. WebKit paints nothing for it, cap or no cap, and every browser on iOS is WebKit, so the whole of iOS saw a blank page. All 336,000 points went down invisibly. The sketch reported 300 of 300 frames and 336,000 of 336,000 points drawn, raised nothing and logged nothing; only the picture was missing. Nothing that reads state, counts frames, or watches for errors could have caught it, and nothing did.
 
@@ -672,7 +672,7 @@ Opens all 38 works in both engines and asks whether each puts down the same ink 
 
 Both engines are asked for the *same numbered frames* rather than watched as they animate, and are compared at whichever of those frames shows the work most fully — there being no single frame that shows every work, since three of them return to their beginnings and are blank at the end while Koch Curves has barely started near it. Asking for a frame by number is what makes the comparison fair. An earlier version watched the two engines animate and compared whatever each had reached when it was looked at; they do not keep step, so works that were drawing perfectly well came out anywhere from 0.97 to 1.35 — near enough the edge of the tolerance to fail on a slow machine for no other reason. Matched frames fall between 0.970 and 1.088, and the run takes a minute instead of seventeen.
 
-The one work that cannot be captured is watched instead, and Strange Attractor is that work: its own refusal to be exported from the wrong engine is what stops the check capturing it there. Watching is the weaker measurement, so it is the exception. Where it is used, "settled" means the picture stopped changing *while its sketch was demonstrably still running* — a picture also stops changing when starved of processor, the two are indistinguishable from outside, and watching too many works at once caused exactly that, reading one half-drawn and reporting a disagreement that was not there.
+The one work that cannot be captured is watched instead, and De Jong Attractor is that work: its own refusal to be exported from the wrong engine is what stops the check capturing it there. Watching is the weaker measurement, so it is the exception. Where it is used, "settled" means the picture stopped changing *while its sketch was demonstrably still running* — a picture also stops changing when starved of processor, the two are indistinguishable from outside, and watching too many works at once caused exactly that, reading one half-drawn and reporting a disagreement that was not there.
 
 The check is aimed at [the sketch exactly as it shipped](test/fixtures/invisible-in-webkit/), which it has to reject, and it measures that the lengthened dot still lands where it was asked for rather than a twentieth of a pixel to the side. `npm run smoke:phone` also runs its whole sweep a second time in WebKit, since emulating a phone in Chromium gets the width, the density and the coarse pointer right and the drawing engine wrong — and the drawing engine is where this artwork was lost.
 

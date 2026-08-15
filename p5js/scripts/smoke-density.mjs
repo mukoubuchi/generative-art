@@ -68,8 +68,8 @@ const SPECIMEN_BARE_BANDS = 4;
 const ACCUMULATING = [
   "circle-packing",
   "clinamen",
+  "de-jong-attractor",
   "dla-frost",
-  "strange-attractor",
   "ulam-spiral"
 ];
 

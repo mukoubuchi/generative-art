@@ -534,10 +534,10 @@
       }
     },
     {
-      "id": "strange-attractor",
-      "title": "Strange Attractor",
-      "entry": "p5js/artworks/strange-attractor/index.html",
-      "interactivePath": "strange-attractor/",
+      "id": "de-jong-attractor",
+      "title": "De Jong Attractor",
+      "entry": "p5js/artworks/de-jong-attractor/index.html",
+      "interactivePath": "de-jong-attractor/",
       "canvas": {
         "width": 680,
         "height": 680
@@ -547,7 +547,7 @@
       ],
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/StrangeAttractor.mp4",
+        "artifact": "exports/p5js/DeJongAttractor.mp4",
         "durationSeconds": 10,
         "scale": 2
       },

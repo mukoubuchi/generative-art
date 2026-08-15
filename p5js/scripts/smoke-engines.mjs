@@ -4,7 +4,7 @@
  * Does every artwork show in WebKit what it shows in Chromium?
  *
  * Nothing here had ever been opened in anything but Chromium, and on 2026-08-13 a reader
- * opened Strange Attractor on a phone and was shown an empty square. Its points were drawn
+ * opened De Jong Attractor on a phone and was shown an empty square. Its points were drawn
  * as subpaths whose two ends are the same point, which Chromium paints and WebKit does not —
  * and every browser on iOS is WebKit, so the whole of iOS saw a blank page. The sketch
  * reported three hundred of three hundred frames and three hundred and thirty-six thousand
@@ -64,7 +64,7 @@ const MOMENTS = [0.1, 0.35, 0.65, 0.99];
  * until it has stopped showing anything new.
  *
  * One work needs this. An artwork may refuse to be captured on an engine that would draw it
- * differently — Strange Attractor does, so that no clip is ever exported from one — and a
+ * differently — De Jong Attractor does, so that no clip is ever exported from one — and a
  * check cannot ask a page that has refused to load. Watching is the weaker measurement, which
  * is why it is the exception rather than the rule.
  *
@@ -398,7 +398,7 @@ try {
 }
 
 /**
- * The check, aimed at the fault it was written for: Strange Attractor's sketch exactly as it
+ * The check, aimed at the fault it was written for: De Jong Attractor's sketch exactly as it
  * shipped, kept in the repository so that this runs where CI checks out a single commit.
  */
 async function controlTheFaultAsItShipped() {
@@ -408,9 +408,9 @@ async function controlTheFaultAsItShipped() {
     await buildSite(manifest, quoteCatalog, { directory: built, thumbnails: false });
     await cp(
       resolve(P5JS_DIRECTORY, "test/fixtures/invisible-in-webkit/sketch.js"),
-      resolve(built, "p5js/artworks/strange-attractor/sketch.js")
+      resolve(built, "p5js/artworks/de-jong-attractor/sketch.js")
     );
-    const artwork = manifest.artworks.find((a) => a.id === "strange-attractor");
+    const artwork = manifest.artworks.find((a) => a.id === "de-jong-attractor");
     const judged = judge(await compareArtwork(engines, server.baseUrl, artwork));
     note(
       `\n${"control (the fault as it shipped)".padEnd(40)}`
@@ -419,7 +419,7 @@ async function controlTheFaultAsItShipped() {
     );
     if (judged.verdict === "ok") {
       failures.push(
-        "Strange Attractor's sketch as it shipped — which drew nothing whatever on an iPhone —"
+        "De Jong Attractor's sketch as it shipped — which drew nothing whatever on an iPhone —"
         + " passes this check, so the check cannot see the fault it was written for"
       );
     }

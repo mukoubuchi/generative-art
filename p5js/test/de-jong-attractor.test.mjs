@@ -16,7 +16,7 @@ import {
   colorBins,
   fitToCanvas,
   nextPoint
-} from "../artworks/strange-attractor/attractor.js";
+} from "../artworks/de-jong-attractor/attractor.js";
 
 const WIDTH = 680;
 const HEIGHT = 680;
