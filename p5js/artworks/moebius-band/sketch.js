@@ -1,11 +1,14 @@
 import {
   STAGE_TURNS,
   backToFront,
+  bandAcross,
   bandRows,
   cellCentres,
   edgePoint,
   glassShade,
   sceneState,
+  solidShade,
+  travellerMesh,
   viewDirection
 } from "./geometry.js";
 
@@ -40,11 +43,21 @@ const SEGMENTS_ACROSS = 8;
 // band collapses into an ellipse.
 const STAGE_TILT = 0.9;
 
-// The traveller: a bead on the centre line carrying a pin along the surface normal. The
-// pin is what makes the one-sidedness visible — the bead's own path repeats every lap.
-const MARKER_RADIUS = 9;
-const PIN_LENGTH = 40;
-const PIN_TIP_RADIUS = 4.5;
+/**
+ * The traveller: one body, grown out of the surface along its normal.
+ *
+ * It was a bead threaded on the centre line with a pin through it, and the pin was the
+ * part that did the work — but a mark at height zero is a mark the flip cannot move,
+ * because reflecting through a surface leaves the surface where it is. The bead never
+ * went anywhere, and it was most of the gold. This shape puts the whole of the gold up
+ * off the band, where a reflection carries it twice its own height and the two faces of
+ * the journey no longer look alike.
+ *
+ * The height is what buys that, the radius is what keeps it findable from across the
+ * frame, and the taper is what makes it a bud rather than a ball on a stick: the sweep
+ * narrows towards the tip, so the body points the way it is standing.
+ */
+const TRAVELLER = { radius: 8.5, height: 38, taper: 0.72, rings: 16, sectors: 24 };
 
 /**
  * A dark water, the glass, and one gold. Three colours, where there were seven: the band
@@ -58,11 +71,12 @@ const PIN_TIP_RADIUS = 4.5;
  * artworks of glass and water stand on the same dark; the band is that shell's sea glass
  * brought up until one thickness of it is pale and two are readable. The traveller is
  * Toggle Color Ball's settled gold, warm against a cold band and legible on both arcs —
- * where the old terracotta was loud enough to be the first thing seen.
+ * where the old terracotta was loud enough to be the first thing seen. It is one gold
+ * still: the light on the body is that same gold shaded, not a second colour.
  */
 const BACKGROUND = [8, 22, 24];
 const GLASS = [168, 206, 198];
-const PIN = [214, 152, 58];
+const GOLD = [214, 152, 58];
 
 const EDGE_SAMPLES = 2 * SEGMENTS_AROUND;
 const ROWS = bandRows(SEGMENTS_AROUND, SEGMENTS_ACROSS, RING_RADIUS, HALF_WIDTH);
@@ -108,30 +122,28 @@ new P5((p) => {
     p.endShape(p.CLOSE);
   }
 
-  function drawMarker(marker) {
+  function drawMarker(marker, view) {
     // Once, solid, and first of everything. The traveller is the only opaque thing on the
     // stage, so it goes down before the glass and writes its depth; the band then covers
     // whatever stands behind it and lets the rest read through. What the band hides is no
     // longer painted twice to be readable — the glass itself does that now, and the
     // hidden half is the story: the point of the journey is exactly the part that happens
     // on the other side.
-    const [x, y, z] = marker.position;
-    const tip = marker.position.map(
-      (component, index) => component + marker.normal[index] * PIN_LENGTH
-    );
-    p.stroke(...PIN);
-    p.strokeWeight(2.5 * RENDER_SCALE);
-    p.line(x, y, z, ...tip);
+    //
+    // Built vertex by vertex rather than reached for: p5's own solids are lit by the
+    // renderer's lights, and this stage has none, so a sphere() comes back a flat disc of
+    // whatever colour it was filled with — which is what the old bead was. Each vertex
+    // carries its own shade here, as the band's do, and the shading reads the sign of the
+    // normal, which is the one thing the band's cannot.
     p.noStroke();
-    p.fill(...PIN);
-    p.push();
-    p.translate(...tip);
-    p.sphere(PIN_TIP_RADIUS, 12, 8);
-    p.pop();
-    p.push();
-    p.translate(x, y, z);
-    p.sphere(MARKER_RADIUS, 16, 12);
-    p.pop();
+    p.beginShape(p.TRIANGLES);
+    const body = travellerMesh(
+      marker.position, marker.normal, bandAcross(marker.u), TRAVELLER);
+    for (const { point, normal } of body) {
+      p.fill(...solidShade(normal, view, GOLD));
+      p.vertex(...point);
+    }
+    p.endShape();
   }
 
   function drawScene(state) {
@@ -149,9 +161,10 @@ new P5((p) => {
     // the depth test still on and the writing off, so no transparent surface can hide
     // another one behind it.
     const gl = p.drawingContext;
-    drawMarker(state.marker);
+    const view = viewDirection(STAGE_TILT, state.spin);
+    drawMarker(state.marker, view);
     gl.depthMask(false);
-    drawBand(viewDirection(STAGE_TILT, state.spin));
+    drawBand(view);
     drawEdge();
     gl.depthMask(true);
   }
