@@ -569,7 +569,7 @@
         "moebius-einseitige-flaeche"
       ],
       "thumbnail": {
-        "frame": 45
+        "frame": 0
       },
       "render": {
         "kind": "video",
