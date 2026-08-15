@@ -512,10 +512,10 @@
       }
     },
     {
-      "id": "flow-field",
-      "title": "Flow Field",
-      "entry": "p5js/artworks/flow-field/index.html",
-      "interactivePath": "flow-field/",
+      "id": "clinamen",
+      "title": "Clinamen",
+      "entry": "p5js/artworks/clinamen/index.html",
+      "interactivePath": "clinamen/",
       "canvas": {
         "width": 960,
         "height": 640
@@ -525,7 +525,7 @@
       ],
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/FlowField.mp4",
+        "artifact": "exports/p5js/Clinamen.mp4",
         "durationSeconds": 10,
         "scale": 2
       },

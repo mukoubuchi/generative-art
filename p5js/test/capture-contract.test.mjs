@@ -103,7 +103,7 @@ function stopsForEverybody(body) {
 const UNDECIDED = ["nautilus"];
 
 test("an artwork registered as a still does not go on drawing on the page", async () => {
-  // What the manifest says an artwork is, held against what its sketch does. Flow Field and
+  // What the manifest says an artwork is, held against what its sketch does. Clinamen and
   // Ulam Spiral were registered as stills while their pages ran an animation, so the gallery
   // gave them no moving mark and the export kept only the last frame. A reader could see
   // them move; nothing in the build could. The difference is legible in the source: a still

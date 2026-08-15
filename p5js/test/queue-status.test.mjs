@@ -63,7 +63,7 @@ test("the first run's era, replayed night by night", () => {
   // Eleven low nights and one final notice; every other night in the window is silent.
   assert.equal(notices.length, 12);
   assert.equal(notices[0].today, "2026-08-26");
-  assert.equal(notices[0].tonight.artwork, "flow-field");
+  assert.equal(notices[0].tonight.artwork, "clinamen");
   for (const [index, notice] of notices.slice(0, 11).entries()) {
     assert.equal(notice.kind, "low");
     assert.equal(notice.remaining, LOW_WATER - index);
@@ -130,7 +130,7 @@ test("a low notice says the number, the horizon, and where to refill", () => {
   const decision = queueDecision(schedule, "2026-08-26", null);
   const text = renderNotice(decision, "2026-08-26");
   assert.ok(text.includes("<!-- queue-status 2026-08-26 -->"));
-  for (const piece of ["**10**", "flow-field", "troubling-of-a-star", "2026-09-05", "p5js/schedule.json", "Asia/Tokyo"]) {
+  for (const piece of ["**10**", "clinamen", "troubling-of-a-star", "2026-09-05", "p5js/schedule.json", "Asia/Tokyo"]) {
     assert.ok(text.includes(piece), `the notice does not mention ${piece}`);
   }
   // The renderer and the parser agree on the marker, or dedup dies quietly.

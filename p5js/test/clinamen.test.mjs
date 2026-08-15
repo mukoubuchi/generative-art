@@ -13,7 +13,7 @@ import {
   flowAngle,
   isInside,
   spawn
-} from "../artworks/flow-field/field.js";
+} from "../artworks/clinamen/field.js";
 
 const WIDTH = 960;
 const HEIGHT = 640;
