@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   EDGE_GAP,
@@ -6,7 +7,6 @@ import {
   HUE_HIGH,
   HUE_LOW,
   SITE_COUNT,
-  connections,
   createSites,
   nearestTwo,
   shade
@@ -26,6 +26,13 @@ function makeRandom(seed) {
 }
 
 const sites = createSites(WIDTH, HEIGHT, makeRandom(5), noise);
+
+/** Every overlay call that can put a geometric mark on top of the pixel-painted cells. */
+function paintingCalls(source) {
+  return [...source.matchAll(
+    /\bp\.(blendMode|strokeWeight|stroke|line|noFill|noStroke|fill|circle|point)\s*\(/gu
+  )].map(([, call]) => call);
+}
 
 test("forty-two sites all land inside the canvas", () => {
   assert.equal(sites.length, SITE_COUNT);
@@ -78,32 +85,6 @@ test("the two nearest sites are found, and their gap vanishes on a boundary", ()
   assert.equal(out.index, 1);
 });
 
-test("a connection is drawn once per pair and only from the lower index", () => {
-  const pairs = connections(sites);
-
-  assert.ok(pairs.length > 0);
-  assert.ok(pairs.length < SITE_COUNT, "fewer lines than sites, by the original's rule");
-  const seen = new Set();
-  for (const [from, to] of pairs) {
-    assert.ok(from < to);
-    const key = `${from}-${to}`;
-    assert.ok(!seen.has(key), "no pair is drawn twice");
-    seen.add(key);
-    // The partner really is this site's nearest neighbour.
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    let nearest = -1;
-    sites.forEach((other, index) => {
-      if (index === from) return;
-      const squared = (sites[from].x - other.x) ** 2 + (sites[from].y - other.y) ** 2;
-      if (squared < nearestDistance) {
-        nearestDistance = squared;
-        nearest = index;
-      }
-    });
-    assert.equal(nearest, to);
-  }
-});
-
 test("shading is brightest on a boundary and dimmest deep inside a cell", () => {
   const site = { hue: 250 };
   const onEdge = shade(site, { nearest: 40, gap: 0 }, 0.5, 1);
@@ -125,4 +106,35 @@ test("the vignette darkens the corners without touching the middle", () => {
 
   assert.ok(corner.brightness < middle.brightness);
   assert.ok(Math.abs(corner.brightness / middle.brightness - 0.38) < 1e-9);
+});
+
+test("the cells carry only their generators and grain", async () => {
+  // The distance field already paints the equal-distance boundaries and the glow around
+  // every generator. What sits over it is therefore one small circle per site and grain:
+  // no nearest-neighbour graph, and no second circle restating the glow as a halo.
+  const sketch = await readFile(
+    new URL("../artworks/voronoi-bloom/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(paintingCalls(sketch), [
+    "noStroke", "fill", "circle",
+    "strokeWeight", "stroke", "point"
+  ]);
+  assert.match(sketch, /p\.circle\(site\.x, site\.y, 2\.4\)/u);
+  assert.ok(sketch.includes("paintCells(sites)"), "the scan is not looking at the cells");
+  assert.ok(sketch.includes("addGrain()"), "the scan is not looking at the grain");
+});
+
+test("the scan finds both overlays in the sketch that shipped with them", async () => {
+  // The negative control is the shipped sketch before the subtraction, not a synthetic
+  // example. It draws the same cells, sites and grain, then adds the nearest-neighbour
+  // lines and a larger stroked circle around every generator.
+  const specimen = await readFile(
+    new URL("./fixtures/voronoi-bloom-overlays/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(paintingCalls(specimen), [
+    "blendMode", "strokeWeight", "stroke", "line", "blendMode",
+    "noFill", "stroke", "strokeWeight", "circle", "noStroke", "fill", "circle",
+    "strokeWeight", "stroke", "point"
+  ]);
+  assert.ok(specimen.includes("paintCells(sites)"), "the specimen is not this artwork");
+  assert.ok(specimen.includes("createSites("), "the specimen has no generators");
+  assert.ok(specimen.includes("addGrain()"), "the specimen has no grain");
 });

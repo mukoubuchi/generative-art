@@ -2,6 +2,7 @@ import { hsbToRgb } from "../shared/color.js";
 import {
   ART_SEED,
   SITE_COUNT,
+  connections,
   createSites,
   nearestTwo,
   shade
@@ -70,8 +71,24 @@ new P5((p) => {
     p.updatePixels();
   }
 
+  function drawConnections(sites) {
+    // Added rather than blended, so where two lines cross the light accumulates.
+    p.blendMode(p.ADD);
+    p.strokeWeight(0.65);
+    for (const [from, to] of connections(sites)) {
+      p.stroke(sites[from].hue, 46, 94, 16);
+      p.line(sites[from].x, sites[from].y, sites[to].x, sites[to].y);
+    }
+    p.blendMode(p.BLEND);
+  }
+
   function drawSites(sites) {
-    sites.forEach((site) => {
+    sites.forEach((site, index) => {
+      const halo = 8 + p.noise(index * 0.31) * 15;
+      p.noFill();
+      p.stroke(site.hue, 34, 100, 36);
+      p.strokeWeight(0.8);
+      p.circle(site.x, site.y, halo);
       p.noStroke();
       p.fill(site.hue, 18, 100, 82);
       p.circle(site.x, site.y, 2.4);
@@ -121,6 +138,7 @@ new P5((p) => {
     paintCells(sites);
     p.push();
     p.scale(RENDER_SCALE);
+    drawConnections(sites);
     drawSites(sites);
     addGrain();
     p.pop();
@@ -129,6 +147,7 @@ new P5((p) => {
       kind: "image",
       seed: ART_SEED,
       siteCount: sites.length,
+      connectionCount: connections(sites).length,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };

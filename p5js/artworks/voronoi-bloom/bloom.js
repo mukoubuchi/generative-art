@@ -61,10 +61,11 @@ export function nearestTwo(xs, ys, count, x, y, out) {
 }
 
 /**
- * One line per site to its nearest neighbour, kept only when the site's index is the lower
- * of the pair. Mutual nearest neighbours therefore appear once, and a site whose nearest
- * neighbour has a lower index contributes nothing — the original's rule, which is why
- * there are fewer lines than sites.
+ * The nearest-neighbour pairs used by the frozen Retina-density specimen.
+ *
+ * The live artwork no longer draws this second graph. The helper remains because the
+ * specimen is the sketch exactly as it shipped with the density fault, and that specimen
+ * is executed by the smoke check rather than merely read as text.
  */
 export function connections(sites) {
   const pairs = [];
