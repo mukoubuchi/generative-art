@@ -67,7 +67,6 @@ const SPECIMEN_BARE_BANDS = 4;
  */
 const ACCUMULATING = [
   "clinamen",
-  "de-jong-attractor",
   "dla-frost",
   "kissing-circles",
   "ulam-spiral"

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   COEFFICIENT_A,
@@ -20,6 +21,17 @@ import {
 
 const WIDTH = 680;
 const HEIGHT = 680;
+
+/** Every p5 lifecycle hook the sketch installs, in the order it installs them. */
+function lifecycleHooks(source) {
+  return [...source.matchAll(/^ {2}p\.(\w+) = \(\) =>/gmu)].map(([, hook]) => hook);
+}
+
+/** Every top-level request to put some or all of the orbit onto the canvas. */
+function cloudDrawings(source) {
+  return [...source.matchAll(/(?<!function )\b(drawCloud|layUpTo)\s*\(/gu)]
+    .map(([, drawing]) => drawing);
+}
 
 test("one step is the de Jong map, read from the previous pair", () => {
   const step = nextPoint(0.3, -0.7);
@@ -136,4 +148,36 @@ test("the hue ramp spans its whole range across the bands", () => {
   for (let bin = 1; bin < COLOR_BINS; bin += 1) {
     assert.ok(binHue(bin) > binHue(bin - 1));
   }
+});
+
+test("the page makes one complete cloud in one draw", async () => {
+  // The capture contract asks whether a still stops for everybody. This asks what its one
+  // draw contains: every point in both density layers, with no carried count and no second
+  // request that can expose the order in which the orbit happened to visit them.
+  const sketch = await readFile(
+    new URL("../artworks/de-jong-attractor/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(cloudDrawings(sketch), ["drawCloud"]);
+  assert.deepEqual(lifecycleHooks(sketch), ["setup", "draw"]);
+  const cloud = sketch.slice(sketch.indexOf("function drawCloud"),
+    sketch.indexOf("function publishState"));
+  assert.equal((cloud.match(/index < POINT_COUNT/gu) ?? []).length, 2,
+    "the colour layer and highlight layer must both cover the complete orbit");
+  assert.match(sketch, /kind: "image"/u);
+});
+
+test("the scan finds both accumulation paths in the sketch that laid the cloud down", async () => {
+  // The negative control is the shipped sketch before the still, not an invented loop. Its
+  // renderer and page each ask to advance to a partial count, and the draw range starts at
+  // mutable state left by the last request. Those are the two paths the still removes.
+  const specimen = await readFile(
+    new URL("./fixtures/de-jong-attractor-accumulating/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(cloudDrawings(specimen), ["layUpTo", "layUpTo"]);
+  assert.deepEqual(lifecycleHooks(specimen), ["setup", "draw"]);
+  assert.ok(specimen.includes("let drawn = 0"),
+    "the specimen must carry the mutable accumulated count");
+  assert.ok(specimen.includes("drawRange(drawn, target)"),
+    "the specimen must advance through a partial range");
+  // It is otherwise this cloud: the same population, colour bins and pale shifted layer.
+  assert.ok(specimen.includes("POINT_COUNT"), "the specimen must use this orbit population");
+  assert.ok(specimen.includes("HIGHLIGHT_COLOR"), "the specimen must keep this palette");
 });

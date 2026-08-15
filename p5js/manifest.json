@@ -547,13 +547,9 @@
         "nietzsche-tanzenden-stern"
       ],
       "render": {
-        "kind": "video",
-        "artifact": "exports/p5js/DeJongAttractor.mp4",
-        "durationSeconds": 10,
+        "kind": "image",
+        "artifact": "exports/p5js/DeJongAttractor.png",
         "scale": 2
-      },
-      "thumbnail": {
-        "frame": 299
       }
     },
     {

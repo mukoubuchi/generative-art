@@ -64,7 +64,7 @@ const MOMENTS = [0.1, 0.35, 0.65, 0.99];
  * until it has stopped showing anything new.
  *
  * One work needs this. An artwork may refuse to be captured on an engine that would draw it
- * differently — De Jong Attractor does, so that no clip is ever exported from one — and a
+ * differently — De Jong Attractor does, so that no artifact is ever captured in one — and a
  * check cannot ask a page that has refused to load. Watching is the weaker measurement, which
  * is why it is the exception rather than the rule.
  *
@@ -193,7 +193,7 @@ const inkThrough = (threshold) => {
  *
  * Returns null when a page will not come up in capture mode. That is not a failure here: an
  * artwork may refuse to be captured on an engine that would draw it differently, precisely so
- * that no clip is ever exported from one, and such a work is watched instead.
+ * that no artifact is ever captured in one, and such a work is watched instead.
  */
 async function readMatchedFrames(browser, baseUrl, artwork) {
   const page = await browser.newPage({

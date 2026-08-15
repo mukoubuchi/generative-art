@@ -35,6 +35,18 @@ const HIGHLIGHT_WEIGHT = 0.55;
 const HIGHLIGHT_COLOR = [196, 18, 100];
 const HIGHLIGHT_ALPHA = 0.06;
 const START_RANGE = 0.01;
+const PLAYBACK_FPS = 30;
+/**
+ * The clip lays the cloud down over nine seconds and holds it for one. The orbit is not
+ * recomputed as it goes: the whole of it is worked out once and the frame fitted to all of
+ * it, so what grows is how much of the cloud has been laid down and not where the camera
+ * is. Fitting each frame to the points drawn so far would rescale the figure every frame
+ * and make the clip a picture of the fitting rather than of the attractor.
+ */
+const CLIP_SECONDS = 10;
+const REVEAL_SECONDS = 9;
+const TOTAL_FRAMES = CLIP_SECONDS * PLAYBACK_FPS;
+const REVEAL_FRAMES = REVEAL_SECONDS * PLAYBACK_FPS;
 
 /**
  * Half the length given to a dot on an engine that will not paint one of no length. Chosen
@@ -127,18 +139,29 @@ new P5((p) => {
     context.stroke();
   }
 
-  /** The whole orbit, its framing and its colours: worked out once and drawn once. */
+  /** The whole orbit, its framing and its colours: worked out once and never refitted. */
   let cloud;
   let bins;
+  let drawn = 0;
 
   /**
-   * Lays down every point, grouped by colour band so that a run of them costs one stroke
-   * colour rather than one each. The layer is added rather than blended, so the brightness
-   * at each place is the density of the complete orbit rather than a point's place in time.
+   * How much of the cloud has been laid down by `frameIndex` — a pure function of the
+   * index, so a frame asked for twice is the same frame.
    */
-  function drawCloud() {
+  function pointsBy(frameIndex) {
+    const part = Math.min(frameIndex / REVEAL_FRAMES, 1);
+    return Math.min(POINT_COUNT, Math.round(POINT_COUNT * part));
+  }
+
+  /**
+   * Lays down the points from `from` to `to`, grouped by colour band so that a run of them
+   * costs one stroke colour rather than one each. The layer is added rather than blended
+   * and addition does not care about order, so laying the cloud down in instalments builds
+   * the same figure as laying it down at once.
+   */
+  function drawRange(from, to) {
     const buckets = Array.from({ length: COLOR_BINS }, () => []);
-    for (let index = 0; index < POINT_COUNT; index += 1) {
+    for (let index = from; index < to; index += 1) {
       buckets[bins[index]].push(index);
     }
     p.push();
@@ -161,31 +184,47 @@ new P5((p) => {
     const [red, green, blue] = hsbToRgb(...HIGHLIGHT_COLOR);
     context.lineWidth = HIGHLIGHT_WEIGHT;
     context.strokeStyle = `rgba(${red},${green},${blue},${HIGHLIGHT_ALPHA})`;
-    for (let index = 0; index < POINT_COUNT; index += HIGHLIGHT_STRIDE) {
+    const first = from + ((HIGHLIGHT_STRIDE - (from % HIGHLIGHT_STRIDE)) % HIGHLIGHT_STRIDE);
+    for (let index = first; index < to; index += HIGHLIGHT_STRIDE) {
       dot(cloud.xs[index] + HIGHLIGHT_OFFSET_X, cloud.ys[index] + HIGHLIGHT_OFFSET_Y);
     }
     p.blendMode(p.BLEND);
     p.pop();
   }
 
-  function publishState() {
-    window.__ARTWORK_STATE__ = {
-      kind: "image",
+  /** Lays the cloud down as far as `target`, starting again if asked to go back. */
+  function layUpTo(target) {
+    if (target < drawn) {
+      p.background(...BACKGROUND);
+      drawn = 0;
+    }
+    drawRange(drawn, target);
+    drawn = target;
+  }
+
+  function publishState(frameIndex) {
+    const state = {
+      kind: "video",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
       seed: ART_SEED,
       pointCount: POINT_COUNT,
+      pointsDrawn: drawn,
       colorBins: COLOR_BINS,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
+    window.__ARTWORK_STATE__ = state;
     window.__ARTWORK_READY__ = true;
+    return state;
   }
 
   p.setup = () => {
-    // A capture has to come off the path the published picture came off. The other path draws
-    // a picture one per cent different, which is right for a reader and wrong for an artifact
-    // that is supposed to preserve the same cloud -- and it would be wrong silently, since a
-    // picture that changed by one per cent looks exactly like one that did not. So a capture
-    // on an engine that would take the other path stops instead of writing one.
+    // An export has to come off the path the published clip came off. The other path draws a
+    // picture one per cent different, which is right for a reader and wrong for an artifact
+    // that is supposed to be the same file as before -- and it would be wrong silently, since
+    // a clip that changed by one per cent looks exactly like a clip that did not. So a
+    // capture on an engine that would take the other path stops instead of writing one.
     if (CAPTURE_MODE && !PAINTS_POINTS) {
       throw new Error(
         "This engine does not paint a zero-length subpath, so a capture taken on it would not"
@@ -204,6 +243,7 @@ new P5((p) => {
     }
     context = p.drawingContext;
     p.colorMode(p.HSB, 360, 100, 100, 100);
+    p.frameRate(PLAYBACK_FPS);
     // Seeded here, so the figure is a function of the seed alone.
     p.randomSeed(ART_SEED);
     p.background(...BACKGROUND);
@@ -214,14 +254,26 @@ new P5((p) => {
     );
     cloud = fitToCanvas(orbit, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     bins = colorBins(orbit.ys);
-    // Stopped for everybody. The sequence in which this orbit visits the cloud cannot be
-    // followed by eye and changes neither its form nor its palette; the complete density is
-    // the artwork, so the page and the export both draw that density once.
-    p.noLoop();
+
+    if (CAPTURE_MODE) {
+      p.noLoop();
+      window.__renderFrame = (frameIndex) => {
+        layUpTo(pointsBy(frameIndex));
+        return Promise.resolve(publishState(frameIndex));
+      };
+    }
+    publishState(0);
   };
 
   p.draw = () => {
-    drawCloud();
-    publishState();
+    if (CAPTURE_MODE) {
+      return;
+    }
+    if (p.frameCount > TOTAL_FRAMES) {
+      p.noLoop();
+      return;
+    }
+    layUpTo(pointsBy(p.frameCount));
+    publishState(p.frameCount);
   };
 });
