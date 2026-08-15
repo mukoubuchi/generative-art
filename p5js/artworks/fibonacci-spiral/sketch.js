@@ -26,12 +26,13 @@ const QUARTER_TURN = Math.PI / 2;
 /**
  * Night, the lines that divide, and the gold that travels.
  *
- * Three voices, where there were five. The night is Bounding Spots', because this is the
- * other artwork in the collection made of one small light on a dark ground and they should
- * be standing on the same dark. The dividing lines take that artwork's baseline — the rail
- * its arcs are struck from — since these are the frame these arcs are struck in. The gold
- * is this artwork's own, the colour its rectangles used to gild towards; of the five it is
- * the one left, and now it is the whole subject rather than the end of a gradient.
+ * Three voices, where there were five. The night is The Love That Moves', because this
+ * is the other artwork in the collection made of one small light on a dark ground and
+ * they should be standing on the same dark. The dividing lines take that artwork's
+ * baseline — the rail its arcs are struck from — since these are the frame these arcs
+ * are struck in. The gold is this artwork's own, the colour its rectangles used to gild
+ * towards; of the five it is the one left, and now it is the whole subject rather than
+ * the end of a gradient.
  */
 const GROUND = [6, 7, 12];
 const DIVIDE = [70, 82, 110];
@@ -71,8 +72,8 @@ new P5((p) => {
    * from phi, and the arcs drawn over them in ivory. Nothing is filled now: a region is
    * shown by what cuts it off from the next one, so the picture is the root's outline and
    * the fourteen cuts inside it, and every cut arrives at the moment the mark finishes
-   * going round the square it closes. The mark itself is Bounding Spots' light — an added
-   * halo with a core inside it — and what it leaves behind is the spiral.
+   * going round the square it closes. The mark itself is The Love That Moves' light —
+   * an added halo with a core inside it — and what it leaves behind is the spiral.
    *
    * The exact golden rectangle used to be stroked underneath as a skeleton, to stand
    * against the integer tiling's own root. At this size the two are 0.02 of a pixel apart,

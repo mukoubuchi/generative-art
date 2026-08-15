@@ -24,7 +24,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Recursive Pentagram](p5js/artworks/recursive-pentagram/) | An endless dive through nested pentagrams, each found inside the last, rendered as an MP4 |
 | [Sierpinski Gasket](p5js/artworks/sierpinski-gasket/) | A built triangle pyramid and a random rain that wets nowhere else, rendered as an MP4 |
 | [Fibonacci Spiral](p5js/artworks/fibonacci-spiral/) | A golden mark drawing the spiral through fifteen integer Fibonacci squares, rendered as an MP4 |
-| [Bounding Spots](p5js/artworks/bounding-spots/) | Twenty nested pendulums whose cadences differ by exactly one, waving and realigning, rendered as an MP4 |
+| [The Love That Moves](p5js/artworks/the-love-that-moves/) | Twenty nested pendulums whose cadences differ by exactly one, waving and realigning, rendered as an MP4 |
 | [Under the Sun](p5js/artworks/under-the-sun/) | A spinning arc that relays the same ring forever over its own fading track, rendered as an MP4 |
 | [Windmill](p5js/artworks/windmill/) | A mill with framed sails, turned by gusts a held key raises and stopped by its own friction, rendered as an MP4 |
 | [Electric Fan](p5js/artworks/electric-fan/) | The same rotor with a motor behind it, climbing to a governed speed and coasting back to a dead stop, rendered as an MP4 |

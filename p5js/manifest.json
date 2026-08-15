@@ -97,10 +97,10 @@
       }
     },
     {
-      "id": "bounding-spots",
-      "title": "Bounding Spots",
-      "entry": "p5js/artworks/bounding-spots/index.html",
-      "interactivePath": "bounding-spots/",
+      "id": "the-love-that-moves",
+      "title": "The Love That Moves",
+      "entry": "p5js/artworks/the-love-that-moves/index.html",
+      "interactivePath": "the-love-that-moves/",
       "canvas": {
         "width": 960,
         "height": 480
@@ -113,7 +113,7 @@
       },
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/BoundingSpots.mp4",
+        "artifact": "exports/p5js/TheLoveThatMoves.mp4",
         "durationSeconds": 10,
         "scale": 2
       }

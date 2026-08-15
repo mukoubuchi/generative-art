@@ -13,7 +13,7 @@ import {
   spotPosition,
   sweepAngle,
   turnsAt
-} from "../artworks/bounding-spots/wave.js";
+} from "../artworks/the-love-that-moves/wave.js";
 
 const PLAYBACK_FPS = 30;
 const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
