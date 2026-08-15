@@ -7,11 +7,12 @@ import { buildChambers, fitToCanvas } from "./geometry.js";
  * order the animal lived it: smallest first, each outgrowing the last. Colour is age —
  * the low-vaulted early rooms sit in abyss teal, the latest great chamber arrives in
  * pearl — and every chamber is translucent, so where the spiral packs the rooms deep
- * the paint stacks into nacre. The shell is drawn once, finished: the page and the
- * capture arrive at the same picture by the same route.
+ * the paint stacks into nacre. The page builds the shell chamber by chamber, because
+ * the building is the poem; the capture takes the finished shell.
  */
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
+const PLAYBACK_FPS = 30;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
@@ -22,6 +23,8 @@ const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const FILL_RATIO = 0.88;
 /** The original's 1 px stroke against a start radius of 200, kept as that fraction. */
 const STROKE_WEIGHT = 1 / 200;
+/** One chamber a frame: the whole shell in five and a quarter seconds. */
+const CHAMBERS_PER_FRAME = 1;
 
 /** The deep the shell is built in. */
 const GROUND = [8, 11, 14];
@@ -70,6 +73,8 @@ function ageColor(chamber) {
 const P5 = window.p5;
 
 new P5((p) => {
+  let built = 0;
+
   /**
    * The shell with its first `count` chambers standing, walls under rims.
    *
@@ -107,10 +112,11 @@ new P5((p) => {
     p.pop();
   }
 
-  function publishState() {
+  function publishState(builtChambers) {
     window.__ARTWORK_STATE__ = {
       kind: "image",
       chambers: CHAMBERS.length,
+      builtChambers,
       logicalSize: { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
       outputSize: { width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT }
     };
@@ -128,17 +134,26 @@ new P5((p) => {
     if (CAPTURE_MODE) {
       p.pixelDensity(1);
     }
-    // Stopped for everybody rather than for the renderer alone. A shell that assembles
-    // itself is a different artwork from a shell, and a page that draws one while the
-    // manifest registers the other leaves a reader seeing something the build cannot.
-    p.noLoop();
+    p.frameRate(PLAYBACK_FPS);
+    p.background(...GROUND);
+    if (CAPTURE_MODE) {
+      p.noLoop();
+      drawShell(CHAMBERS.length);
+      publishState(CHAMBERS.length);
+      return;
+    }
+    publishState(0);
   };
 
   p.draw = () => {
-    // Runs once, the loop having been stopped in setup, and paints every chamber there
-    // is. There is no partial shell to draw and no state carried between calls: the
-    // page and the capture ask for the same picture and take the same path to it.
-    drawShell(CHAMBERS.length);
-    publishState();
+    if (CAPTURE_MODE || built >= CHAMBERS.length) {
+      return;
+    }
+    built = Math.min(built + CHAMBERS_PER_FRAME, CHAMBERS.length);
+    // The whole shell so far is redrawn each frame: a hundred and fifty-eight shapes
+    // at most, cheap enough that the growing picture can stay exactly the finished
+    // picture's prefix.
+    drawShell(built);
+    publishState(built);
   };
 });

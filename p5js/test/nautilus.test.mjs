@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   ROTATION_STEP,
@@ -93,4 +94,48 @@ test("the fitted figure is centred and stays inside the canvas", () => {
   // The longer side of the figure fills the requested share of the canvas exactly.
   const longest = Math.max(placed.right - placed.left, placed.bottom - placed.top);
   assert.ok(Math.abs(longest - fillRatio * Math.min(width, height)) < 1e-9);
+});
+
+/** Every p5 lifecycle hook the sketch installs, in the order it installs them. */
+function lifecycleHooks(source) {
+  return [...source.matchAll(/^ {2}p\.(\w+) = \(\) =>/gmu)].map(([, hook]) => hook);
+}
+
+/**
+ * Every request the sketch makes to draw the shell, with the count asked for. The
+ * declaration is not a request, so it is stepped over rather than counted as one.
+ */
+function shellDrawings(source) {
+  return [...source.matchAll(/(?<!function )\bdrawShell\(([^)]*)\)/gu)].map(([, count]) => count);
+}
+
+test("the one drawing the page makes is of the whole shell", async () => {
+  // Not where the loop is stopped -- the capture contract asks that of every still, and
+  // asks it of this one now that nothing is excused from it. This asks what the drawing
+  // draws. There is one request to draw the shell in the whole sketch and it names every
+  // chamber there is, so the first picture the page puts up is the last one it would have
+  // reached: a reader arrives at a finished shell rather than watching one assemble.
+  const sketch = await readFile(
+    new URL("../artworks/nautilus/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(shellDrawings(sketch), ["CHAMBERS.length"]);
+  assert.deepEqual(lifecycleHooks(sketch), ["setup", "draw"]);
+  // And the count it names is the shell rather than a number that reads like one.
+  assert.equal(buildChambers().length, squares.length);
+});
+
+test("the scan finds the partial shell in the sketch that assembled one", async () => {
+  // The negative control, and the real thing rather than one invented for the occasion:
+  // the sketch as it stood through v1.8.0, when the page drew the shell a chamber at a
+  // time while the manifest registered a still. The capture already took it finished, so
+  // the two requests below are exactly the divergence -- one for the picture that was
+  // published, one for the picture a reader got.
+  const specimen = await readFile(
+    new URL("./fixtures/nautilus-building/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(shellDrawings(specimen), ["CHAMBERS.length", "built"]);
+  assert.deepEqual(lifecycleHooks(specimen), ["setup", "draw"]);
+  assert.ok(specimen.includes("let built = 0"), "the specimen carries no build-up counter");
+  // And the specimen is otherwise this artwork, on the same geometry and the same palette,
+  // so what the scan above rejects it for is the partial drawing and nothing else about it.
+  assert.ok(specimen.includes("buildChambers"), "the specimen is not this artwork");
+  assert.ok(specimen.includes("const FILL_RATIO = 0.88;"), "the specimen is fitted differently");
 });

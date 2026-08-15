@@ -89,18 +89,17 @@ function stopsForEverybody(body) {
 /**
  * Artworks whose page animates while the manifest registers them as stills.
  *
- * This started as three and is down to one, and the one that is left is settled rather than
- * outstanding. Nautilus draws itself in about four tenths of a second -- measured in a
- * browser, sampling until two readings agreed -- which is real motion but far too brief to
- * be worth a clip or to make good on what a "moving" mark promises a reader. It keeps the
- * animation because watching the shell wind is part of it, and it stays a still because
- * four tenths of a second is not a film. Kissing Circles at seven seconds and DLA Frost at
- * eight and a half were the other two, and both are clips now.
+ * Empty, and the emptiness is the point: an artwork is a still or it is a clip, and there is
+ * no third state where the page shows one thing and the catalog says another. The list is
+ * kept rather than deleted so that the check has somewhere to put an exception and a reader
+ * can see there is none.
  *
- * The list stays because it is what closes the question: an artwork can be a still, or a
- * clip, or named here with a reason, and not in none of the three.
+ * A name added here would need a reason, and the reason is the part to be careful about. An
+ * entry is only as good as what it rests on, and the entry that used to be here rested on a
+ * duration nobody had run: it is the number in the reason that has to be measured, not just
+ * the fact that a name is on the list.
  */
-const UNDECIDED = ["nautilus"];
+const UNDECIDED = [];
 
 test("an artwork registered as a still does not go on drawing on the page", async () => {
   // What the manifest says an artwork is, held against what its sketch does. Clinamen and
