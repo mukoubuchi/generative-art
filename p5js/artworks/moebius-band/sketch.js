@@ -3,7 +3,6 @@ import {
   backToFront,
   bandRows,
   cellCentres,
-  edgePoint,
   glassShade,
   sceneState,
   viewDirection
@@ -11,11 +10,10 @@ import {
 
 /**
  * The first WEBGL artwork in the collection. The staging conventions are the 2D ones —
- * logical units, capture mode, one pure function from frame index to scene — with two
- * mode-specific differences worth knowing. Stroke weights in WEBGL are screen pixels and
- * ignore the model transform, so they are multiplied by the export scale by hand. And the
- * drawing buffer is asked to persist, because the thumbnail capture reads the canvas from
- * a later task than the one that drew it, which with a transient buffer reads black.
+ * logical units, capture mode, one pure function from frame index to scene — with one
+ * mode-specific difference worth knowing: the drawing buffer is asked to persist, because
+ * the thumbnail capture reads the canvas from a later task than the one that drew it,
+ * which with a transient buffer reads black.
  */
 const LOGICAL_WIDTH = 800;
 const LOGICAL_HEIGHT = 600;
@@ -41,9 +39,9 @@ const SEGMENTS_ACROSS = 8;
 const STAGE_TILT = 0.9;
 
 /**
- * A dark water and the glass. Two colours, and the band is modelled in the lightness of
- * its own glass, so the half twist — which is the whole of what the artwork claims —
- * reads as a turn of a surface rather than as a change of paint.
+ * A dark water and the glass, and nothing else on the stage. The band is modelled in the
+ * lightness of its own glass, so the half twist — which is the whole of what the artwork
+ * claims — reads as a turn of a surface rather than as a change of paint.
  *
  * The ground is Nautilus's abyss teal taken down to night, so the collection's two
  * artworks of glass and water stand on the same dark; the band is that shell's sea glass
@@ -52,7 +50,6 @@ const STAGE_TILT = 0.9;
 const BACKGROUND = [8, 22, 24];
 const GLASS = [168, 206, 198];
 
-const EDGE_SAMPLES = 2 * SEGMENTS_AROUND;
 const ROWS = bandRows(SEGMENTS_AROUND, SEGMENTS_ACROSS, RING_RADIUS, HALF_WIDTH);
 const CENTRES = cellCentres(ROWS);
 
@@ -81,21 +78,6 @@ new P5((p) => {
     p.endShape();
   }
 
-  function drawEdge() {
-    // One closed stroke, deliberately: the rim needs both laps to come home, and drawing
-    // it as a single 4 PI curve is the claim that the band has a single edge. On glass it
-    // is also the brightest thing in the picture, which is how a pane of glass is found:
-    // by its edge, where the light it has been carrying comes out.
-    p.noFill();
-    p.stroke(...GLASS.map((component) => Math.min(255, component * 1.22)));
-    p.strokeWeight(2 * RENDER_SCALE);
-    p.beginShape();
-    for (let i = 0; i < EDGE_SAMPLES; i += 1) {
-      p.vertex(...edgePoint((i / EDGE_SAMPLES) * 4 * Math.PI, RING_RADIUS, HALF_WIDTH));
-    }
-    p.endShape(p.CLOSE);
-  }
-
   function drawScene(state) {
     p.background(...BACKGROUND);
     p.scale(RENDER_SCALE);
@@ -114,14 +96,15 @@ new P5((p) => {
     // left alone, the paint order decides, which is what the back-to-front sort is for.
     // It is restored afterwards rather than simply left off, so the state the renderer
     // hands to the next frame is the state it handed to this one.
-    // Nothing on the stage is opaque, so the depth buffer has no work to do and is kept
-    // out of the way. The sort decides the order; a fragment the sort put late is one the
-    // depth test would throw away rather than mix in, and glass that is thrown away has
-    // stopped being see-through.
+    // Nothing on the stage is opaque any more, so the depth buffer has no work left to
+    // do and is kept out of the way. The sort decides the order; a fragment the sort put
+    // late is one the depth test would throw away rather than mix in, and glass that is
+    // thrown away has stopped being see-through. It earns its two lines: 38 to 70 pixels
+    // of the frame at the four stations measured, and they fall where the band turns
+    // over and runs through itself, which is the one place the picture is about.
     const gl = p.drawingContext;
     gl.depthMask(false);
     drawBand(viewDirection(STAGE_TILT, state.spin));
-    drawEdge();
     gl.depthMask(true);
   }
 

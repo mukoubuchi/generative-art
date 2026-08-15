@@ -51,19 +51,12 @@ export function bandNormal(u, v, radius) {
 }
 
 /**
- * A point on the band's edge. One curve, not two: because of the glue-with-a-flip, the
- * rim that leaves at v = +w comes back at v = -w, so the edge closes only after u has
- * run 4 PI. Following it is the fastest proof the band has a single boundary.
- */
-export function edgePoint(u, radius, width) {
-  return bandPoint(u, width, radius);
-}
-
-/**
  * The whole surface as rows of vertices with matching normals, ready to be stitched into
  * triangles: rows[i][j] samples u = i/segmentsAround * 2 PI, v from -width to +width.
  * Row `segmentsAround` is the seam row: numerically it equals row 0 with the v order
- * reversed, which is the glue made visible in the data.
+ * reversed, which is the glue made visible in the data. The first and last column are the
+ * band's boundary, so the single edge is in the mesh whether or not it is ever drawn as a
+ * line: follow column 0 round the ring and it hands over to the last column.
  */
 export function bandRows(segmentsAround, segmentsAcross, radius, width) {
   const rows = [];
@@ -116,7 +109,8 @@ function dot(first, second) {
  * shows; seen edge-on it turns bright and nearly solid. That is how glass behaves, and it
  * is also what carries the drawing: the band runs through itself, and only a surface you
  * can see through shows the crossing as a crossing rather than as one sheet hiding
- * another.
+ * another. The same term is what draws the outline, since the silhouette of a curved
+ * surface is exactly where it turns edge-on to the eye.
  */
 export function glassShade(normal, view, colour) {
   const key = Math.abs(dot(normal, KEY_LIGHT));

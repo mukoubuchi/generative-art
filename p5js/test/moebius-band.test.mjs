@@ -8,7 +8,6 @@ import {
   bandPoint,
   bandRows,
   cellCentres,
-  edgePoint,
   glassShade,
   sceneState,
   viewDirection
@@ -75,10 +74,15 @@ test("the band has one side: a lap negates the normal", () => {
 });
 
 test("the band has one edge, which closes only after 4 PI", () => {
+  // The boundary is the strip at v = +-w, which is the first and last column of the mesh
+  // the sketch stitches. Nothing draws it as a line, so what makes it one edge is not
+  // anything about the drawing: it is that leaving at one width and coming back at the
+  // other are the same curve, half travelled.
   for (const { radius, width } of SIZES) {
-    const start = edgePoint(0, radius, width);
-    const afterOneLap = edgePoint(2 * Math.PI, radius, width);
-    const afterTwoLaps = edgePoint(4 * Math.PI, radius, width);
+    const edge = (u) => bandPoint(u, width, radius);
+    const start = edge(0);
+    const afterOneLap = edge(2 * Math.PI);
+    const afterTwoLaps = edge(4 * Math.PI);
     // One lap along the rim lands on the opposite side of the strip, a full 2w away —
     // the "other" edge is the same curve half-travelled.
     const gap = Math.hypot(...start.map((component, index) => component - afterOneLap[index]));
@@ -200,11 +204,11 @@ test("the glass is glass: what shows is what is turned away from the eye", () =>
     assert.ok(alpha >= last, "the transparency must not wobble as the surface turns");
     last = alpha;
   }
-  // Over the real mesh, through the whole turn, the band is mostly see-through, which is
-  // what keeps the far half of the surface showing through the near half instead of being
-  // hidden by it. Measured over 120 stations of the stage: at its most solid 54.5 per
-  // cent of the surface is less than half opaque, at its clearest 93.5. The claim is the
-  // floor.
+  // This term is the whole drawing now. It is what turns the fold bright where the band
+  // stands edge-on and so draws the outline, and it is what keeps the far half of the
+  // surface showing through the near half instead of being hidden by it. Measured over
+  // 120 stations of the stage: at its most solid 54.5 per cent of the surface is less
+  // than half opaque, at its clearest 93.5. The claim is the floor.
   const surface = bandRows(180, 8, 185, 62).flat();
   let solidest = 1;
   for (let station = 0; station < 120; station += 1) {
@@ -268,36 +272,35 @@ function colourNames(source) {
   return [...source.matchAll(/^const (\w+) = \[[\d, ]+\];$/gmu)].map(([, name]) => name);
 }
 
-test("the picture is glass, and the only line in it is the band's own edge", async () => {
-  // What the artwork is, read out of the file it ships as: one surface of glass, painted
-  // once through the one shading model that can answer for a one-sided surface, and one
-  // stroke, which is the rim. Nothing is filled flat, since a flat fill is a shape rather
-  // than a body of glass, and no second colour is stated anywhere.
+test("the picture is one pass of glass and nothing else", async () => {
+  // What the artwork is, read out of the file it ships as: one surface, painted once,
+  // through the one shading model that can answer for a one-sided surface. Nothing is
+  // stroked -- a stroke in WEBGL is measured in screen pixels and ignores the model
+  // transform, so a line on this stage is a line that does not turn with what it is on --
+  // and nothing is filled flat, since a flat fill is a shape rather than a body of glass.
   const sketch = await readFile(
     new URL("../artworks/moebius-band/sketch.js", import.meta.url), "utf8");
-  assert.deepEqual(paintingCalls(sketch), [
-    "noStroke", "beginShape", "fill(...glassShade)", "endShape",
-    "noFill", "stroke(...GLASS)", "strokeWeight", "beginShape", "endShape"
-  ]);
+  assert.deepEqual(paintingCalls(sketch),
+    ["noStroke", "beginShape", "fill(...glassShade)", "endShape"]);
   assert.deepEqual(colourNames(sketch), ["BACKGROUND", "GLASS"]);
-  // The depth buffer is held off across the whole scene and handed back afterwards. With
+  // The depth buffer is held off across that one pass and handed back afterwards. With
   // it written, a fragment the sort put late is thrown away instead of mixed in, and the
   // band stops being see-through exactly where it runs through itself.
   assert.deepEqual(rendererCalls(sketch), ["depthMask(false)", "depthMask(true)"]);
   const scene = sketch.slice(sketch.indexOf("function drawScene"));
   let at = -1;
-  for (const step of ["gl.depthMask(false)", "drawBand(", "drawEdge()", "gl.depthMask(true)"]) {
+  for (const step of ["gl.depthMask(false)", "drawBand(", "gl.depthMask(true)"]) {
     const next = scene.indexOf(step);
     assert.ok(next > at, `${step} is out of order in drawScene`);
     at = next;
   }
 });
 
-test("the scan finds the traveller in the sketch that shipped with it", async () => {
+test("the scan finds the traveller and the drawn rim in the sketch that shipped with them", async () => {
   // The negative control, and it is the real thing rather than one invented for the
   // occasion: the sketch as it stood through v1.7.0, when a gold body stood on the band
-  // and was the only opaque thing on the stage. What the scan rejects it for is that
-  // body -- a second colour, and a fill through a second shading model.
+  // and the rim was drawn as a stroked line. Both were removed because the picture reads
+  // better without them, and this is what the check above would have said about it.
   const specimen = await readFile(
     new URL("./fixtures/moebius-band-traveller/sketch.js", import.meta.url), "utf8");
   assert.deepEqual(paintingCalls(specimen), [
@@ -307,7 +310,7 @@ test("the scan finds the traveller in the sketch that shipped with it", async ()
   ]);
   assert.deepEqual(colourNames(specimen), ["BACKGROUND", "GLASS", "GOLD"]);
   // And the specimen is otherwise this artwork, staged and shaded the same way, so what
-  // the scan rejects it for is the body and nothing else about it.
+  // the scan rejects it for is the body and the line and nothing else about it.
   assert.deepEqual(rendererCalls(specimen), ["depthMask(false)", "depthMask(true)"]);
   assert.ok(specimen.includes("bandRows(SEGMENTS_AROUND"), "the specimen is not this artwork");
   assert.ok(specimen.includes("rotateX(STAGE_TILT)"), "the specimen is not on this stage");
