@@ -17,7 +17,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `windmill` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one afternoon of wind; interactive page |
 | `electric-fan` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one run up to speed and down again; interactive page |
 | `atan2` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one orbit of the probe; interactive page |
-| `one-yin-one-yang` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one turn of the ring, four handovers |
+| `one-yin-one-yang` | 800×600 | 1600×1200 MP4 at 30 fps | 10 seconds, one turn of the ring, four handovers |
 | `pulse-button` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, three tolls; interactive page |
 | `troubling-of-a-star` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one pull and the answer to it; interactive page |
 | `nautilus` | 680×680 | 1360×1360 PNG | Static capture, animated page |
@@ -32,18 +32,20 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `reaction-diffusion-coral` | 680×680 | 1360×1360 PNG | Static |
 | `truchet-tides` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, one drift of the current |
 | `voronoi-bloom` | 800×640 | 1600×1280 PNG | Static |
-| `clinamen` | 960×640 | 1920×1280 PNG | Static capture, interactive page |
-| `de-jong-attractor` | 680×680 | 1360×1360 PNG | Static |
+| `clinamen` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, the swerve combing the trails into the finished field; live page |
+| `de-jong-attractor` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, the orbit accumulating into the cloud |
 | `moebius-band` | 800×600 | 1600×1200 MP4 at 30 fps | 10 seconds, two laps of the marker, two turns of the stage |
-| `ulam-spiral` | 680×680 | 1360×1360 PNG | Static capture, animated page |
+| `ulam-spiral` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, the coil winding out and the primes lighting as it passes |
 | `hilbert-curve` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, degree one eased through degree six |
 | `cafe-wall` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, each of the illusion's two levers pulled and put back |
-| `dla-frost` | 680×680 | 1360×1360 PNG | Static capture, animated page |
-| `kissing-circles` | 680×680 | 1360×1360 PNG | Static capture, animated page |
+| `dla-frost` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, six thousand walkers freezing onto the crystal |
+| `kissing-circles` | 680×680 | 1360×1360 MP4 at 30 fps | 9 seconds, thirty thousand darts thrown and what fits kept |
 | `moire-rings` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, out, once around, and home; interactive page |
 | `lorenz-ribbon` | 800×600 | 1600×1200 MP4 at 30 fps | 10 seconds, both orbits grown and held |
 | `platonic-duals` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one dual cycle, ending where it began; interactive page |
 | `thirty-spokes` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one swing of the stirring each way |
+| `no-common-measure` | 680×680 | 1360×1360 PNG | Static |
+| `turn-it-and-turn-it` | 680×680 | 1360×1360 PNG | Static |
 
 Koch Curves, Recursive Pentagram and Sierpinski Gasket are inherently radial or square constructions, so square logical canvases preserve their symmetry. The 680 px display size follows the laptop-sized square established by the earlier artworks. A per-artwork export scale produces higher-resolution media without enlarging the interactive canvas.
 
