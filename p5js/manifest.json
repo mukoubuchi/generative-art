@@ -201,10 +201,10 @@
       }
     },
     {
-      "id": "toggle-color-ball",
-      "title": "Toggle Color Ball",
-      "entry": "p5js/artworks/toggle-color-ball/index.html",
-      "interactivePath": "toggle-color-ball/",
+      "id": "one-yin-one-yang",
+      "title": "One Yin, One Yang",
+      "entry": "p5js/artworks/one-yin-one-yang/index.html",
+      "interactivePath": "one-yin-one-yang/",
       "canvas": {
         "width": 800,
         "height": 600
@@ -217,7 +217,7 @@
       },
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/ToggleColorBall.mp4",
+        "artifact": "exports/p5js/OneYinOneYang.mp4",
         "durationSeconds": 10,
         "scale": 2
       }

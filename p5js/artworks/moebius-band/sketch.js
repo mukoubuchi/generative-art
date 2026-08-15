@@ -70,7 +70,7 @@ const TRAVELLER = { radius: 8.5, height: 38, taper: 0.72, rings: 16, sectors: 24
  * The ground is Nautilus's abyss teal taken down to night, so the collection's two
  * artworks of glass and water stand on the same dark; the band is that shell's sea glass
  * brought up until one thickness of it is pale and two are readable. The traveller is
- * Toggle Color Ball's settled gold, warm against a cold band and legible on both arcs —
+ * One Yin, One Yang's settled gold, warm against a cold band and legible on both arcs —
  * where the old terracotta was loud enough to be the first thing seen. It is one gold
  * still: the light on the body is that same gold shaded, not a second colour.
  */

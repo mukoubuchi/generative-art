@@ -18,7 +18,7 @@ import {
   ringAngle,
   sweptBounds,
   sweptCentreY
-} from "../artworks/toggle-color-ball/carousel.js";
+} from "../artworks/one-yin-one-yang/carousel.js";
 import { loadCatalog } from "../lib/catalog.mjs";
 
 const PLAYBACK_FPS = 30;
@@ -27,7 +27,7 @@ const STEPS_PER_FRAME = STEPS_PER_SECOND / PLAYBACK_FPS;
 // the ring on it, taken from the module the page draws with. Nothing about the size of the
 // figure is written down twice.
 const { manifest } = await loadCatalog();
-const artwork = manifest.artworks.find((candidate) => candidate.id === "toggle-color-ball");
+const artwork = manifest.artworks.find((candidate) => candidate.id === "one-yin-one-yang");
 const { width: CANVAS_WIDTH, height: CANVAS_HEIGHT } = artwork.canvas;
 // The sketch measures the ring against the shorter side, as every artwork here does; the
 // edges it has to stay inside are the canvas's own, and on a landscape canvas those are
@@ -356,7 +356,7 @@ function strokingCalls(source) {
 
 test("the sketch has no way to draw a line, which is why nothing can show through a seam", async () => {
   const sketch = await readFile(
-    new URL("../artworks/toggle-color-ball/sketch.js", import.meta.url),
+    new URL("../artworks/one-yin-one-yang/sketch.js", import.meta.url),
     "utf8"
   );
   // The scan is looking at the real thing: a file long enough to be the sketch, drawing

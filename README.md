@@ -29,7 +29,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Windmill](p5js/artworks/windmill/) | A mill with framed sails, turned by gusts a held key raises and stopped by its own friction, rendered as an MP4 |
 | [Electric Fan](p5js/artworks/electric-fan/) | The same rotor with a motor behind it, climbing to a governed speed and coasting back to a dead stop, rendered as an MP4 |
 | [Atan2](p5js/artworks/atan2/) | A field of needles all answering atan2 toward one probe, torn along a single ray, rendered as an MP4 |
-| [Toggle Color Ball](p5js/artworks/toggle-color-ball/) | Four discs on a turning ring, the nearest one forward, warm and cool by turns, rendered as an MP4 |
+| [One Yin, One Yang](p5js/artworks/one-yin-one-yang/) | Four discs on a turning ring, the nearest one forward, warm and cool by turns, rendered as an MP4 |
 | [Temple Bell](p5js/artworks/pulse-button/) | A struck bell whose sound crosses the dark and dies away exponentially, rendered as an MP4 |
 | [Spring Polygon](p5js/artworks/spring-polygon/) | A ring of five stars lit by the energy one pulled star sends around it, rendered as an MP4 |
 | [Nautilus](p5js/artworks/nautilus/) | A chambered shell built room by room, coloured by age from abyss teal to pearl, rendered as a static PNG |

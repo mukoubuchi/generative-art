@@ -39,7 +39,7 @@ const KEY_HINT = [
 
 /**
  * Warm paper and one ink. The ground stands between the two the gallery already prints
- * on — Toggle Color Ball's and Kanizsa Square's — because a fan is an indoor thing and
+ * on — One Yin, One Yang's and Kanizsa Square's — because a fan is an indoor thing and
  * the white the Processing sketch used is a screen rather than a room. The blades are a
  * single warm charcoal rather than black: on paper, black is a hole.
  */

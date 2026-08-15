@@ -49,7 +49,7 @@ const FILL_RATIO = 0.92;
  *
  * The temperatures are the other way round from how this artwork first stood. The
  * figure is read as a pyramid, so it takes the settled gold the sun-side ball of
- * Toggle Color Ball is painted in — the quietest of the collection's golds, because
+ * One Yin, One Yang is painted in — the quietest of the collection's golds, because
  * stone that outshone the rain falling on it would put the living thing behind the
  * still one. The rain is The Love That Moves' star blue, light enough to be seen on
  * the night this artwork already stood on, and it is one colour for all three of its

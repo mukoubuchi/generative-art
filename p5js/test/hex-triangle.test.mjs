@@ -217,7 +217,7 @@ test("each triangle is equilateral, and half the path it walks", () => {
  * The walk teaches the paths in a couple of seconds anyway.
  *
  * What is left is six filled triangles on a ground, so the scan below is over the
- * vocabulary rather than over pixels — the same shape of pin as Toggle Color Ball's, and
+ * vocabulary rather than over pixels — the same shape of pin as One Yin, One Yang's, and
  * for the same reason: reading pixels needs a browser, and this is a claim about what the
  * sketch is able to draw. It cannot be the whole vocabulary here, because the triangles
  * are themselves drawn as shapes and keep beginShape and vertex. The specimen beside it is
@@ -275,7 +275,7 @@ test("the scan finds the guides in the sketch that shipped with them", async () 
 /**
  * One ink, and whose ink it is.
  *
- * The figure used to be painted in two colours borrowed from Toggle Color Ball, each of
+ * The figure used to be painted in two colours borrowed from One Yin, One Yang, each of
  * them washed into the paper while the six stood apart and at full strength as they
  * closed. It is one near-black now, on every triangle at every step, and the black is
  * Kanizsa Square's — the same value its bites are cut in, on the same paper it is drawn
