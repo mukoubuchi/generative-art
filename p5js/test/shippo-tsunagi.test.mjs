@@ -15,7 +15,7 @@ import {
   SECOND_LATTICE_FRAMES,
   TOTAL_FRAMES,
   rippleOrder
-} from "../artworks/eyes-pattern/geometry.js";
+} from "../artworks/shippo-tsunagi/geometry.js";
 
 const offsetLattice = latticeCentres(CIRCLE_RADIUS);
 const alignedLattice = latticeCentres(0);
@@ -125,7 +125,7 @@ test("the clip's plan lands on three hundred frames and the manifest agrees", as
   const manifest = JSON.parse(
     readFileSync(new URL("../manifest.json", import.meta.url), "utf8")
   );
-  const artwork = manifest.artworks.find((entry) => entry.id === "eyes-pattern");
+  const artwork = manifest.artworks.find((entry) => entry.id === "shippo-tsunagi");
   assert.equal(artwork.render.kind, "video");
   assert.equal(artwork.render.durationSeconds * 30, TOTAL_FRAMES);
 });

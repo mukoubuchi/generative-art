@@ -24,7 +24,7 @@
  * two perfectly good works as empty.
  *
  * And each work is looked at over several moments rather than one. There is no single frame
- * that shows every work: Herringbone, Pinwheel and Eyes Pattern return to their beginnings
+ * that shows every work: Herringbone, Pinwheel and Shippō Tsunagi return to their beginnings
  * and are blank at the last frame, while Koch Curves has drawn almost nothing by the
  * thirtieth. A work that is never seen is therefore a failure of this check rather than a
  * pass, because an unseen work satisfies "the two engines agree" perfectly.
@@ -45,7 +45,7 @@ const INK_THRESHOLD = 6;
  * Where in a clip the two engines are compared, as fractions of its length.
  *
  * Several moments and not one, because there is no single frame that shows every work:
- * Herringbone, Pinwheel and Eyes Pattern return to their beginnings and are blank at the very
+ * Herringbone, Pinwheel and Shippō Tsunagi return to their beginnings and are blank at the very
  * end, while Koch Curves has drawn almost nothing near the start. The moment a work shows most
  * of itself is the one that gets compared, since that is where a missing picture shows plainest
  * and a difference in antialiasing counts for least.

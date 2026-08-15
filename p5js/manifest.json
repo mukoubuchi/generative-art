@@ -391,10 +391,10 @@
       }
     },
     {
-      "id": "eyes-pattern",
-      "title": "Eyes Pattern",
-      "entry": "p5js/artworks/eyes-pattern/index.html",
-      "interactivePath": "eyes-pattern/",
+      "id": "shippo-tsunagi",
+      "title": "Shippō Tsunagi",
+      "entry": "p5js/artworks/shippo-tsunagi/index.html",
+      "interactivePath": "shippo-tsunagi/",
       "canvas": {
         "width": 680,
         "height": 680
@@ -404,7 +404,7 @@
       ],
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/EyesPattern.mp4",
+        "artifact": "exports/p5js/ShippoTsunagi.mp4",
         "durationSeconds": 10,
         "scale": 2
       },

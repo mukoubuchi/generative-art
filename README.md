@@ -38,7 +38,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Pinwheel](p5js/artworks/pinwheel/) | Walls go up and squares of two sizes take the places left for them, one russet at two strengths, rendered as an MP4 |
 | [Hex Triangle](p5js/artworks/hex-triangle/) | Six walking triangles that close into one exact hexagon and open out again, rendered as an MP4 |
 | [Kanizsa Square](p5js/artworks/kanizsa-square/) | A square drawn by nothing, starved and turned away until it goes, then made real, rendered as an MP4 |
-| [Eyes Pattern](p5js/artworks/eyes-pattern/) | Two circle lattices on indigo; the eyes open only when the second family arrives, rendered as an MP4 |
+| [Shippō Tsunagi](p5js/artworks/shippo-tsunagi/) | Two circle lattices on indigo; the eyes open only when the second family arrives, rendered as an MP4 |
 | [Necker Cube](p5js/artworks/necker-cube/) | One shadow that is exactly two cubes, turning opposite ways, rendered as an MP4 |
 | [Harriss Spiral](p5js/artworks/harriss-spiral/) | The plastic-ratio cascade drawn wave by wave in garden greens, rendered as an MP4 |
 | [Reaction Diffusion Coral](p5js/artworks/reaction-diffusion-coral/) | A Gray-Scott colony grown from seeded specks, rendered as a static PNG |
