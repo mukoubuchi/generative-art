@@ -8,7 +8,8 @@ import {
 /**
  * A finite H-supertile from the Hat's substitution system: 169 copies of one polykite,
  * including the reflected copies that count as the same tile under the paper's convention.
- * The reflected stones carry the warm light; every shape around them has the same outline.
+ * One current of light crosses the whole masonry. The substitution labels shift only its
+ * value, while a pearl inner seam quietly reveals each reflected copy.
  */
 const LOGICAL_WIDTH = 960;
 const LOGICAL_HEIGHT = 640;
@@ -20,15 +21,18 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 
-const GROUND = [18, 17, 23];
-const MORTAR = [28, 26, 34];
-const INLAY = [238, 226, 198];
-const TILE_COLOURS = {
-  H: [184, 168, 139],
-  T: [224, 215, 190],
-  P: [135, 149, 151],
-  F: [91, 105, 113],
-  H1: [217, 145, 61]
+const GROUND = [7, 12, 14];
+const STONE_SHADOW = [42, 67, 69];
+const STONE_LIGHT = [142, 163, 149];
+const PEARL = [239, 228, 198];
+const SEAM = [209, 217, 201];
+/** Small value steps within one stone family keep the substitution ancestry legible. */
+const LABEL_LIFT = {
+  H: 0.04,
+  T: 0.12,
+  P: -0.02,
+  F: -0.1,
+  H1: 0.04
 };
 const TILES = createHatPatch(2);
 const PATCH_BOUNDS = boundsOf(TILES);
@@ -41,6 +45,16 @@ const PATCH_CENTRE = {
   y: (PATCH_BOUNDS.minY + PATCH_BOUNDS.maxY) / 2
 };
 
+function mixColour(first, second, amount) {
+  return first.map(
+    (channel, index) => channel + (second[index] - channel) * amount
+  );
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
 const P5 = window.p5;
 
 new P5((p) => {
@@ -52,7 +66,7 @@ new P5((p) => {
     p.endShape(p.CLOSE);
   }
 
-  function drawTile(tile) {
+  function tileDrawing(tile) {
     const vertices = HAT_OUTLINE.map((vertex) => transformPoint(tile.matrix, vertex));
     const centre = vertices.reduce(
       (sum, vertex) => ({ x: sum.x + vertex.x, y: sum.y + vertex.y }),
@@ -60,49 +74,88 @@ new P5((p) => {
     );
     centre.x /= vertices.length;
     centre.y /= vertices.length;
+    return { ...tile, vertices, centre };
+  }
 
-    p.fill(...TILE_COLOURS[tile.label]);
-    p.stroke(...MORTAR);
-    p.strokeWeight(0.11);
-    polygon(vertices);
+  const drawings = TILES.map(tileDrawing);
 
-    const inset = vertices.map((vertex) => ({
-      x: centre.x + (vertex.x - centre.x) * 0.86,
-      y: centre.y + (vertex.y - centre.y) * 0.86
+  /** A continuous light from the upper right passes through every label family. */
+  function stoneColour(drawing) {
+    const across = (drawing.centre.x - PATCH_BOUNDS.minX)
+      / (PATCH_BOUNDS.maxX - PATCH_BOUNDS.minX);
+    const down = (drawing.centre.y - PATCH_BOUNDS.minY)
+      / (PATCH_BOUNDS.maxY - PATCH_BOUNDS.minY);
+    const light = clamp(
+      0.44 + 0.22 * across - 0.12 * down + LABEL_LIFT[drawing.label],
+      0,
+      1
+    );
+    const stone = mixColour(STONE_SHADOW, STONE_LIGHT, light);
+    return drawing.reflected ? mixColour(stone, PEARL, 0.22) : stone;
+  }
+
+  function drawStone(drawing) {
+    p.noStroke();
+    p.fill(...stoneColour(drawing));
+    polygon(drawing.vertices);
+  }
+
+  function drawSeam(drawing) {
+    p.noFill();
+    p.stroke(...SEAM, 48);
+    p.strokeWeight(0.045);
+    polygon(drawing.vertices);
+  }
+
+  function drawReflectedLight(drawing) {
+    const inset = drawing.vertices.map((vertex) => ({
+      x: drawing.centre.x + (vertex.x - drawing.centre.x) * 0.82,
+      y: drawing.centre.y + (vertex.y - drawing.centre.y) * 0.82
     }));
     p.noFill();
-    p.stroke(...INLAY, tile.reflected ? 165 : 50);
-    p.strokeWeight(tile.reflected ? 0.08 : 0.045);
+    p.stroke(...PEARL, 145);
+    p.strokeWeight(0.035);
     polygon(inset);
+  }
+
+  function drawGroundLight() {
+    const context = p.drawingContext;
+    context.save();
+    context.scale(RENDER_SCALE, RENDER_SCALE);
+    const glow = context.createRadialGradient(545, 270, 20, 545, 270, 500);
+    glow.addColorStop(0, "rgba(82, 111, 101, 0.16)");
+    glow.addColorStop(0.55, "rgba(36, 61, 59, 0.08)");
+    glow.addColorStop(1, "rgba(7, 12, 14, 0)");
+    context.fillStyle = glow;
+    context.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    context.restore();
   }
 
   function drawAll() {
     p.push();
-    p.scale(RENDER_SCALE);
     p.background(...GROUND);
+    drawGroundLight();
 
-    p.noFill();
-    p.stroke(217, 145, 61, 18);
-    p.strokeWeight(1);
-    for (let radius = 180; radius <= 720; radius += 90) {
-      p.circle(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2, radius);
-    }
-
+    p.scale(RENDER_SCALE);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
     p.rotate(-Math.PI / 60);
     p.scale(PATCH_SCALE);
     p.translate(-PATCH_CENTRE.x, -PATCH_CENTRE.y);
-    for (const tile of TILES.filter((entry) => !entry.reflected)) {
-      drawTile(tile);
+    // Faces, seams, then reflected inlays: no tile's edge is buried by a later face.
+    for (const drawing of drawings) {
+      drawStone(drawing);
     }
-    for (const tile of TILES.filter((entry) => entry.reflected)) {
-      drawTile(tile);
+    for (const drawing of drawings) {
+      drawSeam(drawing);
+    }
+    for (const drawing of drawings.filter((entry) => entry.reflected)) {
+      drawReflectedLight(drawing);
     }
     p.pop();
   }
 
   function publishState() {
-    const labels = Object.fromEntries(Object.keys(TILE_COLOURS).map((label) => [
+    const labels = Object.fromEntries(Object.keys(LABEL_LIFT).map((label) => [
       label,
       TILES.filter((tile) => tile.label === label).length
     ]));
