@@ -8,8 +8,8 @@ import {
 /**
  * A finite H-supertile from the Hat's substitution system: 169 copies of one polykite,
  * including the reflected copies that count as the same tile under the paper's convention.
- * One current of light crosses the whole masonry. The substitution labels shift only its
- * value, while a pearl inner seam quietly reveals each reflected copy.
+ * One current of light crosses the whole masonry. Kiln variation distinguishes the pieces,
+ * while a deeper firing and shallow relief reveal each reflected copy.
  */
 const LOGICAL_WIDTH = 960;
 const LOGICAL_HEIGHT = 640;
@@ -21,18 +21,29 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 
-const GROUND = [13, 18, 27];
-const STONE_SHADOW = [196, 106, 74];
-const STONE_LIGHT = [236, 208, 160];
-const PEARL = [246, 244, 236];
-const SEAM = [222, 158, 96];
-/** Small value steps within one stone family keep the substitution ancestry legible. */
+const GROUND = [230, 224, 208];
+const BRICK_LIGHT = [236, 208, 160];
+const HEADER_BURN = [132, 57, 42];
+const RELIEF_SHADOW = [126, 73, 52];
+const MORTAR_GAP = 0.045;
+const RELIEF_SHIFT = 0.07;
+const KILN_PALETTE = [
+  [174, 72, 55],
+  [196, 106, 74],
+  [216, 91, 52],
+  [190, 91, 48],
+  [222, 158, 96],
+  [207, 146, 70],
+  [201, 126, 111],
+  [161, 103, 104]
+];
+/** Small value steps within one brick family keep the substitution ancestry legible. */
 const LABEL_LIFT = {
-  H: 0.04,
-  T: 0.12,
-  P: -0.02,
-  F: -0.1,
-  H1: 0.04
+  H: 0.025,
+  T: 0.075,
+  P: -0.015,
+  F: -0.06,
+  H1: 0.025
 };
 const TILES = createHatPatch(2);
 const PATCH_BOUNDS = boundsOf(TILES);
@@ -79,43 +90,50 @@ new P5((p) => {
 
   const drawings = TILES.map(tileDrawing);
 
-  /** A continuous light from the upper right passes through every label family. */
-  function stoneColour(drawing) {
+  function insetVertices(drawing) {
+    return drawing.vertices.map((vertex) => ({
+      x: drawing.centre.x + (vertex.x - drawing.centre.x) * (1 - MORTAR_GAP),
+      y: drawing.centre.y + (vertex.y - drawing.centre.y) * (1 - MORTAR_GAP)
+    }));
+  }
+
+  function kilnIndex(drawing) {
+    const seed = drawing.centre.x * 12.9898
+      + drawing.centre.y * 78.233
+      + drawing.matrix[0] * 37.719
+      + drawing.matrix[3] * 19.913;
+    const value = Math.sin(seed) * 43758.5453;
+    return Math.floor((value - Math.floor(value)) * KILN_PALETTE.length);
+  }
+
+  /** A continuous light crosses the individual variation of one kiln load. */
+  function brickColour(drawing) {
     const across = (drawing.centre.x - PATCH_BOUNDS.minX)
       / (PATCH_BOUNDS.maxX - PATCH_BOUNDS.minX);
     const down = (drawing.centre.y - PATCH_BOUNDS.minY)
       / (PATCH_BOUNDS.maxY - PATCH_BOUNDS.minY);
     const light = clamp(
-      0.44 + 0.22 * across - 0.12 * down + LABEL_LIFT[drawing.label],
+      0.07 + 0.09 * across - 0.05 * down + LABEL_LIFT[drawing.label],
       0,
-      1
+      0.24
     );
-    const stone = mixColour(STONE_SHADOW, STONE_LIGHT, light);
-    return drawing.reflected ? mixColour(stone, PEARL, 0.22) : stone;
+    const brick = mixColour(KILN_PALETTE[kilnIndex(drawing)], BRICK_LIGHT, light);
+    return drawing.reflected ? mixColour(brick, HEADER_BURN, 0.72) : brick;
   }
 
-  function drawStone(drawing) {
+  function drawReliefShadow(drawing) {
     p.noStroke();
-    p.fill(...stoneColour(drawing));
-    polygon(drawing.vertices);
+    p.fill(...RELIEF_SHADOW, 120);
+    polygon(insetVertices(drawing).map((vertex) => ({
+      x: vertex.x + RELIEF_SHIFT,
+      y: vertex.y + RELIEF_SHIFT * 1.25
+    })));
   }
 
-  function drawSeam(drawing) {
-    p.noFill();
-    p.stroke(...SEAM, 48);
-    p.strokeWeight(0.045);
-    polygon(drawing.vertices);
-  }
-
-  function drawReflectedLight(drawing) {
-    const inset = drawing.vertices.map((vertex) => ({
-      x: drawing.centre.x + (vertex.x - drawing.centre.x) * 0.82,
-      y: drawing.centre.y + (vertex.y - drawing.centre.y) * 0.82
-    }));
-    p.noFill();
-    p.stroke(...PEARL, 145);
-    p.strokeWeight(0.035);
-    polygon(inset);
+  function drawBrick(drawing) {
+    p.noStroke();
+    p.fill(...brickColour(drawing));
+    polygon(insetVertices(drawing));
   }
 
   function drawGroundLight() {
@@ -123,9 +141,9 @@ new P5((p) => {
     context.save();
     context.scale(RENDER_SCALE, RENDER_SCALE);
     const glow = context.createRadialGradient(545, 270, 20, 545, 270, 500);
-    glow.addColorStop(0, "rgba(222, 158, 96, 0.16)");
-    glow.addColorStop(0.55, "rgba(196, 106, 74, 0.08)");
-    glow.addColorStop(1, "rgba(13, 18, 27, 0)");
+    glow.addColorStop(0, "rgba(222, 158, 96, 0.10)");
+    glow.addColorStop(0.55, "rgba(196, 106, 74, 0.045)");
+    glow.addColorStop(1, "rgba(230, 224, 208, 0)");
     context.fillStyle = glow;
     context.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     context.restore();
@@ -141,15 +159,15 @@ new P5((p) => {
     p.rotate(-Math.PI / 60);
     p.scale(PATCH_SCALE);
     p.translate(-PATCH_CENTRE.x, -PATCH_CENTRE.y);
-    // Faces, seams, then reflected inlays: no tile's edge is buried by a later face.
     for (const drawing of drawings) {
-      drawStone(drawing);
+      drawBrick(drawing);
     }
-    for (const drawing of drawings) {
-      drawSeam(drawing);
+    // Warm offset fills give the reflected headers shallow relief without dark outlines.
+    for (const drawing of drawings.filter((entry) => entry.reflected)) {
+      drawReliefShadow(drawing);
     }
     for (const drawing of drawings.filter((entry) => entry.reflected)) {
-      drawReflectedLight(drawing);
+      drawBrick(drawing);
     }
     p.pop();
   }
