@@ -38,7 +38,8 @@ const AWAITING_SCHEDULE = [
   "platonic-duals",
   "thirty-spokes",
   "no-common-measure",
-  "turn-it-and-turn-it"
+  "turn-it-and-turn-it",
+  "what-hangs-stands"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {

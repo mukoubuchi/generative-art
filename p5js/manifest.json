@@ -804,6 +804,28 @@
         "artifact": "exports/p5js/TurnItAndTurnIt.png",
         "scale": 2
       }
+    },
+    {
+      "id": "what-hangs-stands",
+      "title": "What Hangs Stands",
+      "entry": "p5js/artworks/what-hangs-stands/index.html",
+      "interactivePath": "what-hangs-stands/",
+      "canvas": {
+        "width": 960,
+        "height": 640
+      },
+      "quoteIds": [
+        "hooke-ut-pendet"
+      ],
+      "thumbnail": {
+        "frame": 165
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/WhatHangsStands.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }

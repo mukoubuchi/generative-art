@@ -380,6 +380,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.01.0057:book=1:section=1253b"
+    },
+    {
+      "id": "hooke-ut-pendet",
+      "text": "Ut pendet continuum flexile, sic stabit contiguum rigidum inversum",
+      "lang": "la",
+      "author": "Robert Hooke",
+      "source": "The Life of Dr. Robert Hooke, p. xxi",
+      "year": 1705,
+      "publicDomain": true,
+      "sourceUrl": "https://www.e-rara.ch/zut/content/pageview/25413342"
     }
   ]
 }
