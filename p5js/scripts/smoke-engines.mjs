@@ -99,7 +99,7 @@ const INK_FLOOR = 0.002;
  * How far the two engines may disagree about how much ink a work puts down.
  *
  * They never agree exactly, because they antialias differently. Measured across all
- * forty works at matched frames, the ratio sits between 0.939 and 1.095 — and the
+ * forty-one works at matched frames, the ratio sits between 0.939 and 1.095 — and the
  * spread is a property of the machine as much as of the works, since the same run on a
  * laptop comes in narrower, between 0.970 and 1.088. So the band below holds every sound
  * work several times over on either, and is still nowhere near the fault it was written
@@ -493,5 +493,5 @@ if (failures.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  note("\nBoth engines draw the same forty pictures.");
+  note("\nBoth engines draw the same forty-one pictures.");
 }

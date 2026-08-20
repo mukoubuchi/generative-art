@@ -60,6 +60,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Turn It and Turn It](p5js/artworks/turn-it-and-turn-it/) | Every ring one more turn, and the gaps between the marks only ever three lengths, rendered as a static PNG |
 | [What Hangs Stands](p5js/artworks/what-hangs-stands/) | One loaded chain reflected into the compression arch that carries the same forces, rendered as an MP4 |
 | [Mystic Hexagram](p5js/artworks/mystic-hexagram/) | Six points moving on one conic while the intersections of opposite sides keep one line, rendered as an MP4 |
+| [The Hat](p5js/artworks/the-hat/) | One H-supertile assembled from 169 congruent Hats, its reflected stones lit in ochre, rendered as a static PNG |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 

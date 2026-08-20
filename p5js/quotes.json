@@ -400,6 +400,16 @@
       "year": 1640,
       "publicDomain": true,
       "sourceUrl": "https://gallica.bnf.fr/ark:/12148/btv1b86262279/f5"
+    },
+    {
+      "id": "psalm-stone-builders",
+      "text": "אֶ֭בֶן מָאֲס֣וּ הַבּוֹנִ֑ים הָ֝יְתָ֗ה לְרֹ֣אשׁ פִּנָּֽה׃",
+      "lang": "he",
+      "author": "תהלים",
+      "source": "מזמור קיח, כב",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://www.tanach.us/PDFFiles/Psalms.pdf"
     }
   ]
 }
