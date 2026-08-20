@@ -21,11 +21,11 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 
-const GROUND = [7, 12, 14];
-const STONE_SHADOW = [42, 67, 69];
-const STONE_LIGHT = [142, 163, 149];
-const PEARL = [239, 228, 198];
-const SEAM = [209, 217, 201];
+const GROUND = [13, 18, 27];
+const STONE_SHADOW = [196, 106, 74];
+const STONE_LIGHT = [236, 208, 160];
+const PEARL = [246, 244, 236];
+const SEAM = [222, 158, 96];
 /** Small value steps within one stone family keep the substitution ancestry legible. */
 const LABEL_LIFT = {
   H: 0.04,
@@ -123,9 +123,9 @@ new P5((p) => {
     context.save();
     context.scale(RENDER_SCALE, RENDER_SCALE);
     const glow = context.createRadialGradient(545, 270, 20, 545, 270, 500);
-    glow.addColorStop(0, "rgba(82, 111, 101, 0.16)");
-    glow.addColorStop(0.55, "rgba(36, 61, 59, 0.08)");
-    glow.addColorStop(1, "rgba(7, 12, 14, 0)");
+    glow.addColorStop(0, "rgba(222, 158, 96, 0.16)");
+    glow.addColorStop(0.55, "rgba(196, 106, 74, 0.08)");
+    glow.addColorStop(1, "rgba(13, 18, 27, 0)");
     context.fillStyle = glow;
     context.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     context.restore();
