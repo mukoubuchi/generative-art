@@ -826,6 +826,28 @@
         "durationSeconds": 10,
         "scale": 2
       }
+    },
+    {
+      "id": "mystic-hexagram",
+      "title": "Mystic Hexagram",
+      "entry": "p5js/artworks/mystic-hexagram/index.html",
+      "interactivePath": "mystic-hexagram/",
+      "canvas": {
+        "width": 960,
+        "height": 640
+      },
+      "quoteIds": [
+        "pascal-mesme-ordre"
+      ],
+      "thumbnail": {
+        "frame": 105
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/MysticHexagram.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }

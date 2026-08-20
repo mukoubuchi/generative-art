@@ -390,6 +390,16 @@
       "year": 1705,
       "publicDomain": true,
       "sourceUrl": "https://www.e-rara.ch/zut/content/pageview/25413342"
+    },
+    {
+      "id": "pascal-mesme-ordre",
+      "text": "les droites MS, NO, PQ, seront de mesme ordre, cela sera vn troisiesme Lemme.",
+      "lang": "fr",
+      "author": "Blaise Pascal",
+      "source": "Essay pour les coniques, troisième lemme",
+      "year": 1640,
+      "publicDomain": true,
+      "sourceUrl": "https://gallica.bnf.fr/ark:/12148/btv1b86262279/f5"
     }
   ]
 }
