@@ -5,8 +5,7 @@ import {
   PLAYBACK_FPS,
   TOTAL_FRAMES,
   VERTEX_LABELS,
-  constructionAt,
-  phaseAt
+  constructionAt
 } from "./pascal.js";
 
 /**
@@ -23,15 +22,14 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 
-const GROUND = [15, 11, 27];
-const CONIC = [95, 80, 128];
-const HEXAGRAM = [231, 197, 113];
-const PASCAL = [224, 238, 219];
-const LABEL = [220, 213, 196];
-const PAIRS = [
-  { sides: ["KP", "VO"], colour: [161, 125, 232] },
-  { sides: ["PQ", "ON"], colour: [72, 192, 189] },
-  { sides: ["QV", "NK"], colour: [226, 107, 151] }
+/** Deep water under one family of sea-glass ink and pearl light. */
+const GROUND = [7, 12, 15];
+const SEA_GLASS = [137, 174, 163];
+const PEARL = [239, 228, 196];
+const OPPOSITE_PAIRS = [
+  ["KP", "VO"],
+  ["PQ", "ON"],
+  ["QV", "NK"]
 ];
 
 const P5 = window.p5;
@@ -85,6 +83,22 @@ new P5((p) => {
     p.line(from.x, from.y, to.x, to.y);
   }
 
+  /**
+   * A crossing is identified by accumulated light, not a diagram marker. The nested
+   * veils have no rim; their shared centre is simply where the Pascal line burns most.
+   */
+  function drawWitnessLight(point) {
+    p.noStroke();
+    for (let layer = 8; layer >= 1; layer -= 1) {
+      const diameter = 3 + layer * 3.2;
+      const alpha = 3 + (8 - layer) * 2.5;
+      p.fill(...PEARL, alpha);
+      p.circle(point.x, point.y, diameter);
+    }
+    p.fill(...PEARL, 235);
+    p.circle(point.x, point.y, 2.8);
+  }
+
   function drawGeometry(frameIndex) {
     const construction = constructionAt(frameIndex);
     const { vertices, sides, intersections, pascalLine } = construction;
@@ -93,55 +107,51 @@ new P5((p) => {
     p.scale(RENDER_SCALE);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
 
-    p.noFill();
-    p.stroke(...CONIC, 190);
-    p.strokeWeight(2);
-    p.ellipse(0, 0, 2 * CONIC_RADIUS_X, 2 * CONIC_RADIUS_Y);
-    p.stroke(...CONIC, 35);
-    p.ellipse(0, 0, 2 * CONIC_RADIUS_X + 14, 2 * CONIC_RADIUS_Y + 14);
+    // A broad, almost imperceptible bloom keeps the ground from reading as a flat slide.
+    p.noStroke();
+    p.fill(...SEA_GLASS, 2);
+    p.ellipse(0, 0, 790, 530);
+    p.fill(...PEARL, 2);
+    p.ellipse(0, 0, 620, 400);
 
-    for (const pair of PAIRS) {
-      for (const side of pair.sides) {
-        drawInfiniteLine(sides[side], pair.colour, 42, 1.1);
+    p.noFill();
+    p.stroke(...SEA_GLASS, 14);
+    p.strokeWeight(7);
+    p.ellipse(0, 0, 2 * CONIC_RADIUS_X, 2 * CONIC_RADIUS_Y);
+    p.stroke(...SEA_GLASS, 145);
+    p.strokeWeight(0.9);
+    p.ellipse(0, 0, 2 * CONIC_RADIUS_X, 2 * CONIC_RADIUS_Y);
+
+    // All six extensions recede into one ink; incidence, not colour coding, pairs them.
+    for (const pair of OPPOSITE_PAIRS) {
+      for (const side of pair) {
+        drawInfiniteLine(sides[side], SEA_GLASS, 20, 0.55);
       }
     }
-    drawInfiniteLine(pascalLine, PASCAL, 210, 2.4);
 
-    p.stroke(...HEXAGRAM, 215);
-    p.strokeWeight(2.2);
+    // The Pascal line is a hairline inside a low halo, light rather than a white rule.
+    drawInfiniteLine(pascalLine, PEARL, 9, 11);
+    drawInfiniteLine(pascalLine, PEARL, 28, 4.2);
+    drawInfiniteLine(pascalLine, PEARL, 225, 0.85);
+
     p.noFill();
+    p.stroke(...SEA_GLASS, 18);
+    p.strokeWeight(4.5);
+    p.beginShape();
+    for (const label of VERTEX_LABELS) {
+      p.vertex(vertices[label].x, vertices[label].y);
+    }
+    p.endShape(p.CLOSE);
+    p.stroke(...SEA_GLASS, 205);
+    p.strokeWeight(1.15);
     p.beginShape();
     for (const label of VERTEX_LABELS) {
       p.vertex(vertices[label].x, vertices[label].y);
     }
     p.endShape(p.CLOSE);
 
-    p.textFont("Georgia");
-    p.textSize(15);
-    p.textAlign(p.CENTER, p.CENTER);
-    for (const label of VERTEX_LABELS) {
-      const point = vertices[label];
-      const outward = 1.075;
-      p.noStroke();
-      p.fill(...HEXAGRAM, 245);
-      p.circle(point.x, point.y, 9);
-      p.fill(...LABEL, 225);
-      p.text(label, point.x * outward, point.y * outward);
-    }
-
-    const phase = phaseAt(frameIndex);
-    for (const [index, label] of ["M", "T", "S"].entries()) {
-      const point = intersections[label];
-      const pulse = 0.5 + 0.5 * Math.cos(Math.PI * 2 * phase * 3 - index * Math.PI * 2 / 3);
-      p.noFill();
-      p.stroke(...PASCAL, 80 + 140 * pulse);
-      p.strokeWeight(1.5);
-      p.circle(point.x, point.y, 13 + 9 * pulse);
-      p.noStroke();
-      p.fill(...PASCAL, 245);
-      p.circle(point.x, point.y, 7);
-      p.fill(...LABEL, 230);
-      p.text(label, point.x + 15, point.y - 15);
+    for (const point of Object.values(intersections)) {
+      drawWitnessLight(point);
     }
 
     p.pop();
