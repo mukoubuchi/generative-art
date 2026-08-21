@@ -782,8 +782,9 @@
         "gita-nasato-vidyate"
       ],
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/NoCommonMeasure.png",
+        "kind": "video",
+        "artifact": "exports/p5js/NoCommonMeasure.mp4",
+        "durationSeconds": 10,
         "scale": 2
       }
     },
