@@ -65,17 +65,37 @@ const FOLLOWER_RAMP = [[24, 86, 88], [88, 144, 128], [196, 178, 132], [252, 238,
  * The growing tip as a light. The reach and the core are in logical pixels, the stage's
  * own scale having been undone before either is drawn.
  */
-const HEAD_HALO = 34;
-const HEAD_HALO_LAYERS = 14;
-const HEAD_HALO_ALPHA = 16;
 /**
- * Where on its ribbon's ramp a head takes its halo. Both ramps have four stops, so a
- * third of the way along is exactly the second of them -- gold for the leader, sea glass
- * for the follower -- which is where each family is most recognisably itself.
+ * The ribbon's own half-width, in the logical pixels the light is drawn in. The ribbon is
+ * modelled in model units and the light is drawn after the stage's scale has been undone,
+ * so the two are in different units until this line puts them in one. Sizing the light
+ * from the ribbon rather than from a number of its own is what keeps a light a light: it
+ * is the tip of that ribbon, and it should be that ribbon's size.
  */
-const HEAD_HALO_STOP = 1 / 3;
-const HEAD_CORE = 5;
-const HEAD_CORE_ALPHA = 90;
+const RIBBON_HALF_WIDTH_PX = RIBBON_HALF_WIDTH * MODEL_SCALE;
+const HEAD_HALO = RIBBON_HALF_WIDTH_PX * 3;
+const HEAD_HALO_LAYERS = 14;
+/**
+ * The colour each light wears: one stop of its own ribbon's ramp, chosen for being the
+ * place that family is least like white. The crowns are no use here -- both are within a
+ * few levels of white, and two white lights are one light in two places -- and neither is
+ * the mid of the cool ramp, which is a green. So the leader takes its gold and the
+ * follower takes its abyss.
+ */
+const LEADER_LIGHT = LEADER_RAMP[1];
+const FOLLOWER_LIGHT = FOLLOWER_RAMP[0];
+/**
+ * How bright the middle of a light is allowed to get, in whichever channel its colour is
+ * strongest. Each light is accumulated up to this and no further, which does two things
+ * at once: a colour taken from a dark part of a ramp arrives as visible as one taken from
+ * a bright part, and no channel runs past the top and turns the middle white. Running
+ * past the top is how a coloured light loses its colour, since the channels that are
+ * already high stop rising and the low ones catch up.
+ */
+const HEAD_LIGHT_PEAK = 225;
+/** How much of a light's strength is spent in the core rather than in the halo. */
+const HEAD_CORE_SHARE = 0.3;
+const HEAD_CORE = RIBBON_HALF_WIDTH_PX * 0.6;
 
 const { leader, follower } = ribbonPair();
 
@@ -131,7 +151,15 @@ new P5((p) => {
     p.endShape();
   }
 
-  function drawHead(point, ramp) {
+  /**
+   * A light of one colour, at the strength that colour needs. The halo's layers and the
+   * core share one budget, so the middle of the stack lands on HEAD_LIGHT_PEAK whatever
+   * colour is asked for.
+   */
+  function drawHead(point, light) {
+    const strength = HEAD_LIGHT_PEAK / Math.max(...light);
+    const haloAlpha = 255 * strength * (1 - HEAD_CORE_SHARE) / HEAD_HALO_LAYERS;
+    const coreAlpha = 255 * strength * HEAD_CORE_SHARE;
     const [x, y, z] = point;
     p.push();
     p.translate(x, y, z);
@@ -143,17 +171,18 @@ new P5((p) => {
     p.scale(1 / MODEL_SCALE);
     p.rotateY(-WING_ANGLE);
     p.rotateX(-Math.PI / 2);
-    // Layered light, not a bead: nested discs of the ribbon's own family colour, added
-    // rather than painted over, so the middle of the stack is where the most light has
-    // fallen. Not the crown, for the halo. Both crowns are within a few levels of white,
-    // and two white haloes would be one light that happened to be in two places; the
-    // second stop keeps the leader's warm and the follower's cool all the way in to the
-    // core, which measures [255,234,188] against [185,226,208].
+    // Layered light, not a bead: nested discs of one colour, added rather than painted
+    // over, so the middle of the stack is where the most light has fallen. One colour all
+    // the way through, halo and core alike, because a core of its own would be a second
+    // colour arriving exactly where the first is strongest -- which is how the crowns
+    // used to bleach both lights white between them. Measured at frame 205, the two
+    // centres are [235,178,126] and [70,227,238]: a gold and a cyan, each still plainly
+    // its own colour where a light is most likely to lose one.
     for (let layer = HEAD_HALO_LAYERS; layer >= 1; layer -= 1) {
-      p.fill(...rampColor(ramp, HEAD_HALO_STOP), HEAD_HALO_ALPHA);
+      p.fill(...light, haloAlpha);
       p.circle(0, 0, 2 * HEAD_HALO * layer / HEAD_HALO_LAYERS);
     }
-    p.fill(...rampColor(ramp, 1), HEAD_CORE_ALPHA);
+    p.fill(...light, coreAlpha);
     p.circle(0, 0, 2 * HEAD_CORE);
     p.pop();
   }
@@ -179,14 +208,15 @@ new P5((p) => {
       // and throw away the other thirteen. Turning the test off costs the head its
       // occlusion -- a ribbon nearer the eye no longer cuts it -- and that is the right
       // trade twice over: the head is the one light in the picture, and light spilling
-      // over what stands in front of it is what light does. Measured, too. With the test
-      // left on, the head at frame 125 came out at [167,128,93], a dull smear behind the
-      // ribbon it had just laid; with it off, [233,227,181], which is a light.
+      // over what stands in front of it is what light does. Measured, too: at frame 125 the
+      // ribbon just laid takes 28 per cent of the light away when the test is left on --
+      // 693 pixels of it against 971 -- and cuts what reaches the brightest of them from
+      // 174 levels above the bare frame to 110.
       const gl = p.drawingContext;
       p.blendMode(p.ADD);
       gl.disable(gl.DEPTH_TEST);
-      drawHead(leader[upTo], LEADER_RAMP);
-      drawHead(follower[upTo], FOLLOWER_RAMP);
+      drawHead(leader[upTo], LEADER_LIGHT);
+      drawHead(follower[upTo], FOLLOWER_LIGHT);
       gl.enable(gl.DEPTH_TEST);
       p.blendMode(p.BLEND);
     }
