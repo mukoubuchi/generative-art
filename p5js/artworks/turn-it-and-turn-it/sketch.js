@@ -62,8 +62,15 @@ const UNEXPECTED = [220, 60, 90];
  * lengths. Wide enough to count is the whole of the choice.
  */
 const STAGES = 30;
-const INNER_RADIUS = 52;
-const OUTER_RADIUS = 320;
+// Both radii taken down by a twentieth, which leaves the figure's own proportions where
+// they were and moves its rim off the legend. At 320 the outer ring passed 1.27 pixels
+// from the plate the note sits on -- clear of it, but not visibly clear of it, and a
+// line a reader is meant to read wants air around it. At 304 the nearest ink stands
+// 17.31 pixels off. Both numbers are measured, on the drawn pixels rather than on the
+// figure's bounding box: the figure is a disc and the note sits under one corner of
+// that box, where there has never been any ink at all.
+const INNER_RADIUS = 49.4;
+const OUTER_RADIUS = 304;
 const RING_WIDTH = (OUTER_RADIUS - INNER_RADIUS) / STAGES;
 
 /**
