@@ -169,8 +169,8 @@ function standsApartFromTheRoads(colour) {
   const lacquer = ROAD_COLOUR[BLACK];
   return (
     colour[2] > colour[0] &&
-    chroma(colour) < 20 &&
-    luminance(colour) > 1.9 * luminance(lacquer)
+    chroma(colour) < 6 &&
+    luminance(colour) > 1.95 * luminance(lacquer)
   );
 }
 
@@ -213,15 +213,20 @@ test("no colour the ground can take belongs to either road", () => {
   assert.equal(sampled, 4001);
   // Named, because it is the number the picture rests on: at its darkest the ground is
   // still nearly twice the luminance of the lacquer black.
-  assert.ok(closest >= 1.9, `the ground closes to ${closest} times the lacquer`);
+  assert.ok(closest >= 1.95, `the ground closes to ${closest} times the lacquer`);
 
-  // Controls. Neither of these is a colour this picture ever had; they are written down
-  // as the two ways this family could stop doing its work, so the sweep above cannot be
-  // weakened without one of them passing. The first is a warm grey, which the eye would
-  // read as a thin crimson; the second is darker than the lacquer, which would leave the
-  // black road as a hole in a darker page.
-  assert.equal(standsApartFromTheRoads([92, 64, 62]), false);
+  // Controls. None of these is a colour this picture ever had: they are constructed
+  // rather than frozen from a defect, and are written down as the ways this family could
+  // stop doing its work. A ground that leaned warm would read as a thin crimson; one
+  // with colour in it would be a second colour on a page that allows one; one darker
+  // than the lacquer would leave the black road as a hole in a darker page. The first
+  // three fail exactly one clause each, so no clause of the test can be carrying no
+  // weight — drop any one of them and its control starts passing. The fourth is the
+  // realistic version of the first and fails two.
+  assert.equal(standsApartFromTheRoads([24, 22, 22]), false);
+  assert.equal(standsApartFromTheRoads([28, 33, 44]), false);
   assert.equal(standsApartFromTheRoads([8, 8, 9]), false);
+  assert.equal(standsApartFromTheRoads([92, 64, 62]), false);
   assert.equal(standsApartFromTheRoads(hazeOver(AT_RIM)), true);
 });
 
