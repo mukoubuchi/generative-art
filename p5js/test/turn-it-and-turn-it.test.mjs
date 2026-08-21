@@ -23,6 +23,16 @@ import {
   ringAt,
   squareRoot
 } from "../artworks/turn-it-and-turn-it/gaps.js";
+import {
+  FULL_TURN,
+  SEAT_AMPLITUDE,
+  SEAT_CYCLES,
+  angleAt,
+  ease,
+  seat,
+  turnPlans,
+  turnSeconds
+} from "../artworks/turn-it-and-turn-it/turning.js";
 
 /**
  * The artwork's claim is the three-distance theorem: turn by the same irrational share of a
@@ -264,4 +274,103 @@ test("the README's list of rings that lose a colour is the module's own", async 
     ),
     `the drawing holds ${inside} of the two-length rings and the README says otherwise`
   );
+});
+
+/**
+ * The turning the page does when a reader asks for it.
+ *
+ * The claim it has to keep is that the drawing comes back: each ring is given a whole
+ * number of turns, so wherever it stops is where it started. That is arithmetic, and the
+ * tests below hold it as arithmetic — every assertion is an exact equality, because a
+ * ring that is nearly home is a ring that is not home.
+ */
+const PLANS = turnPlans(Number(STAGES));
+
+test("there is one plan per ring, and every ring is turned a whole number of times", () => {
+  assert.equal(PLANS.length, Number(STAGES));
+  assert.equal(PLANS.length, 30, "the number of rings changed and this file's expectations did not");
+  for (const [index, plan] of PLANS.entries()) {
+    assert.ok(Number.isInteger(plan.turns), `ring ${index} is turned ${plan.turns} times, which is not a whole number`);
+    assert.ok(plan.turns >= 1 && plan.turns <= 3, `ring ${index} is turned ${plan.turns} times`);
+    // Meshed wheels run opposite ways, so neighbours must disagree about which way round.
+    assert.equal(plan.direction, index % 2 === 0 ? 1 : -1);
+  }
+  const turns = new Set(PLANS.map((plan) => plan.turns));
+  assert.deepEqual([...turns].sort(), [1, 2, 3], "the rings no longer travel different distances");
+});
+
+test("the machine takes hold from the middle outward and lets go from the middle outward", () => {
+  for (let index = 1; index < PLANS.length; index += 1) {
+    const inner = PLANS[index - 1];
+    const outer = PLANS[index];
+    assert.ok(outer.from > inner.from, `ring ${index} does not start after ring ${index - 1}`);
+    assert.ok(outer.to > inner.to, `ring ${index} does not finish after ring ${index - 1}`);
+    // Later to start and longer about it, which is the sentence the notes make.
+    assert.ok(outer.to - outer.from > inner.to - inner.from,
+      `ring ${index} is not longer about it than ring ${index - 1}`);
+  }
+  assert.equal(turnSeconds(PLANS), PLANS[PLANS.length - 1].to,
+    "the machine is home before its outermost ring is");
+});
+
+test("the easing arrives, exactly", () => {
+  // A quintic smoothstep is used here for its ends rather than its middle. If it fell a
+  // hair short of one, a ring asked for three turns would be given three turns less a
+  // hair, and the whole claim would go with it.
+  assert.equal(ease(0), 0);
+  assert.equal(ease(1), 1);
+  assert.equal(ease(0.5), 0.5);
+  // And it really does ease: the first tenth covers far less ground than the middle tenth.
+  assert.ok(ease(0.1) < 0.1 / 4, "the start is not eased into");
+  assert.ok(1 - ease(0.9) < 0.1 / 4, "the end is not eased out of");
+});
+
+test("the seating catch is exactly nothing at the end, and something just before it", () => {
+  // Zero at the end, and negative zero at that: the sine of a whole number of turns comes
+  // out a hair below nought, and the factor that kills the size keeps the sign. It makes
+  // no difference to a bearing, since adding a negative zero leaves a number alone, and
+  // the test below measures exactly that. It is why this is `===`, which holds the two
+  // zeros to be the same number, rather than a strict equality, which does not.
+  assert.ok(seat(1) === 0, `the catch is ${seat(1)} at the end rather than nothing`);
+  assert.ok(seat(0) === 0, `the catch is ${seat(0)} at the start rather than nothing`);
+  assert.equal(SEAT_AMPLITUDE * seat(1) + FULL_TURN, FULL_TURN,
+    "the catch moves the bearing it is supposed to have finished with");
+  // The catch has to exist, or the factor that kills it is guarding nothing. Frozen
+  // specimen of the defect it guards against: the same expression without its last
+  // factor does not vanish at the end, because sin of a whole number of turns does not.
+  assert.notEqual(seat(0.97), 0);
+  const withoutTheGuard = Math.sin(SEAT_CYCLES * FULL_TURN * 1) * 1 ** 6;
+  assert.notEqual(withoutTheGuard, 0);
+  assert.ok(Math.abs(withoutTheGuard) < 1e-15, "the specimen is no longer the rounding error it was");
+});
+
+test("every ring is exactly home when it lets go, and stays home after", () => {
+  // The claim the page makes, held at every ring rather than at a sampled few, and held
+  // as an exact zero rather than as a small number.
+  for (const [index, plan] of PLANS.entries()) {
+    assert.equal(angleAt(plan, plan.from), 0, `ring ${index} is not home when it takes hold`);
+    assert.equal(angleAt(plan, plan.from - 0.001), 0, `ring ${index} moves before it takes hold`);
+    assert.equal(angleAt(plan, plan.to), 0, `ring ${index} is not home when it lets go`);
+    assert.equal(angleAt(plan, plan.to + 0.001), 0, `ring ${index} is not home after it lets go`);
+    assert.equal(angleAt(plan, turnSeconds(PLANS)), 0, `ring ${index} is not home when the machine is`);
+    // And it did move in between, or being home at both ends would say nothing at all.
+    assert.notEqual(angleAt(plan, (plan.from + plan.to) / 2), 0, `ring ${index} never turns`);
+  }
+});
+
+test("the exact zero is written out because the arithmetic would not give it", () => {
+  // What angleAt would return at a ring's end if the guard were taken away: the eased
+  // rotation reaches its whole number of turns, and the seating catch vanishes, so the
+  // bearing is a whole number of turns exactly. As a bearing that is home; as a number
+  // fed to a sine it is not, which is the reason the zero is written rather than computed.
+  for (const plan of PLANS) {
+    const bearing = plan.direction * (FULL_TURN * plan.turns * ease(1) + SEAT_AMPLITUDE * seat(1));
+    assert.equal(bearing, plan.direction * FULL_TURN * plan.turns);
+    assert.notEqual(Math.sin(bearing), 0, "a whole number of turns now has a sine of exactly nought");
+    // The cosine, for contrast, is exact — so the error is a shear rather than a scaling,
+    // and it is far below anything a canvas can show. The picture is measured elsewhere;
+    // this is only the arithmetic.
+    assert.equal(Math.cos(bearing), 1);
+    assert.ok(Math.abs(Math.sin(bearing)) < 1e-14);
+  }
 });
