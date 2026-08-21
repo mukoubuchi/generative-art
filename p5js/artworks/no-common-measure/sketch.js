@@ -34,10 +34,10 @@ import {
  *
  * The threads running down to the bottom left are the descent. From any pair, folding the
  * triangle gives another pair, smaller, on the curve of the opposite shortfall; the threads
- * join each pair to the one its fold gives. They all run out — every one of them ends at
- * the same small pair, because whole positive numbers cannot go down for ever. A thread
- * starting on the bare line would be the one that never ended, and there is nothing on the
- * bare line to start it.
+ * join each pair to the one its fold gives. They all run out — each at whatever small pair
+ * its own fold can no longer descend from, because whole positive numbers cannot go down
+ * for ever. A thread starting on the bare line would be the one that never ended, and
+ * there is nothing on the bare line to start it.
  */
 const LOGICAL_WIDTH = CANVAS;
 const LOGICAL_HEIGHT = CANVAS;
