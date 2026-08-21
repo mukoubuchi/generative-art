@@ -48,7 +48,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `turn-it-and-turn-it` | 680×680 | 1360×1360 PNG | Static |
 | `what-hangs-stands` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, chain to arch and back across one travelling reflection |
 | `mystic-hexagram` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, one closed journey of six points around the conic |
-| `the-hat` | 960×640 | 1920×1280 PNG | Static |
+| `the-hat` | 680×680 | 1360×1360 PNG | Static |
 | `the-red-and-the-black` | 680×680 | 1360×1360 PNG | Static |
 | `not-without-a-plan` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, one maze made by erasing loops and the one route through it |
 

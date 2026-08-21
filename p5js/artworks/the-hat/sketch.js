@@ -2,7 +2,8 @@ import {
   HAT_OUTLINE,
   boundsOf,
   createHatPatch,
-  transformPoint
+  transformPoint,
+  transformedOutline
 } from "./hat.js";
 
 /**
@@ -11,8 +12,8 @@ import {
  * One current of light crosses the whole masonry. Kiln variation distinguishes the pieces,
  * while a deeper firing and shallow relief reveal each reflected copy.
  */
-const LOGICAL_WIDTH = 960;
-const LOGICAL_HEIGHT = 640;
+const LOGICAL_WIDTH = 680;
+const LOGICAL_HEIGHT = 680;
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
@@ -47,13 +48,62 @@ const LABEL_LIFT = {
 };
 const TILES = createHatPatch(2);
 const PATCH_BOUNDS = boundsOf(TILES);
-const PATCH_SCALE = Math.min(
-  (LOGICAL_WIDTH - 360) / (PATCH_BOUNDS.maxX - PATCH_BOUNDS.minX),
-  (LOGICAL_HEIGHT - 70) / (PATCH_BOUNDS.maxY - PATCH_BOUNDS.minY)
-);
-const PATCH_CENTRE = {
+const PATCH_TILT = -Math.PI / 60;
+
+function turned(point, angle) {
+  return {
+    x: point.x * Math.cos(angle) - point.y * Math.sin(angle),
+    y: point.x * Math.sin(angle) + point.y * Math.cos(angle)
+  };
+}
+
+/**
+ * The masonry is fitted by the ink it actually puts down rather than by the bounds of the
+ * unturned patch. The patch is nearly square — 33.000 by 32.909 — and the slight tilt it
+ * is laid at moves the ink off the centre of those bounds, so measuring the turned outline
+ * is what lets the same margin be left on all four sides.
+ */
+const PATCH_MIDDLE = {
   x: (PATCH_BOUNDS.minX + PATCH_BOUNDS.maxX) / 2,
   y: (PATCH_BOUNDS.minY + PATCH_BOUNDS.maxY) / 2
+};
+const INK = (() => {
+  const turnedVertices = TILES.flatMap(transformedOutline).map(
+    (vertex) => turned({ x: vertex.x - PATCH_MIDDLE.x, y: vertex.y - PATCH_MIDDLE.y }, PATCH_TILT)
+  );
+  const minX = Math.min(...turnedVertices.map((vertex) => vertex.x));
+  const maxX = Math.max(...turnedVertices.map((vertex) => vertex.x));
+  const minY = Math.min(...turnedVertices.map((vertex) => vertex.y));
+  const maxY = Math.max(...turnedVertices.map((vertex) => vertex.y));
+  return { width: maxX - minX, height: maxY - minY, midX: (minX + maxX) / 2, midY: (minY + maxY) / 2 };
+})();
+
+/** The bed of page left round the masonry, in logical pixels, the same on every side. */
+const PATCH_MARGIN = 35;
+const PATCH_SCALE = Math.min(
+  (LOGICAL_WIDTH - 2 * PATCH_MARGIN) / INK.width,
+  (LOGICAL_HEIGHT - 2 * PATCH_MARGIN) / INK.height
+);
+
+/** Turned back into patch coordinates, this is the point that lands on the page's centre. */
+const PATCH_CENTRE = (() => {
+  const back = turned({ x: INK.midX, y: INK.midY }, -PATCH_TILT);
+  return { x: PATCH_MIDDLE.x + back.x, y: PATCH_MIDDLE.y + back.y };
+})();
+
+/**
+ * The current of light is placed on the masonry rather than on the page: its centre and
+ * its two radii are fractions of the drawn patch, so it keeps its bearing on the bricks
+ * — up and to the right of centre, agreeing with the across-and-down gradient the kiln
+ * colours are mixed on — whatever size the page is.
+ */
+const INK_WIDTH_ON_PAGE = INK.width * PATCH_SCALE;
+const INK_HEIGHT_ON_PAGE = INK.height * PATCH_SCALE;
+const LIGHT = {
+  x: (LOGICAL_WIDTH - INK_WIDTH_ON_PAGE) / 2 + 0.6173 * INK_WIDTH_ON_PAGE,
+  y: (LOGICAL_HEIGHT - INK_HEIGHT_ON_PAGE) / 2 + 0.4277 * INK_HEIGHT_ON_PAGE,
+  inner: 0.03504 * INK_WIDTH_ON_PAGE,
+  outer: 0.876 * INK_WIDTH_ON_PAGE
 };
 
 function mixColour(first, second, amount) {
@@ -140,7 +190,10 @@ new P5((p) => {
     const context = p.drawingContext;
     context.save();
     context.scale(RENDER_SCALE, RENDER_SCALE);
-    const glow = context.createRadialGradient(545, 270, 20, 545, 270, 500);
+    const glow = context.createRadialGradient(
+      LIGHT.x, LIGHT.y, LIGHT.inner,
+      LIGHT.x, LIGHT.y, LIGHT.outer
+    );
     glow.addColorStop(0, "rgba(222, 158, 96, 0.10)");
     glow.addColorStop(0.55, "rgba(196, 106, 74, 0.045)");
     glow.addColorStop(1, "rgba(230, 224, 208, 0)");
@@ -156,7 +209,7 @@ new P5((p) => {
 
     p.scale(RENDER_SCALE);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-    p.rotate(-Math.PI / 60);
+    p.rotate(PATCH_TILT);
     p.scale(PATCH_SCALE);
     p.translate(-PATCH_CENTRE.x, -PATCH_CENTRE.y);
     for (const drawing of drawings) {

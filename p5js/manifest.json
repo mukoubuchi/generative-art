@@ -855,8 +855,8 @@
       "entry": "p5js/artworks/the-hat/index.html",
       "interactivePath": "the-hat/",
       "canvas": {
-        "width": 960,
-        "height": 640
+        "width": 680,
+        "height": 680
       },
       "quoteIds": [
         "psalm-stone-builders"
