@@ -755,7 +755,7 @@ The check is aimed at [the sketch exactly as it shipped](test/fixtures/invisible
 
 ### Telling the reader what there is to do
 
-Seven artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
+Eight artworks answer to the reader, and none of them said so, which left the interaction discoverable only by reading the source. Each page now prints a single line at the foot of its canvas:
 
 | Artwork | Control | The line it prints |
 | --- | --- | --- |
@@ -766,6 +766,7 @@ Seven artworks answer to the reader, and none of them said so, which left the in
 | `troubling-of-a-star` | drag | `drag` pull a bob; the ring answers |
 | `moire-rings` | pointer | `move` the pointer carries the second centre |
 | `platonic-duals` | drag | `drag` the stage turns in your hand |
+| `turn-it-and-turn-it` | click | `click` turn it and turn it |
 
 The line is drawn where the line is drawn: an artwork that only plays a fixed loop says nothing, because there is nothing to say. Clinamen is the near case — its page is live, and its trails accumulate as you watch — but nothing it does depends on the reader, so it carries no line.
 

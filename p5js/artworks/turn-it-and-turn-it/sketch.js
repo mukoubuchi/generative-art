@@ -1,3 +1,5 @@
+import { hintMode } from "../shared/hint-mode.js";
+import { drawKeyHint } from "../shared/key-hint.js";
 import { asTurn, lengthsUpTo, ringAt } from "./gaps.js";
 
 /**
@@ -31,6 +33,12 @@ const RENDER_SCALE = CAPTURE_MODE
   : 1;
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
+const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
+/**
+ * The work is named for an instruction, so the instruction is what the legend prints.
+ * Nothing here has to be worded: the saying already is the thing to do.
+ */
+const HINT_LEGEND = [{ cap: "click", text: "turn it and turn it" }];
 
 const GROUND = [230, 224, 208];
 /**
@@ -205,6 +213,9 @@ new P5((p5Instance) => {
       p.pop();
     });
     p.pop();
+    if (HINT.shown) {
+      drawKeyHint(p, HINT_LEGEND, LOGICAL_WIDTH, LOGICAL_HEIGHT, HINT.scale);
+    }
   }
 
   function publishState() {
