@@ -99,9 +99,10 @@ const INK_FLOOR = 0.002;
  * How far the two engines may disagree about how much ink a work puts down.
  *
  * They never agree exactly, because they antialias differently. Measured across all
- * forty-one works at matched frames, the ratio sits between 0.939 and 1.095 — and the
- * spread is a property of the machine as much as of the works, since the same run on a
- * laptop comes in narrower, between 0.970 and 1.088. So the band below holds every sound
+ * forty-two works at matched frames, the ratio sits between 0.971 and 1.108 — and the
+ * spread is a property of the machine as much as of the works, since an earlier run over
+ * forty-one of them came in between 0.939 and 1.095, and the same run on a laptop
+ * narrower again, between 0.970 and 1.088. So the band below holds every sound
  * work several times over on either, and is still nowhere near the fault it was written
  * for: a work WebKit draws not at all sits at 0.
  */
@@ -493,5 +494,8 @@ if (failures.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  note("\nBoth engines draw the same forty-one pictures.");
+  // Read back from the catalogue rather than written out, because a hand-counted number in
+  // a line nothing compares with anything is a number that goes stale the next time a work
+  // is added -- which is exactly what this one did.
+  note(`\nBoth engines draw the same ${manifest.artworks.length} pictures.`);
 }
