@@ -52,11 +52,30 @@ const SCREEN_SHIFT_X = 15.5;
 const SCREEN_SHIFT_Y = 76;
 
 const BACKGROUND = [13, 18, 27];
-// Height's colour, floor to crown, one ramp per ribbon: the leader in ember and gold,
-// the follower in steel and ice. Where they travel together the braid alternates; once
-// they part, each wing carries whichever ribbon claimed it.
-const LEADER_RAMP = [[122, 62, 46], [214, 148, 88], [246, 210, 140]];
-const FOLLOWER_RAMP = [[42, 66, 104], [110, 152, 198], [214, 234, 248]];
+// Height's colour, floor to crown, one ramp per ribbon, and neither ramp is new here:
+// the leader wears Kissing Circles' ages, fired clay up to nearly white-hot, and the
+// follower wears Nautilus's, abyss teal up through sea glass and sand to pearl. Two
+// families the collection already owns, so the pair reads as warm against cool without
+// a colour being invented for it. Where the ribbons travel together the braid
+// alternates; once they part, each wing carries whichever ribbon claimed it.
+const LEADER_RAMP = [[196, 106, 74], [222, 158, 96], [236, 208, 160], [246, 244, 236]];
+const FOLLOWER_RAMP = [[24, 86, 88], [88, 144, 128], [196, 178, 132], [252, 238, 200]];
+
+/**
+ * The growing tip as a light. The reach and the core are in logical pixels, the stage's
+ * own scale having been undone before either is drawn.
+ */
+const HEAD_HALO = 34;
+const HEAD_HALO_LAYERS = 14;
+const HEAD_HALO_ALPHA = 16;
+/**
+ * Where on its ribbon's ramp a head takes its halo. Both ramps have four stops, so a
+ * third of the way along is exactly the second of them -- gold for the leader, sea glass
+ * for the follower -- which is where each family is most recognisably itself.
+ */
+const HEAD_HALO_STOP = 1 / 3;
+const HEAD_CORE = 5;
+const HEAD_CORE_ALPHA = 90;
 
 const { leader, follower } = ribbonPair();
 
@@ -116,8 +135,26 @@ new P5((p) => {
     const [x, y, z] = point;
     p.push();
     p.translate(x, y, z);
-    p.fill(...rampColor(ramp, 1));
-    p.sphere(RIBBON_HALF_WIDTH * 2.2, 10, 8);
+    // Undo the stage, in the order that cancels it: the scale first, being uniform and
+    // free to move, then the two turns in reverse. What is left is the camera's own
+    // plane, which is where a flat disc has to lie to read as a light rather than as a
+    // coin seen edge-on -- and edge-on is exactly what the stage's quarter turn would
+    // otherwise make of it.
+    p.scale(1 / MODEL_SCALE);
+    p.rotateY(-WING_ANGLE);
+    p.rotateX(-Math.PI / 2);
+    // Layered light, not a bead: nested discs of the ribbon's own family colour, added
+    // rather than painted over, so the middle of the stack is where the most light has
+    // fallen. Not the crown, for the halo. Both crowns are within a few levels of white,
+    // and two white haloes would be one light that happened to be in two places; the
+    // second stop keeps the leader's warm and the follower's cool all the way in to the
+    // core, which measures [255,234,188] against [185,226,208].
+    for (let layer = HEAD_HALO_LAYERS; layer >= 1; layer -= 1) {
+      p.fill(...rampColor(ramp, HEAD_HALO_STOP), HEAD_HALO_ALPHA);
+      p.circle(0, 0, 2 * HEAD_HALO * layer / HEAD_HALO_LAYERS);
+    }
+    p.fill(...rampColor(ramp, 1), HEAD_CORE_ALPHA);
+    p.circle(0, 0, 2 * HEAD_CORE);
     p.pop();
   }
 
@@ -137,8 +174,21 @@ new P5((p) => {
     drawRibbon(leader, LEADER_SIDES, LEADER_RAMP, upTo);
     drawRibbon(follower, FOLLOWER_SIDES, FOLLOWER_RAMP, upTo);
     if (upTo < RIBBON_STEPS) {
+      // Light rather than paint, and it answers to no depth at all. The fourteen discs of
+      // a halo share one plane, so a stack tested against the buffer would show one disc
+      // and throw away the other thirteen. Turning the test off costs the head its
+      // occlusion -- a ribbon nearer the eye no longer cuts it -- and that is the right
+      // trade twice over: the head is the one light in the picture, and light spilling
+      // over what stands in front of it is what light does. Measured, too. With the test
+      // left on, the head at frame 125 came out at [167,128,93], a dull smear behind the
+      // ribbon it had just laid; with it off, [233,227,181], which is a light.
+      const gl = p.drawingContext;
+      p.blendMode(p.ADD);
+      gl.disable(gl.DEPTH_TEST);
       drawHead(leader[upTo], LEADER_RAMP);
       drawHead(follower[upTo], FOLLOWER_RAMP);
+      gl.enable(gl.DEPTH_TEST);
+      p.blendMode(p.BLEND);
     }
     p.pop();
     return upTo;
