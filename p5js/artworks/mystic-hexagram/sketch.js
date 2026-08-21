@@ -26,6 +26,9 @@ const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const GROUND = [7, 12, 15];
 const SEA_GLASS = [137, 174, 163];
 const PEARL = [239, 228, 196];
+/** How far a witness's light reaches, and in how many veils. */
+const WITNESS_HALO = 46;
+const WITNESS_LAYERS = 12;
 const OPPOSITE_PAIRS = [
   ["KP", "VO"],
   ["PQ", "ON"],
@@ -86,17 +89,24 @@ new P5((p) => {
   /**
    * A crossing is identified by accumulated light, not a diagram marker. The nested
    * veils have no rim; their shared centre is simply where the Pascal line burns most.
+   *
+   * The light reaches 46 pixels, which is far enough for the line to burn rather than
+   * merely carry three dots, and short enough that the three stay three: over the whole
+   * clip the nearest two witnesses come 121.8 pixels apart, and two reaches meet at 92.
    */
   function drawWitnessLight(point) {
     p.noStroke();
-    for (let layer = 8; layer >= 1; layer -= 1) {
-      const diameter = 3 + layer * 3.2;
-      const alpha = 3 + (8 - layer) * 2.5;
-      p.fill(...PEARL, alpha);
-      p.circle(point.x, point.y, diameter);
+    p.blendMode(p.ADD);
+    for (let layer = WITNESS_LAYERS; layer >= 1; layer -= 1) {
+      const reach = WITNESS_HALO * layer / WITNESS_LAYERS;
+      p.fill(...PEARL, 5);
+      p.circle(point.x, point.y, 2 * reach);
     }
+    p.fill(...PEARL, 150);
+    p.circle(point.x, point.y, 2 * 6.5);
     p.fill(...PEARL, 235);
-    p.circle(point.x, point.y, 2.8);
+    p.circle(point.x, point.y, 2 * 3.2);
+    p.blendMode(p.BLEND);
   }
 
   function drawGeometry(frameIndex) {
