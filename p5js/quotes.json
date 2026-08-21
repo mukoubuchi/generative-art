@@ -410,6 +410,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://www.tanach.us/PDFFiles/Psalms.pdf"
+    },
+    {
+      "id": "yijing-taiji-liangyi",
+      "text": "易有太極，是生兩儀",
+      "lang": "lzh",
+      "author": "易傳",
+      "source": "繫辭上傳 第十一章",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://zh.wikisource.org/wiki/%E6%98%93%E5%82%B3/%E7%B9%AB%E8%BE%AD%E4%B8%8A"
     }
   ]
 }

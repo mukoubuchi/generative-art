@@ -866,6 +866,24 @@
         "artifact": "exports/p5js/TheHat.png",
         "scale": 2
       }
+    },
+    {
+      "id": "taijitu",
+      "title": "Taijitu",
+      "entry": "p5js/artworks/taijitu/index.html",
+      "interactivePath": "taijitu/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "yijing-taiji-liangyi"
+      ],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/Taijitu.png",
+        "scale": 2
+      }
     }
   ]
 }

@@ -41,7 +41,8 @@ const AWAITING_SCHEDULE = [
   "turn-it-and-turn-it",
   "what-hangs-stands",
   "mystic-hexagram",
-  "the-hat"
+  "the-hat",
+  "taijitu"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
