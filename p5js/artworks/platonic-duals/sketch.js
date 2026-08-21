@@ -35,8 +35,20 @@ const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const MODEL_SCALE = 252;
 /** The camera's standing tilt, gentle enough that the vertical five-fold axis reads. */
 const STAGE_TILT = 0.42;
-/** Sparks: the coming solid's corners, born on the going solid's faces. */
-const SPARK_RADIUS = 7;
+/**
+ * Sparks: the coming solid's corners, born on the going solid's faces. Each is drawn as
+ * light rather than as a bead -- a stack of faint discs turned to face the camera, added
+ * together, with a small bright core at the middle. A sphere would carry a lit side and a
+ * horizon, and read as a modelled ball sitting on the face; a disc facing the camera has
+ * neither. The halo takes the family's face colour, which is the more saturated of the
+ * two: added light climbs towards white, and the paler edge colour bleached out to the
+ * point where the steel sparks and the gold ones could not be told apart.
+ */
+const SPARK_HALO = 26;
+const SPARK_HALO_LAYERS = 12;
+const SPARK_HALO_ALPHA = 11;
+const SPARK_CORE = 4;
+const SPARK_CORE_ALPHA = 210;
 
 const BACKGROUND = [11, 13, 19];
 /** The icosahedron's family: gold. */
@@ -119,20 +131,29 @@ new P5((p) => {
     }
   }
 
-  function drawSparks(solid, family, strength) {
+  function drawSparks(solid, halo, core, strength, spin, tilt) {
     if (strength <= 0) {
       return;
     }
     p.noStroke();
+    p.blendMode(p.ADD);
     for (const vertex of solid.vertices) {
       p.push();
       p.translate(...vertex.map((part) => part * MODEL_SCALE));
-      p.fill(...family, 140 * strength);
-      p.sphere(SPARK_RADIUS * strength * 1.9, 10, 8);
-      p.fill(...family, 250 * strength);
-      p.sphere(SPARK_RADIUS * strength, 10, 8);
+      // Undo the stage's turn and tilt, so the disc lies in the camera's plane wherever
+      // the stage has got to and wherever the reader has dragged it.
+      p.rotateY(-spin);
+      p.rotateX(-tilt);
+      for (let layer = SPARK_HALO_LAYERS; layer >= 1; layer -= 1) {
+        const reach = SPARK_HALO * strength * layer / SPARK_HALO_LAYERS;
+        p.fill(...halo, SPARK_HALO_ALPHA * strength);
+        p.circle(0, 0, 2 * reach);
+      }
+      p.fill(...core, SPARK_CORE_ALPHA * strength);
+      p.circle(0, 0, 2 * SPARK_CORE * strength);
       p.pop();
     }
+    p.blendMode(p.BLEND);
   }
 
   function drawScene(state) {
@@ -147,8 +168,10 @@ new P5((p) => {
     drawBand(BANDS[2], state.outer);
     // The sparks: the middle solid's corners rising out of the outer solid's faces,
     // then the inner solid's corners out of the middle's.
-    drawSparks(SOLIDS.middle, STEEL_EDGE, state.sparks.onOuter);
-    drawSparks(SOLIDS.inner, GOLD_EDGE, state.sparks.onMiddle);
+    const spin = state.spin + drag.spin;
+    const tilt = STAGE_TILT + drag.tilt;
+    drawSparks(SOLIDS.middle, STEEL_FACE, STEEL_EDGE, state.sparks.onOuter, spin, tilt);
+    drawSparks(SOLIDS.inner, GOLD_FACE, GOLD_EDGE, state.sparks.onMiddle, spin, tilt);
     gl.enable(gl.DEPTH_TEST);
   }
 
