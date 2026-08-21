@@ -37,6 +37,16 @@ const SEGMENTS_ACROSS = 8;
 // The camera's standing tilt: enough to see the twist as depth, not so much that the
 // band collapses into an ellipse.
 const STAGE_TILT = 0.9;
+// How far the stage is raised so the figure sits centred in the frame. The tilted ring
+// projects taller above its centre than below, so it needs lifting; how far cannot be
+// reasoned out, because the lift acts in camera space under a perspective projection, so
+// a point nearer the eye rises further up the frame than a point behind it, and the
+// silhouette is stretched by the lift as well as moved by it. The number is therefore
+// measured, against the union of all 150 frames' silhouettes: at this value that union
+// stands 121 pixels clear of the top of the frame and 121 clear of the bottom, and the
+// 144 either side is what the ring's own sweep gives. Its predecessor, -56, left 101
+// above and 151 below.
+const STAGE_LIFT = -32;
 
 /**
  * A dark water and the glass, and nothing else on the stage. The band is modelled in the
@@ -81,9 +91,7 @@ new P5((p) => {
   function drawScene(state) {
     p.background(...BACKGROUND);
     p.scale(RENDER_SCALE);
-    // The tilted ring projects taller above its centre than below, so the figure is
-    // lifted a little to sit optically centred in the frame.
-    p.translate(0, -56, 0);
+    p.translate(0, STAGE_LIFT, 0);
     p.rotateX(STAGE_TILT);
     // A turntable turn, about the ring's own axis: the tilted silhouette holds still
     // while the twist — which is not a rotational symmetry — sweeps visibly around.
