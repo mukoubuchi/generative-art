@@ -202,8 +202,10 @@ new P5((p5Instance) => {
     RINGS.forEach((ring, index) => {
       const angle = angleAt(index, seconds);
       if (angle === 0) {
-        // Not rotated by nothing: rotated by nothing is a matrix multiplication, and the
-        // still is the picture this has to come back to exactly.
+        // Not rotated by nothing. Rotating a finished ring by its whole number of turns
+        // was measured against this and gives a byte-identical canvas, so nothing in the
+        // picture is riding on the skip; what the skip buys is that the return is exact
+        // in the arithmetic rather than fourteen decimal places below a pixel.
         drawRing(ring, index);
         return;
       }
