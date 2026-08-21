@@ -906,6 +906,24 @@
         "durationSeconds": 10,
         "scale": 2
       }
+    },
+    {
+      "id": "apollonian-gasket",
+      "title": "Apollonian Gasket",
+      "entry": "p5js/artworks/apollonian-gasket/index.html",
+      "interactivePath": "apollonian-gasket/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "pappus-kyklon-agagein"
+      ],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/ApollonianGasket.png",
+        "scale": 2
+      }
     }
   ]
 }
