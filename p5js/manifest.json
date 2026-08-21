@@ -868,20 +868,20 @@
       }
     },
     {
-      "id": "taijitu",
-      "title": "Taijitu",
-      "entry": "p5js/artworks/taijitu/index.html",
-      "interactivePath": "taijitu/",
+      "id": "the-red-and-the-black",
+      "title": "The Red and the Black",
+      "entry": "p5js/artworks/the-red-and-the-black/index.html",
+      "interactivePath": "the-red-and-the-black/",
       "canvas": {
         "width": 680,
         "height": 680
       },
       "quoteIds": [
-        "yijing-taiji-liangyi"
+        "stendhal-cessa-de-parler"
       ],
       "render": {
         "kind": "image",
-        "artifact": "exports/p5js/Taijitu.png",
+        "artifact": "exports/p5js/TheRedAndTheBlack.png",
         "scale": 2
       }
     }
