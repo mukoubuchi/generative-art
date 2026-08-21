@@ -420,6 +420,16 @@
       "year": 1831,
       "publicDomain": true,
       "sourceUrl": "https://gallica.bnf.fr/ark:/12148/btv1b8623298f/f54.item"
+    },
+    {
+      "id": "pope-mighty-maze",
+      "text": "A mighty Maze! but not without a Plan;",
+      "lang": "en",
+      "author": "Alexander Pope",
+      "source": "An Essay on Man, Epistle I, line 6",
+      "year": 1736,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/bim_eighteenth-century_an-essay-on-man-in-four_pope-alexander_1736/page/n8/mode/1up"
     }
   ]
 }

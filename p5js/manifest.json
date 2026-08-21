@@ -884,6 +884,28 @@
         "artifact": "exports/p5js/TheRedAndTheBlack.png",
         "scale": 2
       }
+    },
+    {
+      "id": "not-without-a-plan",
+      "title": "Not Without a Plan",
+      "entry": "p5js/artworks/not-without-a-plan/index.html",
+      "interactivePath": "not-without-a-plan/",
+      "canvas": {
+        "width": 960,
+        "height": 640
+      },
+      "quoteIds": [
+        "pope-mighty-maze"
+      ],
+      "thumbnail": {
+        "frame": 299
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/NotWithoutAPlan.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }
