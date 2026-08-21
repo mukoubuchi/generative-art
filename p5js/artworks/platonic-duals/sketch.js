@@ -1,3 +1,4 @@
+import { pinLogicalCamera } from "../shared/camera-scale.js";
 import { hintMode } from "../shared/hint-mode.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import { edgesOf } from "./geometry.js";
@@ -136,7 +137,6 @@ new P5((p) => {
 
   function drawScene(state) {
     p.background(...BACKGROUND);
-    p.scale(RENDER_SCALE);
     const gl = p.drawingContext;
     gl.disable(gl.DEPTH_TEST);
     p.rotateX(STAGE_TILT + drag.tilt);
@@ -205,6 +205,8 @@ new P5((p) => {
       p.pixelDensity(1);
     }
     p.setAttributes("preserveDrawingBuffer", true);
+    // An export is this same view at more pixels, not a larger model in a larger frame.
+    pinLogicalCamera(p, LOGICAL_HEIGHT, OUTPUT_WIDTH, OUTPUT_HEIGHT);
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();

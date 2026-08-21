@@ -1,3 +1,4 @@
+import { pinLogicalCamera } from "../shared/camera-scale.js";
 import { RIBBON_STEPS, ribbonPair } from "./lorenz.js";
 
 /**
@@ -127,7 +128,6 @@ new P5((p) => {
     );
     p.background(...BACKGROUND);
     p.push();
-    p.scale(RENDER_SCALE);
     p.translate(SCREEN_SHIFT_X, SCREEN_SHIFT_Y);
     p.rotateX(Math.PI / 2);
     p.rotateY(WING_ANGLE);
@@ -170,6 +170,8 @@ new P5((p) => {
       p.pixelDensity(1);
     }
     p.setAttributes("preserveDrawingBuffer", true);
+    // An export is this same view at more pixels, not a larger model in a larger frame.
+    pinLogicalCamera(p, LOGICAL_HEIGHT, OUTPUT_WIDTH, OUTPUT_HEIGHT);
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();

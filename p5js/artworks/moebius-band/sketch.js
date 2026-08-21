@@ -1,3 +1,4 @@
+import { pinLogicalCamera } from "../shared/camera-scale.js";
 import {
   STAGE_TURNS,
   backToFront,
@@ -90,7 +91,6 @@ new P5((p) => {
 
   function drawScene(state) {
     p.background(...BACKGROUND);
-    p.scale(RENDER_SCALE);
     p.translate(0, STAGE_LIFT, 0);
     p.rotateX(STAGE_TILT);
     // A turntable turn, about the ring's own axis: the tilted silhouette holds still
@@ -146,6 +146,8 @@ new P5((p) => {
       p.pixelDensity(1);
     }
     p.setAttributes("preserveDrawingBuffer", true);
+    // An export is this same view at more pixels, not a larger model in a larger frame.
+    pinLogicalCamera(p, LOGICAL_HEIGHT, OUTPUT_WIDTH, OUTPUT_HEIGHT);
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();
