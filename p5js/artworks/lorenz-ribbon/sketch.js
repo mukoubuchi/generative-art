@@ -11,8 +11,8 @@ import { RIBBON_STEPS, ribbonPair } from "./lorenz.js";
  * machinery: the low passes near the wings' outer rims sit dark, the climbs over the
  * saddle bright.
  */
-const LOGICAL_WIDTH = 800;
-const LOGICAL_HEIGHT = 600;
+const LOGICAL_WIDTH = 680;
+const LOGICAL_HEIGHT = 680;
 const PLAYBACK_FPS = 30;
 const GROWTH_FRAMES = 250;
 const HOLD_FRAMES = 50;
@@ -29,14 +29,26 @@ const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 // The stage: the attractor's height stood upright, the wings angled towards the viewer,
 // the whole figure scaled from the model's units into the frame and centred on the
 // saddle's height.
-const MODEL_SCALE = 8.9;
+//
+// The scale and the two shifts are one setting rather than three, and none of them can be
+// reasoned out from the model's units. All three act in camera space under a perspective
+// projection, so a point nearer the eye moves further across the frame than a point behind
+// it: a shift stretches the silhouette as well as moving it, and a change to either shift
+// changes what the scale fills. They are therefore measured together, against the union of
+// all 300 frames' silhouettes — which is not the last frame's, because the two heads that
+// lead the growing ribbons swing wider than the ribbon does and put the union's edges where
+// no single frame has them.
+//
+// At these three values that union is 596 by 592 on the 680 square frame: 42 pixels clear
+// of the left, 42 of the right, 44 of the top, 44 of the bottom. Their predecessors — 8.9,
+// 0 and 66, on an 800 by 600 frame — left a 386 by 393 figure with 181, 233, 128 and 79,
+// which is a figure very nearly square adrift in a frame that was not.
+const MODEL_SCALE = 12.93;
 const CENTER_HEIGHT = 24.5;
 const WING_ANGLE = -0.62;
 const RIBBON_HALF_WIDTH = 0.55;
-// The tilted projection throws the figure off the frame's middle; measured from a
-// render and pulled back.
-const SCREEN_SHIFT_X = 0;
-const SCREEN_SHIFT_Y = 66;
+const SCREEN_SHIFT_X = 15.5;
+const SCREEN_SHIFT_Y = 76;
 
 const BACKGROUND = [13, 18, 27];
 // Height's colour, floor to crown, one ramp per ribbon: the leader in ember and gold,

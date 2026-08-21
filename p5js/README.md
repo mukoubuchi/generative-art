@@ -41,7 +41,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `dla-frost` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, six thousand walkers freezing onto the crystal |
 | `kissing-circles` | 680×680 | 1360×1360 MP4 at 30 fps | 9 seconds, thirty thousand darts thrown and what fits kept |
 | `moire-rings` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, out, once around, and home; interactive page |
-| `lorenz-ribbon` | 800×600 | 1600×1200 MP4 at 30 fps | 10 seconds, both orbits grown and held |
+| `lorenz-ribbon` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, both orbits grown and held |
 | `platonic-duals` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one dual cycle, ending where it began; interactive page |
 | `thirty-spokes` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one swing of the stirring each way |
 | `no-common-measure` | 680×680 | 1360×1360 PNG | Static |
