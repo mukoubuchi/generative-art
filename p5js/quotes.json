@@ -440,6 +440,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/pappialexandrin01pappgoog/page/n187/mode/2up"
+    },
+    {
+      "id": "khwarizmi-mal-wa-ashara",
+      "text": "مال وعشرة اجذاره يعدل تسعة وثلثين درهما",
+      "lang": "ar",
+      "author": "محمد بن موسى الخوارزمي",
+      "source": "كتاب الجبر والمقابلة، الأموال والجذور التي تعدل العدد",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/algebraofmohamme00khuwuoft/page/n351/mode/1up"
     }
   ]
 }

@@ -925,6 +925,28 @@
         "artifact": "exports/p5js/ApollonianGasket.png",
         "scale": 2
       }
+    },
+    {
+      "id": "made-whole",
+      "title": "Made Whole",
+      "entry": "p5js/artworks/made-whole/index.html",
+      "interactivePath": "made-whole/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "khwarizmi-mal-wa-ashara"
+      ],
+      "thumbnail": {
+        "frame": 285
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/MadeWhole.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }

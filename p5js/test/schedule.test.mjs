@@ -44,7 +44,8 @@ const AWAITING_SCHEDULE = [
   "the-hat",
   "the-red-and-the-black",
   "not-without-a-plan",
-  "apollonian-gasket"
+  "apollonian-gasket",
+  "made-whole"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
