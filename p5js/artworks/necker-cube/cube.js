@@ -17,7 +17,7 @@
 
 /** Simulation steps per second; the 30 fps clip samples every second step. */
 export const STEPS_PER_SECOND = 60;
-/** One whole rock of the cube: the clip. */
+/** The clip, end to end, in steps: the plan below sums to exactly this. */
 export const TOTAL_STEPS = 600;
 
 /**

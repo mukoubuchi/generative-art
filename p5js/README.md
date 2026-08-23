@@ -27,7 +27,7 @@ Publishing is disabled by default. A normal run is a dry run, and the X API is c
 | `hex-triangle` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, five gatherings |
 | `kanizsa-square` | 680×680 | 1360×1360 MP4 at 30 fps | 8.1 seconds, three turns of the machine's own cycle |
 | `shippo-tsunagi` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one lattice, then the eyes |
-| `necker-cube` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, one rock and two readings; interactive page |
+| `necker-cube` | 680×680 | 1360×1360 MP4 at 30 fps | 10 seconds, ambiguous, one reading, ambiguous, the other; nothing turns |
 | `harriss-spiral` | 795×600 | 1590×1200 MP4 at 30 fps | 10 seconds, fifteen waves of the cascade |
 | `reaction-diffusion-coral` | 680×680 | 1360×1360 PNG | Static |
 | `truchet-tides` | 960×640 | 1920×1280 MP4 at 30 fps | 10 seconds, one drift of the current |
