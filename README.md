@@ -41,7 +41,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Shippō Tsunagi](p5js/artworks/shippo-tsunagi/) | Two circle lattices on indigo; the eyes open only when the second family arrives, rendered as an MP4 |
 | [Necker Cube](p5js/artworks/necker-cube/) | One shadow that is exactly two cubes, one the mirror of the other; nothing in the drawing moves but where three lines stop, rendered as an MP4 |
 | [Harriss Spiral](p5js/artworks/harriss-spiral/) | The plastic-ratio cascade drawn wave by wave in garden greens, rendered as an MP4 |
-| [Reaction Diffusion Coral](p5js/artworks/reaction-diffusion-coral/) | A Gray-Scott colony grown from seeded specks, rendered as a static PNG |
+| [Reaction Diffusion Coral](p5js/artworks/reaction-diffusion-coral/) | A Gray-Scott colony grown from seeded specks, twelve hundred steps of it in order, rendered as an MP4 |
 | [Truchet Tides](p5js/artworks/truchet-tides/) | Truchet tiles turned by a drifting field, their channels cut and rejoined, rendered as an MP4 |
 | [Voronoi Bloom](p5js/artworks/voronoi-bloom/) | Voronoi boundaries lit from golden-angle sites, rendered as a static PNG |
 | [Clinamen](p5js/artworks/clinamen/) | Particle trails combed into streams by a noise field, rendered as an MP4 |

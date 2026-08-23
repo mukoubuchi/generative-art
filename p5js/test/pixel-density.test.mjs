@@ -107,9 +107,13 @@ test("a sketch that writes pixels indexes by the buffer it is writing into", () 
     // It has to ask what the density is, or it cannot know how big the buffer is.
     assert.match(source, /p\.pixelDensity\(\)/u, `${artwork} never reads the density`);
     // And the index has to be built from that, not from the logical width.
+    // The index is built from the backing width, whether it is written out at the write or
+    // named first and multiplied at it. Both artworks now walk the buffer twice -- once to
+    // measure what does not change with time, once a frame to paint -- so the cell number
+    // is worked out where the position is known and carried to where the bytes go.
     assert.match(
       source,
-      /const offset = \(backingX \+ backingY \* backingWidth\) \* 4;/u,
+      /backingX \+ backingY \* backingWidth/u,
       `${artwork} indexes its pixels by something other than the backing width`
     );
     assert.doesNotMatch(
@@ -122,5 +126,5 @@ test("a sketch that writes pixels indexes by the buffer it is writing into", () 
   // The negative control: the offset every one of these used to have is still recognised.
   const wasBroken = "const offset = (outputX + outputY * OUTPUT_WIDTH) * 4;";
   assert.match(wasBroken, /const offset = \([^)]*OUTPUT_WIDTH[^)]*\) \* 4;/u);
-  assert.doesNotMatch(wasBroken, /const offset = \(backingX \+ backingY \* backingWidth\) \* 4;/u);
+  assert.doesNotMatch(wasBroken, /backingX \+ backingY \* backingWidth/u);
 });

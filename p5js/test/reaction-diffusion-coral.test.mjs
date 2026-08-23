@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   CENTRE_WEIGHT,
-  CORNER_WEIGHT,
   COLONY_COUNT,
+  CORNER_WEIGHT,
   EDGE_WEIGHT,
   SIM_SIZE,
   advance,
   createSimulation,
   laplacian,
+  run,
   sampleBilinear,
   seedCircle,
   seedColonies
@@ -142,4 +144,47 @@ test("sampling between grid points interpolates rather than snapping", () => {
   assert.ok(Math.abs(sampleBilinear(field, 10.5, 10) - 0.5) < 1e-6);
   assert.ok(Math.abs(sampleBilinear(field, 10, 10)) < 1e-6);
   assert.ok(Math.abs(sampleBilinear(field, 11, 10) - 1) < 1e-6);
+});
+
+test("running the reaction a step at a time is running it all at once", () => {
+  // What the clip rests on. The still ran twelve hundred steps in one call before it
+  // painted; the clip advances the same field a few steps a frame and paints between them.
+  // Those are the same twelve hundred steps only if a step is a step -- if `advance` keeps
+  // no state of its own about how many have gone before, and `run` is nothing but a loop
+  // over it. Fifty steps is enough to settle that and cheap enough to run every time.
+  const steps = 50;
+  const together = createSimulation(generators(11).noise);
+  seedColonies(together, generators(11).random);
+  const apart = createSimulation(generators(11).noise);
+  seedColonies(apart, generators(11).random);
+
+  run(together, steps);
+  for (let step = 0; step < steps; step += 1) {
+    advance(apart);
+  }
+  assert.deepEqual([...apart.chemicalB], [...together.chemicalB]);
+  assert.deepEqual([...apart.chemicalA], [...together.chemicalA]);
+
+  // Not vacuous: one step short is a different field.
+  const short = createSimulation(generators(11).noise);
+  seedColonies(short, generators(11).random);
+  run(short, steps - 1);
+  assert.notDeepEqual([...short.chemicalB], [...together.chemicalB]);
+});
+
+test("Reaction Diffusion Coral is registered as the reaction running", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+  const artwork = manifest.artworks.find((entry) => entry.id === "reaction-diffusion-coral");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.artifact, "exports/p5js/ReactionDiffusionCoral.mp4");
+  assert.equal(artwork.render.durationSeconds, 10);
+  assert.deepEqual(artwork.thumbnail, { frame: 290 });
+
+  const sketch = readFileSync(
+    new URL("../artworks/reaction-diffusion-coral/sketch.js", import.meta.url), "utf8");
+  // The clip's last painted step is the iteration count the artwork has always settled at.
+  assert.match(sketch, /Math\.round\(ITERATIONS \* Math\.min\(frameIndex \/ GROWTH_FRAMES, 1\)\)/u);
+  // The loop is stopped for the renderer and nobody else, so the page runs the reaction too.
+  assert.match(sketch, /if \(CAPTURE_MODE\) \{\n {6}p\.noLoop\(\);/u);
+  assert.equal(sketch.match(/p\.noLoop\(\);/gu).length, 2);
 });

@@ -469,9 +469,13 @@
       "quoteIds": [
         "turing-dappling"
       ],
+      "thumbnail": {
+        "frame": 290
+      },
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/ReactionDiffusionCoral.png",
+        "kind": "video",
+        "artifact": "exports/p5js/ReactionDiffusionCoral.mp4",
+        "durationSeconds": 10,
         "scale": 2
       }
     },
