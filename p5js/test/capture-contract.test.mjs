@@ -110,9 +110,13 @@ test("an artwork registered as a still does not go on drawing on the page", asyn
   const { manifest } = await loadCatalog();
   const stills = manifest.artworks.filter((artwork) => artwork.render.kind === "image");
   const moving = manifest.artworks.filter((artwork) => artwork.render.kind === "video");
-  // Both kinds are present, so neither branch is passing for want of examples. The stills
-  // are the minority now that everything which forms on the page is published as a clip.
-  assert.ok(stills.length >= 4, `only ${stills.length} artworks are registered as stills`);
+  // Both kinds are present, so neither branch is passing for want of examples. Three is not
+  // a floor chosen to fit: the ruling of 2026-08-23 made the clip the default and left the
+  // still to artworks with a reason, and exactly three have one -- The Red and the Black,
+  // where one or nought is a state and not a process; De Jong Attractor, where running the
+  // sketch on only adds exposure to a cloud that is already the whole of the orbit; and
+  // Nautilus, kept as the original is.
+  assert.ok(stills.length >= 3, `only ${stills.length} artworks are registered as stills`);
   assert.ok(moving.length >= 25, `only ${moving.length} artworks are registered as moving`);
 
   const animating = [];
@@ -129,7 +133,7 @@ test("an artwork registered as a still does not go on drawing on the page", asyn
 
   // Not vacuous: the rule tells the two kinds apart rather than calling everything still.
   const settled = stills.filter((artwork) => !UNDECIDED.includes(artwork.id));
-  assert.ok(settled.length >= 4, `only ${settled.length} stills stop for everybody`);
+  assert.ok(settled.length >= 3, `only ${settled.length} stills stop for everybody`);
 
   // The negative control, and the shape this exists to catch: stopping only for the
   // renderer leaves the page animating, and is not the same as stopping.

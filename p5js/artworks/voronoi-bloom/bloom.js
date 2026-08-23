@@ -103,3 +103,24 @@ export function shade(site, measurement, texture, vignette) {
     brightness: Math.max(0, Math.min(100, brightness))
   };
 }
+
+/**
+ * The radius every front stands at, `part` of the way through the spread.
+ *
+ * `ordered` is the distance from each pixel to the seed nearest it, sorted. The value a
+ * given share of the way along it is therefore the radius at which that share of the
+ * picture has been reached, so reading the radius off this table lights the same area
+ * every frame. A clock that ran the radius up at a constant rate instead would put most
+ * of the picture on the screen early and spend the rest of the clip on the corners.
+ *
+ * What the diagram rests on is untouched either way: at any instant there is one radius
+ * and every front stands at it, so two fronts arrive at a point together exactly when the
+ * point is equidistant from their seeds, which is what a boundary is. The clock decides
+ * when, not where.
+ *
+ * The end is written out rather than looked up, so the last frame reaches the farthest
+ * pixel rather than the last one the table happens to index.
+ */
+export function reachAt(part, ordered, farthest) {
+  return part >= 1 ? farthest : ordered[Math.floor(part * (ordered.length - 1))];
+}

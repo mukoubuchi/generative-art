@@ -510,9 +510,13 @@
       "quoteIds": [
         "baudelaire-se-repondent"
       ],
+      "thumbnail": {
+        "frame": 290
+      },
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/VoronoiBloom.png",
+        "kind": "video",
+        "artifact": "exports/p5js/VoronoiBloom.mp4",
+        "durationSeconds": 10,
         "scale": 2
       }
     },

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
@@ -9,6 +10,7 @@ import {
   SITE_COUNT,
   createSites,
   nearestTwo,
+  reachAt,
   shade
 } from "../artworks/voronoi-bloom/bloom.js";
 
@@ -119,7 +121,7 @@ test("the cells carry only their generators and grain", async () => {
     "strokeWeight", "stroke", "point"
   ]);
   assert.match(sketch, /p\.circle\(site\.x, site\.y, 2\.4\)/u);
-  assert.ok(sketch.includes("paintCells(sites)"), "the scan is not looking at the cells");
+  assert.ok(sketch.includes("paintCells(reach)"), "the scan is not looking at the cells");
   assert.ok(sketch.includes("addGrain()"), "the scan is not looking at the grain");
 });
 
@@ -137,4 +139,117 @@ test("the scan finds both overlays in the sketch that shipped with them", async 
   assert.ok(specimen.includes("paintCells(sites)"), "the specimen is not this artwork");
   assert.ok(specimen.includes("createSites("), "the specimen has no generators");
   assert.ok(specimen.includes("addGrain()"), "the specimen has no grain");
+});
+
+test("the front's end is read back from the table it is compared with", () => {
+  // Single precision rounds both ways, so a distance written into a Float32Array can come
+  // back larger than the double it was written from. Taking the clip's end from the doubles
+  // therefore left the farthest pixel unreached in the last frame: three bytes of six
+  // million, and exactly the three that decide whether the clip ends on the picture the
+  // catalog registers.
+  const store = new Float32Array(1);
+  const measured = 512.1234567890123;
+  store[0] = measured;
+  assert.ok(store[0] > measured, "this witness no longer shows the rounding it was chosen for");
+
+  const sketch = readFileSync(
+    new URL("../artworks/voronoi-bloom/sketch.js", import.meta.url), "utf8");
+  // So the farthest is taken from the table rather than from the measurement.
+  assert.match(sketch, /reached\[cell\] = measurement\.nearest;/u);
+  assert.match(sketch, /if \(reached\[cell\] > farthest\) \{\n {10}farthest = reached\[cell\];/u);
+  assert.equal(sketch.includes("if (measurement.nearest > farthest)"), false);
+});
+
+test("Voronoi Bloom is registered as the fronts spreading", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+  const artwork = manifest.artworks.find((entry) => entry.id === "voronoi-bloom");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.artifact, "exports/p5js/VoronoiBloom.mp4");
+  assert.equal(artwork.render.durationSeconds, 10);
+  assert.deepEqual(artwork.thumbnail, { frame: 290 });
+
+  const sketch = readFileSync(
+    new URL("../artworks/voronoi-bloom/sketch.js", import.meta.url), "utf8");
+  // One radius for every front, read off the picture's own distances.
+  assert.match(sketch, /reachAt\(part, field\.ordered, field\.farthest\)/u);
+  // The loop is stopped for the renderer, and on the page only once the bloom is whole.
+  assert.match(sketch, /if \(CAPTURE_MODE\) \{\n {6}p\.noLoop\(\);/u);
+  assert.match(sketch, /if \(p\.frameCount >= TOTAL_FRAMES\) \{\n {6}p\.noLoop\(\);/u);
+  assert.equal(sketch.match(/p\.noLoop\(\);/gu).length, 2);
+});
+
+test("the clock lights the same area every frame, and ends on the farthest pixel", () => {
+  // The radius is read off the sorted distances, so the share of the table below it is the
+  // share of the picture lit. Walked in equal steps that share rises in equal steps, which
+  // is the whole claim: the clip spends its ten seconds on the diagram rather than on the
+  // corners.
+  //
+  // The table is this artwork's own field, measured on a coarse grid rather than invented:
+  // forty-two sites laid by the sketch's own rule, and each cell's distance to the nearest
+  // of them. That shape matters. Fronts from forty-two seeds meet early and then have only
+  // the corners left, so the distances crowd towards the small end with a long thin tail --
+  // which is exactly why a radius walked at a constant rate front-loads the picture.
+  const width = 200;
+  const height = 160;
+  const measurement = { index: 0, nearest: 0, gap: 0 };
+  const xs = Float64Array.from(sites, (site) => site.x);
+  const ys = Float64Array.from(sites, (site) => site.y);
+  const distances = [];
+  for (let row = 0; row < height; row += 1) {
+    for (let column = 0; column < width; column += 1) {
+      nearestTwo(xs, ys, SITE_COUNT, column * (WIDTH / width), row * (HEIGHT / height), measurement);
+      distances.push(measurement.nearest);
+    }
+  }
+  const ordered = Float32Array.from(distances).sort();
+  const cells = ordered.length;
+  const farthest = ordered[cells - 1];
+  const frames = 270;
+  const litAt = (reach) => {
+    let count = 0;
+    for (const distance of ordered) {
+      if (distance <= reach) {
+        count += 1;
+      }
+    }
+    return count;
+  };
+
+  const lit = [];
+  for (let frame = 0; frame <= frames; frame += 1) {
+    lit.push(litAt(reachAt(Math.min(frame / frames, 1), ordered, farthest)));
+  }
+  assert.equal(lit.at(-1), cells, "the last frame does not reach every pixel");
+  assert.equal(reachAt(1, ordered, farthest), farthest);
+
+  // Every step of the clock lights the same share, to within the rounding a floor can drop
+  // and the ties a real field has. The share is cells/frames, which is what "equal area a
+  // frame" means stated as a number rather than as a hope.
+  const steps = lit.slice(1, frames).map((value, index) => value - lit[index]);
+  const share = cells / frames;
+  const worst = Math.max(...steps.map((step) => Math.abs(step - share)));
+  // Measured at 0.5 of the 118.5 pixels a frame on this grid; the bound is a hundredth of
+  // the share, which is twenty times what the rounding actually costs.
+  assert.ok(worst <= share * 0.01,
+    `a frame was ${worst.toFixed(1)} pixels off the ${share.toFixed(1)} it should light`);
+  assert.ok(steps.every((step) => step >= 0), "the clock goes backwards");
+
+  // The negative control is the clock this replaced, on the same field: a radius walked at
+  // a constant rate. It lights most of the picture early and then has frames that add
+  // almost nothing, which is the thing the change was made to stop.
+  const constant = [];
+  for (let frame = 0; frame <= frames; frame += 1) {
+    constant.push(litAt(farthest * Math.min(frame / frames, 1)));
+  }
+  assert.ok(constant[Math.round(frames / 2)] > cells * 0.8,
+    "the control clock does not front-load this field, so it is not the contrast it is here for");
+  const constantSteps = constant.slice(1, frames).map((value, index) => value - constant[index]);
+  assert.ok(Math.max(...constantSteps) > share * 2, "the control clock is not uneven");
+  // And it has a tail of frames that add almost nothing. Measured on this grid: 29 of the
+  // 269 steps light under a tenth of the share, against none under half of it for the
+  // clock in use.
+  assert.ok(constantSteps.filter((step) => step < share * 0.1).length > 20,
+    "the control clock has no thin tail, so the comparison has nothing to show");
+  assert.equal(steps.filter((step) => step < share * 0.5).length, 0,
+    "the clock in use has thin frames of its own");
 });

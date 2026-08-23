@@ -43,7 +43,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Harriss Spiral](p5js/artworks/harriss-spiral/) | The plastic-ratio cascade drawn wave by wave in garden greens, rendered as an MP4 |
 | [Reaction Diffusion Coral](p5js/artworks/reaction-diffusion-coral/) | A Gray-Scott colony grown from seeded specks, twelve hundred steps of it in order, rendered as an MP4 |
 | [Truchet Tides](p5js/artworks/truchet-tides/) | Truchet tiles turned by a drifting field, their channels cut and rejoined, rendered as an MP4 |
-| [Voronoi Bloom](p5js/artworks/voronoi-bloom/) | Voronoi boundaries lit from golden-angle sites, rendered as a static PNG |
+| [Voronoi Bloom](p5js/artworks/voronoi-bloom/) | Forty-two fronts sharing one radius, and the boundaries are where they meet, rendered as an MP4 |
 | [Clinamen](p5js/artworks/clinamen/) | Particle trails combed into streams by a noise field, rendered as an MP4 |
 | [De Jong Attractor](p5js/artworks/de-jong-attractor/) | A de Jong orbit accumulated into a luminous cloud, rendered as a static PNG |
 | [Möbius Band](p5js/artworks/moebius-band/) | A half-twisted band of glass, one-sided and one-edged, rendered as an MP4 |
