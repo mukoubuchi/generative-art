@@ -192,3 +192,47 @@ test("the format table in the notes says what the manifest says", async () => {
   assert.equal(caught.filter((complaint) => complaint.includes("the manifest says video")).length, 5);
   assert.equal(caught.filter((complaint) => complaint.includes("no row for it")).length, 2);
 });
+
+/** The rows of the entrance table: id, and the sentence the reader is given for it. */
+function entranceRows(readme) {
+  return [...readme.matchAll(/^\| \[[^\]]+\]\(p5js\/artworks\/([a-z0-9-]+)\/\) \| (.*?) \|$/gmu)]
+    .map(([, id, sentence]) => ({ id, sentence }));
+}
+
+test("the entrance table names every artwork and says which medium it is", async () => {
+  // The same argument as the format table next door, one level further out, and made after
+  // the same thing went wrong. The table at the front of the repository is prose too, and
+  // nothing was reading it: on 2026-08-23 four rows still called artworks static PNGs that
+  // had been clips for weeks, and four artworks had no row at all. The format table has had
+  // a test since the day it went stale; this one had not, which is the whole difference.
+  const { manifest } = await loadCatalog();
+  const readme = await readFile(new URL("../../README.md", import.meta.url), "utf8");
+  const rows = entranceRows(readme);
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    manifest.artworks.map((artwork) => artwork.id),
+    "the entrance table and the manifest do not list the same artworks in the same order"
+  );
+
+  const medium = { video: "rendered as an MP4", image: "rendered as a static PNG" };
+  for (const row of rows) {
+    const artwork = manifest.artworks.find((entry) => entry.id === row.id);
+    assert.ok(
+      row.sentence.endsWith(medium[artwork.render.kind]),
+      `${row.id} is a ${artwork.render.kind} and its row ends "${row.sentence.slice(-30)}"`
+    );
+  }
+
+  // Negative control, and the rows are the real ones rather than invented for the check:
+  // these four stood in the file, contradicting a manifest that had called them clips since
+  // v1.6.0 and earlier.
+  const strayed = `
+| [Clinamen](p5js/artworks/clinamen/) | Particle trails combed into streams by a noise field, rendered as a static PNG |
+| [DLA Frost](p5js/artworks/dla-frost/) | Walkers frozen where they first touched a growing crystal, rendered as a static PNG |
+`;
+  const strayedRows = entranceRows(strayed);
+  assert.equal(strayedRows.length, 2, "the scan cannot read the rows it is meant to reject");
+  assert.ok(strayedRows.every((row) => row.sentence.endsWith(medium.image)));
+  assert.ok(strayedRows.every((row) => !row.sentence.endsWith(medium.video)));
+});

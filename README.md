@@ -44,14 +44,14 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Reaction Diffusion Coral](p5js/artworks/reaction-diffusion-coral/) | A Gray-Scott colony grown from seeded specks, rendered as a static PNG |
 | [Truchet Tides](p5js/artworks/truchet-tides/) | Truchet tiles turned by a drifting field, their channels cut and rejoined, rendered as an MP4 |
 | [Voronoi Bloom](p5js/artworks/voronoi-bloom/) | Voronoi boundaries lit from golden-angle sites, rendered as a static PNG |
-| [Clinamen](p5js/artworks/clinamen/) | Particle trails combed into streams by a noise field, rendered as a static PNG |
+| [Clinamen](p5js/artworks/clinamen/) | Particle trails combed into streams by a noise field, rendered as an MP4 |
 | [De Jong Attractor](p5js/artworks/de-jong-attractor/) | A de Jong orbit accumulated into a luminous cloud, rendered as a static PNG |
 | [Möbius Band](p5js/artworks/moebius-band/) | A half-twisted band of glass, one-sided and one-edged, rendered as an MP4 |
-| [Ulam Spiral](p5js/artworks/ulam-spiral/) | The primes alone on a square spiral of the counting numbers, rendered as a static PNG |
+| [Ulam Spiral](p5js/artworks/ulam-spiral/) | The primes alone on a square spiral of the counting numbers, rendered as an MP4 |
 | [Hilbert Curve](p5js/artworks/hilbert-curve/) | One unbroken line eased through six degrees of filling a square, rendered as an MP4 |
 | [Café Wall](p5js/artworks/cafe-wall/) | Horizontal courses bowed into wedges by an offset and a grey, rendered as an MP4 |
-| [DLA Frost](p5js/artworks/dla-frost/) | Walkers frozen where they first touched a growing crystal, rendered as a static PNG |
-| [Kissing Circles](p5js/artworks/kissing-circles/) | Darts kept greedy-first, each grown into the largest circle that fits, rendered as a static PNG |
+| [DLA Frost](p5js/artworks/dla-frost/) | Walkers frozen where they first touched a growing crystal, rendered as an MP4 |
+| [Kissing Circles](p5js/artworks/kissing-circles/) | Darts kept greedy-first, each grown into the largest circle that fits, rendered as an MP4 |
 | [Moiré Rings](p5js/artworks/moire-rings/) | Two families of rings beating into hyperbolas around the pointer, rendered as an MP4 |
 | [Lorenz Ribbons](p5js/artworks/lorenz-ribbon/) | Two orbits a breath apart parting onto different wings, rendered as an MP4 |
 | [Platonic Duals](p5js/artworks/platonic-duals/) | Two solids trading places, each one's face centres already the other's corners, rendered as an MP4 |
@@ -61,6 +61,10 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [What Hangs Stands](p5js/artworks/what-hangs-stands/) | One loaded chain reflected into the compression arch that carries the same forces, rendered as an MP4 |
 | [Mystic Hexagram](p5js/artworks/mystic-hexagram/) | Six points moving on one conic while the intersections of opposite sides keep one line, rendered as an MP4 |
 | [The Hat](p5js/artworks/the-hat/) | One H-supertile assembled from 169 congruent Hats, its reflected stones lit in ochre, rendered as a static PNG |
+| [The Red and the Black](p5js/artworks/the-red-and-the-black/) | The received Taijitu figure carrying a different pair, drawn from the order it is painted in and returned to itself by a half turn that swaps the two roads, rendered as a static PNG |
+| [Not Without a Plan](p5js/artworks/not-without-a-plan/) | One maze made by erasing the loops out of a wandering walk, and the single route through it, rendered as an MP4 |
+| [Apollonian Gasket](p5js/artworks/apollonian-gasket/) | Every gap between three touching circles holding exactly one more, drawn as the equation gives it, rendered as a static PNG |
+| [Made Whole](p5js/artworks/made-whole/) | The unknown square and its ten roots, and the corner that was missing put in to make a square of them, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 
