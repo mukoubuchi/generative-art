@@ -1,4 +1,5 @@
-import { hintMode } from "../shared/hint-mode.js";
+import { hintMode, indicatorShown } from "../shared/hint-mode.js";
+import { RIPPLE_FRAMES, drawPointerIndicator, ripplePhase } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
 import { asTurn, lengthsUpTo, ringAt } from "./gaps.js";
 import { FULL_TURN, angleAt, turnPlans, turnSeconds } from "./turning.js";
@@ -24,6 +25,14 @@ import { FULL_TURN, angleAt, turnPlans, turnSeconds } from "./turning.js";
  * always cut into the other two lengths, which is the same thing as the longest being their
  * sum. A few rings come out in two colours instead of three. Nothing marks them; they are
  * the stages where the turning has come round almost exactly, and they are where they are.
+ *
+ * The clip is one click, recorded. It opens on the drawing at rest, a pointer comes down
+ * on the wheel, and the machine takes hold from the middle outward and lets go the same
+ * way; every ring is given a whole number of turns, so the picture it comes back to is the
+ * picture it left. The first frame and the last are both that picture, and both are the
+ * picture the catalogue has always carried. What the turning is for is the claim: the three
+ * lengths are still three, and still in the same order round each ring, however far the
+ * rings have been carried out of step with one another.
  */
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
@@ -35,6 +44,7 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
+const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
 /**
  * The work is named for an instruction, so the instruction is what the legend prints.
  * Nothing here has to be worded: the saying already is the thing to do.
@@ -86,6 +96,32 @@ const RINGS = Array.from({ length: STAGES }, (unused, index) => ringAt(BigInt(in
 // are arithmetic and are held to it next door, in turning.js.
 const TURN_PLANS = turnPlans(STAGES);
 const TURN_SECONDS = turnSeconds(TURN_PLANS);
+
+const PLAYBACK_FPS = 30;
+/**
+ * The clip's plan, in frames. The turning is not the clip's to shorten -- it is the page's
+ * mechanism, and it takes as long as the outermost ring takes -- so the clip is built round
+ * it: a rest at the start for the pointer to come down on, the whole of the turning, and a
+ * rest at the end on the drawing it comes back to. Twelve seconds, because 11.22 of them
+ * are already spoken for -- the outermost ring starts latest and takes longest, and
+ * `turnSeconds` reads that off the plans rather than being told it.
+ */
+const REST_FRAMES = 12;
+const CLIP_SECONDS = 12;
+const TOTAL_FRAMES = CLIP_SECONDS * PLAYBACK_FPS;
+/** Where the recorded hand comes down: out on the wide bands, clear of the middle. */
+const PRESS_BEARING = Math.PI * 0.28;
+const PRESS_RADIUS = OUTER_RADIUS * 0.62;
+/** How long the pointer's core stays thickened after the press, in frames. */
+const PRESS_HOLD_FRAMES = 4;
+/**
+ * The hand is in the picture for the gesture and for nothing else: it comes down six
+ * frames before the press and lifts when the ripple has gone. Both ends of the clip are
+ * the drawing at rest and nothing else, which is what lets them be the same picture the
+ * catalogue registers -- a pointer resting on the wheel would be a mark the still has not
+ * got, and the clip would no longer begin and end on it.
+ */
+const HAND_LEAD_FRAMES = 6;
 
 const P5 = window.p5;
 
@@ -169,9 +205,53 @@ new P5((p5Instance) => {
     }
   }
 
-  function publishState() {
+  /**
+   * The recorded hand, drawn into the clip and nowhere else. The page has the reader's own
+   * pointer on it and the thumbnail carries the legend; a phantom hand would be a lie in
+   * one direction and an instruction that cannot be followed in the other.
+   */
+  /** Whether the recorded hand is in the picture at `frameIndex`. */
+  function handShown(frameIndex) {
+    const since = frameIndex - REST_FRAMES;
+    return since >= -HAND_LEAD_FRAMES && since < RIPPLE_FRAMES;
+  }
+
+  function drawHand(frameIndex) {
+    const since = frameIndex - REST_FRAMES;
+    p.push();
+    p.scale(RENDER_SCALE);
+    drawPointerIndicator(
+      p,
+      LOGICAL_WIDTH / 2 + PRESS_RADIUS * Math.cos(PRESS_BEARING),
+      LOGICAL_HEIGHT / 2 + PRESS_RADIUS * Math.sin(PRESS_BEARING),
+      LOGICAL_WIDTH,
+      LOGICAL_HEIGHT,
+      {
+        pressed: since >= 0 && since <= PRESS_HOLD_FRAMES,
+        ripple: ripplePhase(since < 0 ? null : since)
+      }
+    );
+    p.pop();
+  }
+
+  /**
+   * Where the turning has got to at `frameIndex`, in seconds, and nought while the drawing
+   * is still at rest. A pure function of the index: a frame asked for twice is the same
+   * frame, and every ring is home at both ends of the clip because `angleAt` returns
+   * exactly nought outside a ring's plan rather than arriving near it.
+   */
+  function turningAt(frameIndex) {
+    return Math.max(0, (frameIndex - REST_FRAMES) / PLAYBACK_FPS);
+  }
+
+  function publishState(frameIndex, seconds) {
     const state = {
-      kind: "image",
+      kind: "video",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
+      turningSeconds: seconds,
+      turnSeconds: TURN_SECONDS,
+      atRest: TURN_PLANS.every((plan) => angleAt(plan, seconds) === 0),
       stages: RINGS.length,
       // How many distinct arc lengths each stage turned out to have, measured not assumed.
       lengthCounts: RINGS.map((ring) => ring.lengths.length),
@@ -202,11 +282,22 @@ new P5((p5Instance) => {
     if (CAPTURE_MODE) {
       p.pixelDensity(1);
     }
-    // A still: every stage is on the paper at once, which is what makes "three at every
-    // stage" something a reader can check rather than take on trust.
-    p.noLoop();
+    p.frameRate(PLAYBACK_FPS);
+    if (CAPTURE_MODE) {
+      // The clip replays a click rather than answering one: every frame is a function of
+      // its index, so the capture is deterministic and both ends are the drawing at rest.
+      p.noLoop();
+      window.__renderFrame = (frameIndex) => {
+        const seconds = turningAt(frameIndex);
+        drawAll(seconds);
+        if (INDICATOR && handShown(frameIndex)) {
+          drawHand(frameIndex);
+        }
+        return Promise.resolve(publishState(frameIndex, seconds));
+      };
+    }
     drawAll();
-    publishState();
+    publishState(0, 0);
     // The turning is the page's own, and no part of it exists for the renderer: an export
     // is the still, and it is taken from a sketch that never had a click to answer.
     if (!CAPTURE_MODE) {
@@ -220,6 +311,9 @@ new P5((p5Instance) => {
   };
 
   p.draw = () => {
+    if (CAPTURE_MODE) {
+      return;
+    }
     if (turningSince === null) {
       p.noLoop();
       return;
@@ -229,9 +323,11 @@ new P5((p5Instance) => {
       // Home, and nothing left to draw until somebody asks again.
       turningSince = null;
       drawAll();
+      publishState(p.frameCount, 0);
       p.noLoop();
       return;
     }
     drawAll(seconds);
+    publishState(p.frameCount, seconds);
   };
 });

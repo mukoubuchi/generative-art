@@ -374,3 +374,42 @@ test("the exact zero is written out because the arithmetic would not give it", (
     assert.ok(Math.abs(Math.sin(bearing)) < 1e-14);
   }
 });
+
+test("the clip is one recorded click, and both its ends are the drawing at rest", async () => {
+  // The two ends have to be the registered drawing, not merely close to it, because the
+  // catalog's picture of this artwork is a frame of its own clip. Every ring is home at
+  // nought and home again once it has let go -- written out rather than left to a whole
+  // number of turns landing on a sine that is not quite nought -- so the frames on either
+  // side of the turning are the same drawing.
+  const plans = turnPlans(30);
+  const whole = turnSeconds(plans);
+  for (const plan of plans) {
+    assert.equal(angleAt(plan, 0), 0);
+    assert.equal(angleAt(plan, whole), 0);
+  }
+  // Not vacuous: in between, the rings are somewhere else entirely.
+  assert.ok(plans.some((plan) => angleAt(plan, whole / 2) !== 0));
+
+  const sketch = await readFile(
+    new URL("../artworks/turn-it-and-turn-it/sketch.js", import.meta.url), "utf8");
+  const manifest = JSON.parse(await readFile(
+    new URL("../manifest.json", import.meta.url), "utf8"));
+  const artwork = manifest.artworks.find((entry) => entry.id === "turn-it-and-turn-it");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.artifact, "exports/p5js/TurnItAndTurnIt.mp4");
+  // The card is the drawing at rest, which is the clip's opening frame.
+  assert.deepEqual(artwork.thumbnail, { frame: 0 });
+
+  // The clip is long enough to hold the whole mechanism after its opening rest, which is
+  // why it is twelve seconds and not the ten the rest of the catalog runs to.
+  const fps = Number(sketch.match(/const PLAYBACK_FPS = (\d+);/u)[1]);
+  const rest = Number(sketch.match(/const REST_FRAMES = (\d+);/u)[1]);
+  const clip = Number(sketch.match(/const CLIP_SECONDS = (\d+);/u)[1]);
+  assert.equal(clip, artwork.render.durationSeconds);
+  assert.ok(rest + whole * fps < clip * fps,
+    `the turning does not fit: ${rest} rest frames and ${whole * fps} of turning in ${clip * fps}`);
+
+  // The recorded hand is in the picture for the gesture and for nothing else, so neither
+  // end of the clip carries a mark the registered drawing has not got.
+  assert.match(sketch, /const since = frameIndex - REST_FRAMES;\n {4}return since >= -HAND_LEAD_FRAMES && since < RIPPLE_FRAMES;/u);
+});

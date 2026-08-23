@@ -57,7 +57,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Platonic Duals](p5js/artworks/platonic-duals/) | Two solids trading places, each one's face centres already the other's corners, rendered as an MP4 |
 | [Thirty Spokes](p5js/artworks/thirty-spokes/) | Loops stirred past recognition, each still caught the same number of times on one hole, rendered as an MP4 |
 | [No Common Measure](p5js/artworks/no-common-measure/) | Curves strung with whole numbers crowding towards the one that stays bare, with motes climbing the descent backwards, rendered as an MP4 |
-| [Turn It and Turn It](p5js/artworks/turn-it-and-turn-it/) | Every ring one more turn, and the gaps between the marks only ever three lengths, rendered as a static PNG |
+| [Turn It and Turn It](p5js/artworks/turn-it-and-turn-it/) | Every ring one more turn, and the gaps between the marks only ever three lengths; one click carries them all round and home, rendered as an MP4 |
 | [What Hangs Stands](p5js/artworks/what-hangs-stands/) | One loaded chain reflected into the compression arch that carries the same forces, rendered as an MP4 |
 | [Mystic Hexagram](p5js/artworks/mystic-hexagram/) | Six points moving on one conic while the intersections of opposite sides keep one line, rendered as an MP4 |
 | [The Hat](p5js/artworks/the-hat/) | One H-supertile assembled from 169 congruent Hats, its reflected stones lit in ochre, rendered as a static PNG |

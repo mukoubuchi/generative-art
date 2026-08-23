@@ -800,9 +800,13 @@
       "quoteIds": [
         "avot-hafokh-bah"
       ],
+      "thumbnail": {
+        "frame": 0
+      },
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/TurnItAndTurnIt.png",
+        "kind": "video",
+        "artifact": "exports/p5js/TurnItAndTurnIt.mp4",
+        "durationSeconds": 12,
         "scale": 2
       }
     },
