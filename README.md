@@ -63,7 +63,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [The Hat](p5js/artworks/the-hat/) | One H-supertile assembled from 169 congruent Hats, its reflected stones lit in ochre, rendered as a static PNG |
 | [The Red and the Black](p5js/artworks/the-red-and-the-black/) | The received Taijitu figure carrying a different pair, drawn from the order it is painted in and returned to itself by a half turn that swaps the two roads, rendered as a static PNG |
 | [Not Without a Plan](p5js/artworks/not-without-a-plan/) | One maze made by erasing the loops out of a wandering walk, and the single route through it, rendered as an MP4 |
-| [Apollonian Gasket](p5js/artworks/apollonian-gasket/) | Every gap between three touching circles holding exactly one more, drawn as the equation gives it, rendered as a static PNG |
+| [Apollonian Gasket](p5js/artworks/apollonian-gasket/) | Every gap between three touching circles holding exactly one more, the packing arriving in order of curvature, rendered as an MP4 |
 | [Made Whole](p5js/artworks/made-whole/) | The unknown square and its ten roots, and the corner that was missing put in to make a square of them, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.

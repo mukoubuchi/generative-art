@@ -928,9 +928,13 @@
       "quoteIds": [
         "pappus-kyklon-agagein"
       ],
+      "thumbnail": {
+        "frame": 290
+      },
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/ApollonianGasket.png",
+        "kind": "video",
+        "artifact": "exports/p5js/ApollonianGasket.mp4",
+        "durationSeconds": 10,
         "scale": 2
       }
     },

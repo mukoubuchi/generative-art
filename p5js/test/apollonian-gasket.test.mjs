@@ -10,6 +10,7 @@ import {
   descartesResidual,
   otherCircle,
   radiusOf,
+  reachAt,
   rootCircles,
   tangencyGap,
   touching
@@ -196,7 +197,7 @@ test("the swap that grows the packing returns the other circle of the pair", () 
 test("the plate draws the packing, at the size the catalog registers", () => {
   assert.match(SKETCH, /from "\.\/apollonian-gasket\.js"/u);
   assert.match(SKETCH, /const CIRCLES = buildPacking\(\);/u);
-  assert.match(SKETCH, /for \(const circle of CIRCLES\)/u);
+  assert.match(SKETCH, /CIRCLES\.forEach\(\(circle, index\)/u);
   // The pen answers to how large a circle is drawn, not to its bend, so the hierarchy on
   // the page is the hierarchy of sizes.
   assert.match(SKETCH, /function penFor\(radiusOnPage\)/u);
@@ -204,17 +205,22 @@ test("the plate draws the packing, at the size the catalog registers", () => {
 
   const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
   const artwork = manifest.artworks.find((entry) => entry.id === "apollonian-gasket");
-  assert.equal(artwork.render.kind, "image");
-  assert.equal(artwork.render.artifact, "exports/p5js/ApollonianGasket.png");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.artifact, "exports/p5js/ApollonianGasket.mp4");
+  assert.equal(artwork.render.durationSeconds, 10);
   assert.equal(artwork.render.scale, 2);
   assert.deepEqual(artwork.canvas, { width: 680, height: 680 });
   assert.deepEqual(artwork.quoteIds, ["pappus-kyklon-agagein"]);
-  assert.equal(artwork.thumbnail, undefined);
+  // The card shows the finished packing rather than the middle of the cascade, which is a
+  // frame inside the clip's closing hold.
+  assert.deepEqual(artwork.thumbnail, { frame: 290 });
 
-  // A still, and held to it: noLoop is called whether or not the page is being captured.
-  const setup = SKETCH.slice(SKETCH.indexOf("p.setup = () =>"));
-  const captureGuardCloses = setup.indexOf("    }\n", setup.indexOf("if (CAPTURE_MODE)"));
-  assert.ok(setup.indexOf("p.noLoop();") > captureGuardCloses);
+  // A clip, and held to it: the loop is stopped for the renderer and nobody else, so the
+  // page draws the same cascade the export does. Every noLoop in the sketch is inside a
+  // capture guard, and there is a draw for the page to go on running.
+  assert.match(SKETCH, /if \(CAPTURE_MODE\) \{\n {6}p\.noLoop\(\);/u);
+  assert.equal(SKETCH.match(/p\.noLoop\(\);/gu).length, 2);
+  assert.match(SKETCH, /p\.draw = \(\) =>/u);
 
   // The finest circle is a pixel of the exported plate, which is what the cutoff says.
   const outerRadius = Number(SKETCH.match(/const OUTER_RADIUS = (\d+);/u)[1]);
@@ -270,4 +276,58 @@ test("the catalog carries Pappus's sentence as Hultsch's text sets it", () => {
       `${character} (U+${point.toString(16)}) is not Greek`
     );
   }
+});
+
+test("the clip's clock is the packing's own scale, and it reaches every circle", () => {
+  const circles = buildPacking();
+  const bends = circles.map((circle) => Math.abs(circle.bend));
+  const given = Math.max(...bends.slice(0, 4));
+  const finest = Math.max(...bends);
+
+  // It starts on the four that are given and ends on the sharpest curve drawn, so the
+  // first frame of the cascade is the given configuration and the last is the packing.
+  assert.equal(reachAt(0, given, finest), given);
+  assert.equal(reachAt(1, given, finest), finest);
+  assert.equal(circles.filter((circle) => Math.abs(circle.bend) <= reachAt(0, given, finest)).length, 4);
+  assert.equal(circles.filter((circle) => Math.abs(circle.bend) <= reachAt(1, given, finest)).length, circles.length);
+
+  // Equal time per doubling, which is what "the packing's own scale" means: the ratio
+  // across any two equal stretches of the clock is the same ratio.
+  const ratio = reachAt(0.25, given, finest) / reachAt(0, given, finest);
+  for (const part of [0.25, 0.5, 0.75]) {
+    assert.ok(
+      Math.abs(reachAt(part + 0.25, given, finest) / reachAt(part, given, finest) - ratio) < 1e-9,
+      `the clock is not multiplicative across ${part}`
+    );
+  }
+  // And it only ever goes forward, so no circle is drawn and then taken away again.
+  let previous = 0;
+  for (let step = 0; step <= 100; step += 1) {
+    const reach = reachAt(step / 100, given, finest);
+    assert.ok(reach >= previous, "the clock goes backwards");
+    previous = reach;
+  }
+});
+
+test("every circle is decided by three that are already on the paper", () => {
+  // What the clip's order rests on. Revealing by curvature shows a circle the moment the
+  // clock reaches its bend, and that is only the picture of a gap being answered if the
+  // three circles that answer it are there first. They are, and not by arrangement: the
+  // fourth circle of a Descartes quadruple taken the growing way is sharper than all three
+  // of its parents, so ordering by bend orders parents before children everywhere.
+  const circles = buildPacking();
+  const children = circles.filter((circle) => circle.generation > 0);
+  assert.ok(children.length > 1700, `only ${children.length} circles have parents`);
+  for (const child of children) {
+    for (const parent of child.parents) {
+      assert.ok(
+        Math.abs(child.bend) > Math.abs(circles[parent].bend),
+        `circle ${child.index} is not sharper than its parent ${parent}`
+      );
+    }
+  }
+  // The scan is not vacuous: the same comparison run the other way round fails at once.
+  const backwards = children.filter((child) =>
+    child.parents.every((parent) => Math.abs(child.bend) < Math.abs(circles[parent].bend)));
+  assert.equal(backwards.length, 0);
 });

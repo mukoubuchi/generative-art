@@ -251,3 +251,22 @@ export function tangencyGap(first, second) {
 export function touching(first, second) {
   return Math.abs(tangencyGap(first, second)) < 1e-9;
 }
+
+/**
+ * The curvature a clip has reached at `part` of its cascade, running from the sharpest of
+ * the given circles to the sharpest the packing is drawn down to.
+ *
+ * Equal time per doubling. The packing is built by a rule that keeps applying to what it
+ * has just made, so its own scale is multiplicative: the circles between one bend and
+ * twice it are the same kind of population however far out you are, and giving each such
+ * range the same time is the only clock that treats them alike. A clock that counted
+ * circles instead would spend nine tenths of itself on hairlines.
+ *
+ * The end is written out rather than left to arithmetic, for the reason a whole number of
+ * turns is written out next door in Turn It and Turn It: a power that ought to land on the
+ * finest bend can land a hair under it, and a hair under is one circle short of the
+ * packing this artwork registers.
+ */
+export function reachAt(part, given, finest) {
+  return part >= 1 ? finest : given * Math.pow(finest / given, part);
+}
