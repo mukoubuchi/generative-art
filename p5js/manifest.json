@@ -870,9 +870,13 @@
       "quoteIds": [
         "psalm-stone-builders"
       ],
+      "thumbnail": {
+        "frame": 290
+      },
       "render": {
-        "kind": "image",
-        "artifact": "exports/p5js/TheHat.png",
+        "kind": "video",
+        "artifact": "exports/p5js/TheHat.mp4",
+        "durationSeconds": 10,
         "scale": 2
       }
     },

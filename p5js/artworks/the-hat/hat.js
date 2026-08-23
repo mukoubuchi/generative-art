@@ -399,3 +399,96 @@ export function boundsOf(tiles) {
     maxY: Math.max(...points.map((vertex) => vertex.y))
   };
 }
+
+/** A tile's placement as a string, rounded well inside the lattice the matrices land on. */
+function placementKey(matrix) {
+  return matrix.map((entry) => (Math.round(entry * 1e6) / 1e6).toFixed(6)).join("|");
+}
+
+function invert(matrix) {
+  const [a, b, c, d, e, f] = matrix;
+  const scale = a * e - b * d;
+  return [
+    e / scale, -b / scale, (b * f - c * e) / scale,
+    -d / scale, a / scale, (c * d - a * f) / scale
+  ];
+}
+
+/**
+ * Every way a smaller patch sits inside a larger one, as the rigid motions that put it
+ * there.
+ *
+ * A substitution tiling contains its own earlier rounds: the patch of one round appears
+ * whole inside the patch of the next, turned and shifted but not resized, because every
+ * round is built out of the same hat. The placements are found rather than derived — each
+ * tile of the host is tried as the image of the guest's first tile, and a candidate is
+ * kept only when every one of the guest's tiles lands exactly on a tile of the host. Two
+ * candidates that cover the same tiles are one placement, so the list is of placements
+ * and not of the tiles that happened to find them.
+ */
+export function placementsInside(guest, host) {
+  const occupied = new Set(host.map((tile) => placementKey(tile.matrix)));
+  const fromFirst = invert(guest[0].matrix);
+  const found = [];
+  const seen = new Set();
+  for (const target of host) {
+    const motion = multiply(target.matrix, fromFirst);
+    const landed = guest.map((tile) => placementKey(multiply(motion, tile.matrix)));
+    if (!landed.every((place) => occupied.has(place))) {
+      continue;
+    }
+    const covered = [...landed].sort().join(";");
+    if (seen.has(covered)) {
+      continue;
+    }
+    seen.add(covered);
+    found.push(motion);
+  }
+  return found;
+}
+
+/** The first of them, in the order the host hands its tiles out. Undefined when none. */
+export function placementInside(guest, host) {
+  return placementsInside(guest, host)[0];
+}
+
+/**
+ * Which round of the substitution first put each tile of the patch on the paper.
+ *
+ * The patch of `rounds` rounds holds a copy of the patch of one round fewer, which holds
+ * a copy of the one before that, down to the four hats of the bare H metatile. Walking
+ * that chain inwards labels every tile with the round it belongs to, and those labels are
+ * the clip's order: the seed stands, then the tiles that make it a round-one patch, then
+ * the tiles that make that a round-two patch. Nothing moves between the stages — every
+ * tile is already at its final place, because the chain is made of placements rather than
+ * of rescalings.
+ *
+ * A round can sit inside the next in more than one place, so which copy is walked into is
+ * a choice and not a fact. `choose` is handed the candidates and the tiles each one would
+ * cover, and returns the one to take; left out, the first the host offers is taken, which
+ * is an order and not a preference.
+ */
+export function nestingRounds(rounds = 2, choose = (candidates) => candidates[0]) {
+  const full = createHatPatch(rounds);
+  const at = new Map(full.map((tile, index) => [placementKey(tile.matrix), index]));
+  const labels = new Array(full.length).fill(rounds);
+  let host = full;
+  for (let round = rounds - 1; round >= 0; round -= 1) {
+    const guest = createHatPatch(round);
+    const candidates = placementsInside(guest, host);
+    if (candidates.length === 0) {
+      throw new Error(`No placement of the round-${round} patch inside the round above it`);
+    }
+    const motion = choose(
+      candidates,
+      candidates.map((placed) =>
+        guest.map((tile) => ({ ...tile, matrix: multiply(placed, tile.matrix) }))),
+      round
+    );
+    host = guest.map((tile) => ({ ...tile, matrix: multiply(motion, tile.matrix) }));
+    for (const tile of host) {
+      labels[at.get(placementKey(tile.matrix))] = round;
+    }
+  }
+  return labels;
+}

@@ -2,6 +2,7 @@ import {
   HAT_OUTLINE,
   boundsOf,
   createHatPatch,
+  nestingRounds,
   transformPoint,
   transformedOutline
 } from "./hat.js";
@@ -11,6 +12,13 @@ import {
  * including the reflected copies that count as the same tile under the paper's convention.
  * One current of light crosses the whole masonry. Kiln variation distinguishes the pieces,
  * while a deeper firing and shallow relief reveal each reflected copy.
+ *
+ * The clip is the substitution, laid. The patch of two rounds holds a copy of the patch
+ * of one round, which holds the bare H metatile of four hats, so the masonry can be built
+ * in the order the rule makes it: four bricks, then the twenty-one that turn them into a
+ * round-one patch, then the hundred and forty-four that turn that into this one. Every
+ * brick is at its final place from the moment it is laid — the stages are nested, not
+ * rescaled — so nothing in the picture ever moves, and the last frame is the whole patch.
  */
 const LOGICAL_WIDTH = 680;
 const LOGICAL_HEIGHT = 680;
@@ -21,6 +29,23 @@ const RENDER_SCALE = CAPTURE_MODE
   : 1;
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
+const PLAYBACK_FPS = 30;
+
+/**
+ * The clip's plan, in frames: each round of the substitution is laid and then held, so a
+ * reader is given the finished shape of every stage rather than a wall that never stops
+ * arriving. The rounds get longer because they have more to lay -- four bricks, then
+ * twenty-one, then a hundred and forty-four -- and the last hold carries the whole patch.
+ */
+const STAGE_PLAN = [
+  { laying: 0, holding: 30 },
+  { laying: 60, holding: 30 },
+  { laying: 150, holding: 30 }
+];
+const TOTAL_FRAMES = STAGE_PLAN.reduce(
+  (total, stage) => total + stage.laying + stage.holding,
+  0
+);
 
 const GROUND = [230, 224, 208];
 const BRICK_LIGHT = [236, 208, 160];
@@ -138,7 +163,79 @@ new P5((p) => {
     return { ...tile, vertices, centre };
   }
 
-  const drawings = TILES.map(tileDrawing);
+  const drawings = TILES.map((tile, index) => ({ ...tileDrawing(tile), index }));
+
+  /**
+   * The order the bricks are laid in: by the round of the substitution that first put each
+   * one on the paper, and within a round outward from the seed, so the masonry grows from
+   * the four hats it starts as rather than filling in from a corner.
+   */
+  const ROUNDS = nestingRounds(2, (candidates, covered) => {
+    // Variant B: of the copies a round can sit in, the one whose ink is nearest the middle
+    // of the page. The patch is the same patch either way -- what this settles is which of
+    // its own sub-patches the clip walks into, and so where the seed stands.
+    const reach = (tiles) => {
+      const points = tiles.flatMap(transformedOutline);
+      const middle = {
+        x: points.reduce((total, point) => total + point.x, 0) / points.length,
+        y: points.reduce((total, point) => total + point.y, 0) / points.length
+      };
+      return Math.hypot(middle.x - PATCH_CENTRE.x, middle.y - PATCH_CENTRE.y);
+    };
+    let best = 0;
+    covered.forEach((tiles, index) => {
+      if (reach(tiles) < reach(covered[best])) {
+        best = index;
+      }
+    });
+    return candidates[best];
+  });
+  const SEED_CENTRE = (() => {
+    const seed = drawings.filter((unused, index) => ROUNDS[index] === 0);
+    const sum = seed.reduce(
+      (total, drawing) => ({ x: total.x + drawing.centre.x, y: total.y + drawing.centre.y }),
+      { x: 0, y: 0 }
+    );
+    return { x: sum.x / seed.length, y: sum.y / seed.length };
+  })();
+  const LAYING_ORDER = drawings
+    .map((drawing, index) => ({
+      index,
+      round: ROUNDS[index],
+      reach: Math.hypot(drawing.centre.x - SEED_CENTRE.x, drawing.centre.y - SEED_CENTRE.y)
+    }))
+    .sort((first, second) => first.round - second.round || first.reach - second.reach);
+  /** Where each brick stands in that order, so a reveal is a comparison and not a search. */
+  const LAID_AT = (() => {
+    const places = new Array(drawings.length);
+    LAYING_ORDER.forEach((entry, place) => {
+      places[entry.index] = place;
+    });
+    return places;
+  })();
+
+  /**
+   * How many bricks are standing at `frameIndex`. A pure function of the index: a frame
+   * asked for twice is the same frame, which is what lets a thumbnail jump to one.
+   */
+  function laidBy(frameIndex) {
+    let standing = 0;
+    let start = 0;
+    for (let stage = 0; stage < STAGE_PLAN.length; stage += 1) {
+      const target = ROUNDS.filter((round) => round <= stage).length;
+      const { laying, holding } = STAGE_PLAN[stage];
+      if (frameIndex < start + laying) {
+        const part = laying === 0 ? 1 : (frameIndex - start) / laying;
+        return Math.round(standing + (target - standing) * part);
+      }
+      if (frameIndex < start + laying + holding) {
+        return target;
+      }
+      standing = target;
+      start += laying + holding;
+    }
+    return drawings.length;
+  }
 
   function insetVertices(drawing) {
     return drawing.vertices.map((vertex) => ({
@@ -202,7 +299,14 @@ new P5((p) => {
     context.restore();
   }
 
-  function drawAll() {
+  /**
+   * The masonry with `standing` bricks laid. The bricks are walked in the order the patch
+   * hands them out rather than the order they are laid in, so which brick's relief falls
+   * over which never depends on how far the clip has got: the last frame is the drawing
+   * this artwork has always been, shape for shape.
+   */
+  function drawAll(standing = drawings.length) {
+    const laid = (drawing) => LAID_AT[drawing.index] < standing;
     p.push();
     p.background(...GROUND);
     drawGroundLight();
@@ -212,26 +316,30 @@ new P5((p) => {
     p.rotate(PATCH_TILT);
     p.scale(PATCH_SCALE);
     p.translate(-PATCH_CENTRE.x, -PATCH_CENTRE.y);
-    for (const drawing of drawings) {
+    for (const drawing of drawings.filter(laid)) {
       drawBrick(drawing);
     }
     // Warm offset fills give the reflected headers shallow relief without dark outlines.
-    for (const drawing of drawings.filter((entry) => entry.reflected)) {
+    for (const drawing of drawings.filter((entry) => entry.reflected && laid(entry))) {
       drawReliefShadow(drawing);
     }
-    for (const drawing of drawings.filter((entry) => entry.reflected)) {
+    for (const drawing of drawings.filter((entry) => entry.reflected && laid(entry))) {
       drawBrick(drawing);
     }
     p.pop();
   }
 
-  function publishState() {
+  function publishState(frameIndex, standing) {
     const labels = Object.fromEntries(Object.keys(LABEL_LIFT).map((label) => [
       label,
       TILES.filter((tile) => tile.label === label).length
     ]));
     const state = {
-      kind: "image",
+      kind: "video",
+      frameIndex,
+      totalFrames: TOTAL_FRAMES,
+      standingTiles: standing,
+      tilesByRound: [0, 1, 2].map((round) => ROUNDS.filter((entry) => entry === round).length),
       substitutionRounds: 2,
       tiles: TILES.length,
       reflectedTiles: TILES.filter((tile) => tile.reflected).length,
@@ -244,14 +352,35 @@ new P5((p) => {
     return state;
   }
 
+  /** Draws the masonry as far as `frameIndex` has laid it, and says how far that was. */
+  function drawFrame(frameIndex) {
+    const standing = laidBy(frameIndex);
+    drawAll(standing);
+    return standing;
+  }
+
   p.setup = () => {
     p.createCanvas(OUTPUT_WIDTH, OUTPUT_HEIGHT).parent("artwork");
     if (CAPTURE_MODE) {
       p.pixelDensity(1);
     }
-    // A still: the complete substitution patch is present in the first and only drawing.
-    p.noLoop();
-    drawAll();
-    publishState();
+    p.frameRate(PLAYBACK_FPS);
+    if (CAPTURE_MODE) {
+      p.noLoop();
+      window.__renderFrame = (frameIndex) =>
+        Promise.resolve(publishState(frameIndex, drawFrame(frameIndex)));
+    }
+    publishState(0, drawFrame(0));
+  };
+
+  p.draw = () => {
+    if (CAPTURE_MODE) {
+      return;
+    }
+    // The page lays the patch to the same plan the clip follows, frame for frame.
+    publishState(p.frameCount, drawFrame(p.frameCount));
+    if (p.frameCount >= TOTAL_FRAMES) {
+      p.noLoop();
+    }
   };
 });

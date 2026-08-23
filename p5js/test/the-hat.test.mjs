@@ -7,6 +7,8 @@ import {
   boundsOf,
   createHatPatch,
   determinant,
+  nestingRounds,
+  placementInside,
   polygonArea,
   transformedOutline
 } from "../artworks/the-hat/hat.js";
@@ -75,20 +77,66 @@ test("invalid substitution depths are rejected", () => {
   assert.throws(() => createHatPatch(1.5), /non-negative integer/);
 });
 
-test("The Hat is registered as an unconditional still", () => {
+test("The Hat is registered as the clip its substitution makes", () => {
   const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
   const artwork = manifest.artworks.find((entry) => entry.id === "the-hat");
-  assert.equal(artwork.render.kind, "image");
-  assert.equal(artwork.render.artifact, "exports/p5js/TheHat.png");
+  assert.equal(artwork.render.kind, "video");
+  assert.equal(artwork.render.artifact, "exports/p5js/TheHat.mp4");
+  assert.equal(artwork.render.durationSeconds, 10);
   assert.equal(artwork.render.scale, 2);
+  // The card shows the finished patch, from a frame inside the clip's closing hold.
+  assert.deepEqual(artwork.thumbnail, { frame: 290 });
 
   const sketch = readFileSync(
     new URL("../artworks/the-hat/sketch.js", import.meta.url),
     "utf8"
   );
-  const setup = sketch.slice(sketch.indexOf("p.setup = () =>"));
-  const captureGuardCloses = setup.indexOf("    }\n", setup.indexOf("if (CAPTURE_MODE)"));
-  assert.ok(setup.indexOf("p.noLoop();") > captureGuardCloses);
+  // A clip, and held to it: the loop is stopped for the renderer and nobody else, so the
+  // page lays the patch to the same plan the export follows.
+  assert.match(sketch, /if \(CAPTURE_MODE\) \{\n {6}p\.noLoop\(\);/u);
+  assert.equal(sketch.match(/p\.noLoop\(\);/gu).length, 2);
+  assert.match(sketch, /p\.draw = \(\) =>/u);
+  // The plan's three stages are the three rounds, and they fill ten seconds at thirty
+  // frames a second -- the duration the manifest registers, not a number chosen twice.
+  const plan = [...sketch.matchAll(/\{ laying: (\d+), holding: (\d+) \}/gu)]
+    .map(([, laying, holding]) => Number(laying) + Number(holding));
+  assert.equal(plan.length, 3);
+  assert.equal(plan.reduce((total, stage) => total + stage, 0),
+    artwork.render.durationSeconds * 30);
+});
+
+test("the patch holds its own earlier rounds, which is the order the clip lays it in", () => {
+  // The clip's stages are not a retelling of the substitution: they are sub-patches of the
+  // finished one. The four hats of the bare H metatile sit inside the twenty-five of the
+  // round-one patch, which sits inside these hundred and sixty-nine, each as a copy that
+  // has been moved but not resized. So every brick is at its final place from the moment
+  // it is laid, and nothing in the picture ever moves.
+  const rounds = nestingRounds(2);
+  assert.equal(rounds.length, TILES.length);
+  assert.deepEqual(
+    [0, 1, 2].map((round) => rounds.filter((entry) => entry === round).length),
+    [4, 21, 144]
+  );
+  assert.deepEqual(
+    [0, 1, 2].map((round) => rounds.filter((entry) => entry <= round).length),
+    [4, 25, 169]
+  );
+  // The three counts are the patches themselves, rather than three numbers that add up.
+  assert.equal(createHatPatch(0).length, 4);
+  assert.equal(createHatPatch(1).length, 25);
+  assert.equal(createHatPatch(2).length, 169);
+  // Read twice, the labelling is the same labelling: the placement is found by a search,
+  // and a search that returned a different answer each time would reorder the clip.
+  assert.deepEqual(nestingRounds(2), rounds);
+
+  // The scan is not vacuous: a patch cannot hold a copy of the round above it.
+  assert.equal(placementInside(createHatPatch(2), createHatPatch(1)), undefined);
+  // And the placement it does find is a rigid motion -- the hats keep their size, which is
+  // what makes the stages nested rather than rescaled.
+  const motion = placementInside(createHatPatch(1), createHatPatch(2));
+  assert.ok(motion, "the round-one patch is not inside the round-two patch");
+  assert.ok(Math.abs(Math.abs(determinant(motion)) - 1) < 1e-9,
+    "the placement changes the size of the tiles");
 });
 
 test("the catalog preserves the verified WLC wording of Psalm 118:22", () => {

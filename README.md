@@ -60,7 +60,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Turn It and Turn It](p5js/artworks/turn-it-and-turn-it/) | Every ring one more turn, and the gaps between the marks only ever three lengths; one click carries them all round and home, rendered as an MP4 |
 | [What Hangs Stands](p5js/artworks/what-hangs-stands/) | One loaded chain reflected into the compression arch that carries the same forces, rendered as an MP4 |
 | [Mystic Hexagram](p5js/artworks/mystic-hexagram/) | Six points moving on one conic while the intersections of opposite sides keep one line, rendered as an MP4 |
-| [The Hat](p5js/artworks/the-hat/) | One H-supertile assembled from 169 congruent Hats, its reflected stones lit in ochre, rendered as a static PNG |
+| [The Hat](p5js/artworks/the-hat/) | One H-supertile of 169 congruent Hats, laid in the order the substitution makes it — four, then twenty-five, then all of them — its reflected stones lit in ochre, rendered as an MP4 |
 | [The Red and the Black](p5js/artworks/the-red-and-the-black/) | The received Taijitu figure carrying a different pair, drawn from the order it is painted in and returned to itself by a half turn that swaps the two roads, rendered as a static PNG |
 | [Not Without a Plan](p5js/artworks/not-without-a-plan/) | One maze made by erasing the loops out of a wandering walk, and the single route through it, rendered as an MP4 |
 | [Apollonian Gasket](p5js/artworks/apollonian-gasket/) | Every gap between three touching circles holding exactly one more, the packing arriving in order of curvature, rendered as an MP4 |
