@@ -54,12 +54,13 @@ new P5((p) => {
    * hundred, and the numbers are the ones the single-pass paint used to compute inline --
    * the same calls, in the same order, from the same seeds.
    *
-   * Kept at full precision, and that is not fussiness. Stored as single floats the two
-   * tables came back a hair off, and a hair is enough to carry a brightness across the
-   * boundary between one byte and the next: two pixels of the five and a half million came
-   * out one step from the picture this artwork registers. The vignette's factor is tabled
-   * the same way and for the same reason: it is a fractional power of the pixel's own
-   * position, the most expensive thing in the loop that the reaction has no say in.
+   * Kept at full precision, and that is not fussiness. Stored as single floats the tables
+   * come back a hair off, and a hair is enough to carry a brightness across the boundary
+   * between one byte and the next: with all three at single precision, eight pixels of the
+   * 1,849,600 in an export come out one step from the picture this artwork registers, one
+   * channel each. The vignette's factor is tabled the same way and for the same reason: it
+   * is a fractional power of the pixel's own position, the most expensive thing in the loop
+   * that the reaction has no say in.
    */
   let paper = null;
 
