@@ -172,36 +172,47 @@ const quoteMark = (className) => `<svg class="${className}" aria-hidden="true" f
 /**
  * The epigraph over the door.
  *
- * Quoted from the middle of its sentence, so it opens on a lower-case "si" — the same
- * treatment the catalog already gives Poincaré and Huygens, which begin mid-sentence and
- * carry no leading ellipsis either. The apostrophe is set as U+2019 to match the French
- * entries in quotes.json; the snippets this was read in normalise their punctuation, so
- * they say nothing about which apostrophe the book was printed with.
+ * Quoted from the middle of its paragraph, and it keeps the "En d’autres termes" the page
+ * prints, so a reader meets the sentence the way the book hands it over. The sentence before
+ * it reads, in the 1967 and Gallimard printings, "Il s’agit d’en arriver au moment où la
+ * conscience cessera d’être conscience de quelque chose."; the 1949 printing shows it from
+ * "cessera d’être" onward. The apostrophes are set as U+2019, five of them, to match the
+ * French entries in quotes.json; the snippets this was read in normalise their punctuation,
+ * so they say nothing about which apostrophe the book was printed with.
  *
- * It closes the second section of the "Introduction théorique", immediately before the
- * heading of the third, and the locator is given by section rather than by page. The 1949
- * table of contents came back with its page column run together as "21 21 23 25", which
- * cannot be assigned to sections from a snippet, and the editions below are paginated
- * differently in any case.
+ * Where it sits is given as the work and nothing finer. No page is claimed: the printings
+ * below are paginated differently, and none of the snippets carries one. Nor is a section.
+ * The passage this replaced stood against the heading of a numbered section, which is what
+ * placed it; on either side of this one there is nothing but running prose. It is followed
+ * in every printing by "Cet achèvement, lié, là où la lucidité a ses chances, … a la valeur
+ * d’une mise en place de l’existence sociale. Cette mise en place serait comparable …", so
+ * it is not the last sentence of the essay and is not described as one here.
  *
  * Read through the Google Books volumes feed in snippet view, which is where these are
  * legible: archive.org and Gallica hold no copy, and HathiTrust puts its text behind
- * script. Five volumes, all under Bataille's name:
+ * script. Five volumes, all under Bataille's name, their publishers taken from the feed's
+ * single-volume records rather than from its search results, which drop the field:
  *
- *   kHNHAAAAIAAJ  1949  La part maudite / essai d'économie générale
- *   HZCBlYTCZroC  1967  La Part maudite / précédé de la Notion de dépense (Minuit)
- *   8IIOAQAAIAAJ  1970  OEuvres complètes
- *   ZW1cAAAAMAAJ  1970  L'Économie à la mesure de l'univers. La part maudite. […]
- *   fbMqAQAAIAAJ  1976  Annexes
+ *   kHNHAAAAIAAJ  1949  Éditions de Minuit  La part maudite / essai d'économie générale
+ *   HZCBlYTCZroC  1967  Éditions de Minuit  La Part maudite / précédé de la Notion de dépense
+ *   8IIOAQAAIAAJ  1970  Gallimard           OEuvres complètes
+ *   ZW1cAAAAMAAJ  1970  Gallimard           L'Économie à la mesure de l'univers. […]
+ *   fbMqAQAAIAAJ  1976  Gallimard           Annexes
  *
- * The 1949 volume carries the sentence whole in a single snippet, broken across lines as
- * "il faut né- cessairement" and "de fa- çon", and followed by "§ 3. LA PAUVRETÉ - DES
- * ORGANISMES OU DES ENSEMBLES LIMITÉS ET L'EXCÈS DE RICHESSE DE LA NATURE VIVANTE", which
- * is what fixes the position. All five set the comma in "le dépenser, volontiers ou non";
- * secondary works quoting the passage drop it, so a citation taken from one of those can be
- * told from one taken from the book. The feed's OCR puts a space before every comma and
- * full stop, including where French would never print one, so that spacing is the OCR's own
- * and not the page's.
+ * The last four carry the sentence whole in one snippet each. The 1949 printing gives it in
+ * two, and how it was reached is worth keeping: a bare phrase query returns "En d'autres
+ * termes , prendre conscience du sens décisif d'un instant où la croissance ( l'acquisition
+ * de quelque chose ) se résoudra en dépense , est exactement la conscience de" and stops,
+ * while the same query with the volume's subtitle appended returns the rest, "est exactement
+ * la conscience de soi , c'est - à - dire une conscience qui n'a plus rien pour objet 1 .
+ * Cet". A passage missing from one window is not missing from the book, which is why this
+ * one was read in four shapes of query before anything was said about it.
+ *
+ * A footnote follows the sentence, and its marker differs between printings — 1 in 1949 and
+ * 1967, an asterisk in the three Gallimard volumes — so the quotation ends at the full stop
+ * before it. The feed's OCR puts a space before every comma and full stop and around the
+ * hyphens of "c'est - à - dire", including where French would never print one, so that
+ * spacing is the OCR's own and not the page's.
  *
  * Not in quotes.json, and deliberately. That catalog throws on any entry not marked public
  * domain, and Bataille died in 1962, so this is not one. It is the door's epigraph rather
@@ -209,12 +220,12 @@ const quoteMark = (className) => `<svg class="${className}" aria-hidden="true" f
  * source attached, which is the shape a short quotation is allowed to take.
  */
 const EPIGRAPH = {
-  text: "si le système ne peut plus croître, ou si l\u2019excédent ne peut en entier être "
-    + "absorbé dans sa croissance, il faut nécessairement le perdre sans profit, "
-    + "le dépenser, volontiers ou non, glorieusement ou sinon de façon catastrophique.",
+  text: "En d\u2019autres termes, prendre conscience du sens décisif d\u2019un instant où la "
+    + "croissance (l\u2019acquisition de quelque chose) se résoudra en dépense, est exactement "
+    + "la conscience de soi, c\u2019est-à-dire une conscience qui n\u2019a plus rien pour objet.",
   lang: "fr",
   author: "Georges Bataille",
-  source: "La Part maudite, Introduction théorique",
+  source: "La Part maudite",
   year: 1949
 };
 
