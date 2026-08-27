@@ -219,7 +219,7 @@ const quoteMark = (className) => `<svg class="${className}" aria-hidden="true" f
  * than an artwork's aphorism: it never goes out on the posting path, and it stands with its
  * source attached, which is the shape a short quotation is allowed to take.
  */
-const EPIGRAPH = {
+export const EPIGRAPH = {
   text: "En d\u2019autres termes, prendre conscience du sens décisif d\u2019un instant où la "
     + "croissance (l\u2019acquisition de quelque chose) se résoudra en dépense, est exactement "
     + "la conscience de soi, c\u2019est-à-dire une conscience qui n\u2019a plus rien pour objet.",
