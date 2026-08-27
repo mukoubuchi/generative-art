@@ -170,11 +170,44 @@ body {
   line-height: 1.05;
 }
 
-.masthead__lede {
+/*
+ * The epigraph under the title, which stands where a lede did. It keeps that measure and
+ * that weight of ink exactly — it is still the one paragraph a reader meets first, and the
+ * head of the page should not have grown louder for having become a quotation.
+ *
+ * Italic and a quotation mark carry the fact that it is quoted, which is how the cards say
+ * the same thing. What is not borrowed from them is the rule down the side: a card needs it
+ * to fence the quotation off from the title above and the source link below, and up here
+ * there is nothing on either side to be fenced from.
+ */
+.masthead__epigraph {
   margin: 0;
   max-width: 38rem;
   color: var(--ink-dim);
   font-size: clamp(0.95rem, 1.6vw, 1.06rem);
+  font-style: italic;
+  text-wrap: pretty;
+}
+
+.masthead__epigraph-text {
+  margin: 0;
+}
+
+/*
+ * Set against the end edge, as the cards' attributions are, so a reader finds it where they
+ * already look for one. It is a step quieter than the quotation rather than a step brighter:
+ * in a card the quotation is the quiet thing under a title, and the attribution has to lift
+ * clear of it, whereas here the quotation is what the page opens with and the name belongs
+ * behind it.
+ */
+.masthead__cite {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+  font-style: normal;
+  letter-spacing: 0.01em;
+  text-align: end;
   text-wrap: pretty;
 }
 
@@ -707,7 +740,8 @@ body {
  * box keeps the icon's own 448:512 proportions, so it is not letterboxed inside a square,
  * and sits on the baseline of the line it opens.
  */
-.card__quote-mark {
+.card__quote-mark,
+.masthead__quote-mark {
   width: calc(0.95em * 448 / 512);
   height: 0.95em;
   vertical-align: -0.05em;

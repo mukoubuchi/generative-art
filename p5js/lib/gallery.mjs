@@ -161,9 +161,62 @@ const RULE = `<svg class="rule" viewBox="0 0 120 8" preserveAspectRatio="none"`
 /**
  * Set inline at the head of the quotation rather than positioned over the block, so it
  * wraps with the text it belongs to and cannot land on top of a line at any width.
+ *
+ * The class is passed in because two blocks quote — the cards, and the epigraph under the
+ * title — and the mark is sized in `em`. Taking the class of the block it sits in is what
+ * lets one symbol follow two sizes of type without either being told the other's measure.
  */
-const QUOTE_MARK = `<svg class="card__quote-mark" aria-hidden="true" focusable="false">`
+const quoteMark = (className) => `<svg class="${className}" aria-hidden="true" focusable="false">`
   + `<use href="#${QUOTE_SYMBOL_ID}"/></svg>`;
+
+/**
+ * The epigraph over the door.
+ *
+ * Quoted from the middle of its sentence, so it opens on a lower-case "si" — the same
+ * treatment the catalog already gives Poincaré and Huygens, which begin mid-sentence and
+ * carry no leading ellipsis either. The apostrophe is set as U+2019 to match the French
+ * entries in quotes.json; the snippets this was read in normalise their punctuation, so
+ * they say nothing about which apostrophe the book was printed with.
+ *
+ * It closes the second section of the "Introduction théorique", immediately before the
+ * heading of the third, and the locator is given by section rather than by page. The 1949
+ * table of contents came back with its page column run together as "21 21 23 25", which
+ * cannot be assigned to sections from a snippet, and the editions below are paginated
+ * differently in any case.
+ *
+ * Read through the Google Books volumes feed in snippet view, which is where these are
+ * legible: archive.org and Gallica hold no copy, and HathiTrust puts its text behind
+ * script. Five volumes, all under Bataille's name:
+ *
+ *   kHNHAAAAIAAJ  1949  La part maudite / essai d'économie générale
+ *   HZCBlYTCZroC  1967  La Part maudite / précédé de la Notion de dépense (Minuit)
+ *   8IIOAQAAIAAJ  1970  OEuvres complètes
+ *   ZW1cAAAAMAAJ  1970  L'Économie à la mesure de l'univers. La part maudite. […]
+ *   fbMqAQAAIAAJ  1976  Annexes
+ *
+ * The 1949 volume carries the sentence whole in a single snippet, broken across lines as
+ * "il faut né- cessairement" and "de fa- çon", and followed by "§ 3. LA PAUVRETÉ - DES
+ * ORGANISMES OU DES ENSEMBLES LIMITÉS ET L'EXCÈS DE RICHESSE DE LA NATURE VIVANTE", which
+ * is what fixes the position. All five set the comma in "le dépenser, volontiers ou non";
+ * secondary works quoting the passage drop it, so a citation taken from one of those can be
+ * told from one taken from the book. The feed's OCR puts a space before every comma and
+ * full stop, including where French would never print one, so that spacing is the OCR's own
+ * and not the page's.
+ *
+ * Not in quotes.json, and deliberately. That catalog throws on any entry not marked public
+ * domain, and Bataille died in 1962, so this is not one. It is the door's epigraph rather
+ * than an artwork's aphorism: it never goes out on the posting path, and it stands with its
+ * source attached, which is the shape a short quotation is allowed to take.
+ */
+const EPIGRAPH = {
+  text: "si le système ne peut plus croître, ou si l\u2019excédent ne peut en entier être "
+    + "absorbé dans sa croissance, il faut nécessairement le perdre sans profit, "
+    + "le dépenser, volontiers ou non, glorieusement ou sinon de façon catastrophique.",
+  lang: "fr",
+  author: "Georges Bataille",
+  source: "La Part maudite, Introduction théorique",
+  year: 1949
+};
 
 function renderCard(manifest, artwork, quote, index) {
   const href = escapeHtml(artworkHref(artwork));
@@ -187,7 +240,7 @@ function renderCard(manifest, artwork, quote, index) {
             <div class="card__label">
               <h2 class="card__title">${escapeHtml(artwork.title)}</h2>
               ${quote ? `<blockquote class="card__quote" lang="${escapeHtml(quote.lang)}">
-                <p class="card__quote-text">${QUOTE_MARK}${escapeHtml(quote.text)}</p>
+                <p class="card__quote-text">${quoteMark("card__quote-mark")}${escapeHtml(quote.text)}</p>
                 <cite class="card__cite">—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(quote.source)}${escapeHtml(quoteYearSuffix(quote))}</cite>
               </blockquote>` : ""}
             </div>
@@ -294,11 +347,14 @@ ${ICON_SPRITE}
         <!-- No count: it would be one more place to remember when an artwork is added, and
              the page is generated from the manifest precisely so nothing has to be kept in
              step by hand. -->
-        <p class="masthead__lede">
-          Every work here is a program: its geometry dwells in a module that needs no
-          browser, and the picture is its visible consequence. Each opus bears an aphorism,
-          kept in its original tongue and verified against a primary source.
-        </p>
+        <!-- The epigraph over the door, set in the register the cards use for their own
+             quotations so that the head of the page and the grid below it read as one
+             catalog. Where it was read, why it is quoted from mid-sentence, and why it is
+             not in quotes.json: see EPIGRAPH in lib/gallery.mjs. -->
+        <blockquote class="masthead__epigraph" lang="${escapeHtml(EPIGRAPH.lang)}">
+          <p class="masthead__epigraph-text">${quoteMark("masthead__quote-mark")}${escapeHtml(EPIGRAPH.text)}</p>
+          <cite class="masthead__cite">—&nbsp;<b>${escapeHtml(EPIGRAPH.author)}</b>, ${escapeHtml(EPIGRAPH.source)}${escapeHtml(quoteYearSuffix(EPIGRAPH))}</cite>
+        </blockquote>
       </div>
       <!-- The face, and it looks towards the pointer. The script writes the direction here
            as custom properties and the stylesheet does the rest; with no script, or with
