@@ -37,8 +37,8 @@ export function weightedCharacterCount(text) {
 
 /**
  * The year's place in an attribution, shared by every surface that prints one — the
- * post, the gallery card, and the artwork page — so the three cannot drift. A catalog
- * entry whose date is recorded as unknown simply has no year to print.
+ * post, the gallery card, and the epigraph over the index — so the three cannot drift. A
+ * catalog entry whose date is recorded as unknown simply has no year to print.
  */
 export function quoteYearSuffix(quote) {
   return quote.year == null ? "" : ` (${quote.year})`;
