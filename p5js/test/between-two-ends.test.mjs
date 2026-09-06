@@ -271,6 +271,45 @@ test("all three standing curves are the same astroid turned, exactly rather than
   assert.ok(!isExactlyZero(astroidResidue(exactNestedPoint(3n, 4n, 5n, { pointIndex: 2 }), 0)));
 });
 
+test("the gear decides how many cusps the nested curve has, and where they fall", () => {
+  // A cusp is a phase where the point stops before reversing, so it is found
+  // by looking for a vanishing velocity over the whole turn rather than by
+  // reading local minima off a grid: a grid that skips its own endpoint
+  // misses the cusp that every gear has at zero.
+  const cusps = { 1: [0, 120, 240], 2: [0, 90, 180, 270], 3: [0] };
+  const speed = (degrees, gear) => {
+    const at = (angle) => nestedAtUnit(
+      [Math.cos(angle), Math.sin(angle)], { gear }
+    ).materialPoint;
+    const angle = degrees * Math.PI / 180;
+    const step = 1e-5;
+    const [backX, backY] = at(angle - step);
+    const [aheadX, aheadY] = at(angle + step);
+    return Math.hypot(aheadX - backX, aheadY - backY) / (2 * step);
+  };
+  const apart = (first, second) => {
+    const gap = Math.abs(first - second) % 360;
+    return Math.min(gap, 360 - gap);
+  };
+  for (const [gear, degrees] of Object.entries(cusps)) {
+    for (const cusp of degrees) assert.ok(speed(cusp, Number(gear)) < 1e-6, `${gear} at ${cusp}`);
+    // Nothing outside that list even slows down: a hundredth of a degree at a
+    // time over the whole turn, skipping one degree either side of a cusp.
+    let slowest = Infinity;
+    for (let step = 0; step < 36000; step += 1) {
+      const degrees0 = step / 100;
+      if (degrees.some((cusp) => apart(degrees0, cusp) < 1)) continue;
+      slowest = Math.min(slowest, speed(degrees0, Number(gear)));
+    }
+    assert.ok(slowest > 1, `gear ${gear} slows to ${slowest} away from its cusps`);
+  }
+  assert.equal(cusps[NESTED_GEAR].length, 4);
+  assert.equal(cusps[1].length, 3);
+  assert.equal(cusps[3].length, 1);
+  // The notes give these three numbers in prose; this is what holds them.
+  assert.match(NOTES, /three cusps at one and a single cusp at three, against the astroid's four/u);
+});
+
 test("the plate lays down no line and no curve twice", () => {
   // Four couples give four diameter directions and four times three carried
   // points, but a line is its own half turn and an astroid its own quarter,
