@@ -295,8 +295,8 @@ test("the Arabic catalog text is Rosen's page reading, codepoint for codepoint",
     "https://archive.org/details/algebraofmohamme00khuwuoft/page/n351/mode/1up"
   );
 
-  assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "ar").length, 1);
-  assert.equal(CATALOG.quotes.length, 45);
+  assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "ar").length, 2);
+  assert.equal(CATALOG.quotes.length, 46);
 });
 
 test("the gallery card and post carry the same Arabic record within the post limit", () => {

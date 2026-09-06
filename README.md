@@ -65,6 +65,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Not Without a Plan](p5js/artworks/not-without-a-plan/) | One maze made by erasing the loops out of a wandering walk, and the single route through it, rendered as an MP4 |
 | [Apollonian Gasket](p5js/artworks/apollonian-gasket/) | Every gap between three touching circles holding exactly one more, the packing arriving in order of curvature, rendered as an MP4 |
 | [Made Whole](p5js/artworks/made-whole/) | The unknown square and its ten roots, and the corner that was missing put in to make a square of them, rendered as an MP4 |
+| [Between Two Ends](p5js/artworks/between-two-ends/) | Two tangent circles carrying one point back and forth along a fixed diameter, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 

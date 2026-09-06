@@ -967,6 +967,28 @@
         "durationSeconds": 10,
         "scale": 2
       }
+    },
+    {
+      "id": "between-two-ends",
+      "title": "Between Two Ends",
+      "entry": "p5js/artworks/between-two-ends/index.html",
+      "interactivePath": "between-two-ends/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "tusi-mutaraddida"
+      ],
+      "thumbnail": {
+        "frame": 38
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/BetweenTwoEnds.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }
