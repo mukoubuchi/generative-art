@@ -470,6 +470,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/sextiempiriciope01sext/page/n62/mode/1up"
+    },
+    {
+      "id": "galileo-istessa-circonferenza",
+      "text": "si vedranno sempre tutti nell’ istessa circonferenza di cerchi successiuamente crescenti",
+      "lang": "it",
+      "author": "Galileo Galilei",
+      "source": "Discorsi e dimostrazioni matematiche, giornata terza",
+      "year": 1638,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/discorsiedimostr00gali/page/n197/mode/1up"
     }
   ]
 }

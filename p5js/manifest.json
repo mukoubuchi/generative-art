@@ -1011,6 +1011,28 @@
         "durationSeconds": 12,
         "scale": 2
       }
+    },
+    {
+      "id": "the-same-circumference",
+      "title": "The Same Circumference",
+      "entry": "p5js/artworks/the-same-circumference/index.html",
+      "interactivePath": "the-same-circumference/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "galileo-istessa-circonferenza"
+      ],
+      "thumbnail": {
+        "frame": 135
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/TheSameCircumference.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }
