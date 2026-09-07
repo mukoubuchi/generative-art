@@ -66,7 +66,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Apollonian Gasket](p5js/artworks/apollonian-gasket/) | Every gap between three touching circles holding exactly one more, the packing arriving in order of curvature, rendered as an MP4 |
 | [Made Whole](p5js/artworks/made-whole/) | The unknown square and its ten roots, and the corner that was missing put in to make a square of them, rendered as an MP4 |
 | [Between Two Ends](p5js/artworks/between-two-ends/) | Al-Tusi's two circles taken at their word and then past it: four couples, a couple inside each, and the astroids their points leave, rendered as an MP4 |
-| [The Same Tower](p5js/artworks/the-same-tower/) | Sextus's tower built: one footprint extruded, whose floor lines are circles to a far eye and squares to a near one, and neither in between, rendered as an MP4 |
+| [The Same Tower](p5js/artworks/the-same-tower/) | Sextus's tower built in crystal: round to a far eye, square to a near one, and a third eye swinging off their line to show the bent floors on the one footprint they share, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 

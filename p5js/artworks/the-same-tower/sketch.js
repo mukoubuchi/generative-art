@@ -1,51 +1,58 @@
-import { hintMode, indicatorShown } from "../shared/hint-mode.js";
-import { drawPointerIndicator } from "../shared/input-indicator.js";
-import { drawKeyHint } from "../shared/key-hint.js";
 import {
   DURATION_SECONDS,
   FLOOR_COUNT,
+  FLOOR_HEIGHTS,
   LOGICAL_SIZE,
   PLAYBACK_FPS,
   RIM_SEGMENTS,
   STAGE_SCALE,
   TOTAL_FRAMES,
-  leverAtFrame,
-  leverFromPointer,
-  pointerAtLever,
-  sceneAtLever
+  rimAt,
+  sceneAt,
+  verticals,
+  wallQuads
 } from "./the-same-tower.js";
 
 /**
- * A tower drawn in hairlines on a night ground, and an eye that walks towards it. Far
- * off, the floors are circles and the tower a cylinder; close to, they are squares and
- * the tower a prism; on the way they are neither. Nothing about the tower changes. The
- * eye keeps the tower at one size as it walks -- the field of view narrows with the
- * distance -- so what the reader watches is a shape changing and not a thing approaching.
+ * A tower of crystal on a night ground, and an eye that walks towards it and then steps
+ * off the line. Far off, the floors are circles and the walls turn round like a
+ * cylinder's; close to, the floors are squares and four walls lie flat. Then a third eye
+ * swings round and up and the floors show for what they are: bent curves on one
+ * footprint, neither circles nor squares. Nothing about the tower changes.
  *
- * On the page the pointer is the walk: left is far, right is near. The clip replays a
- * recorded walk in and back out, resting at both stations, with the hand drawn where it
- * would have to be.
+ * The clip carries the whole of it. The page plays the same clip, because a hand on a
+ * lever did not let a reader see the trick: the tower has to be shown from where the
+ * trick is visible and from where it is not, and that is a staging, not a control.
  */
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
-const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
-const INDICATOR = indicatorShown(PARAMETERS, CAPTURE_MODE);
-const HINT_LEGEND = [
-  { cap: "move", text: "walk towards the tower and back" }
-];
 const OUTPUT_SIZE = LOGICAL_SIZE * RENDER_SCALE;
 
 /**
- * The night the collection's darkest artworks stand on, and the crown of Lorenz
- * Ribbons' leader ramp for the lines: the one ground nearest to black in the catalogue
- * and the one line nearest to white, so the tower is drawn and not painted.
+ * The night the collection's darkest artworks stand on, and Platonic Duals' gold family
+ * for the crystal: a face ink that is a whisper and an edge that is not, layered with the
+ * depth test off so that the far wall shows through the near one. The two lights are the
+ * same two the duals are lit by, fixed to the stage.
  */
 const GROUND = [6, 7, 12];
-const LINE = [246, 244, 236];
+const GOLD_FACE = [222, 166, 96];
+const GOLD_EDGE = [252, 204, 116];
+const FACE_ALPHA = 46;
+const EDGE_ALPHA = 235;
+const KEY_LIGHT = [-0.42, 0.52, -0.74];
+const FILL_LIGHT = [0.66, -0.3, 0.69];
 const LINE_WEIGHT = 1.4;
+/**
+ * The station glow: additive halos laid over the floor lines, four widening layers at a
+ * faint alpha each, scaled by how nearly the picture is the station's figure. A signal
+ * that the eye has arrived, not a second colour.
+ */
+const HALO_LAYERS = 4;
+const HALO_ALPHA = 0.045;
+const HALO_SPREAD = 1.2;
 
 /** The stage's clipping planes, in stage units, well outside the walk and the tower. */
 const NEAR_PLANE = STAGE_SCALE * 0.5;
@@ -63,78 +70,80 @@ function onStage([x, y, z]) {
   return [x * STAGE_SCALE, negate(z * STAGE_SCALE), negate(y * STAGE_SCALE)];
 }
 
+function dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+/** Shading folded in |N . L|, as the duals are: crystal has no inside to keep the sign for. */
+function crystal(normal) {
+  const stageNormal = [normal[0], 0, -normal[1]];
+  const key = Math.abs(dot(stageNormal, KEY_LIGHT));
+  const fill = Math.abs(dot(stageNormal, FILL_LIGHT));
+  return GOLD_FACE.map((component) => component * (0.35 + 0.5 * key + 0.25 * fill));
+}
+
+/** The tower is fixed; only the eye moves. So the geometry is built once. */
+const RIMS = FLOOR_HEIGHTS.map((height) => rimAt(height));
+const WALLS = wallQuads(RIMS).map((quad) => ({
+  corners: quad.corners.map(onStage),
+  colour: [...crystal(quad.normal), FACE_ALPHA]
+}));
+const CORNERS = verticals().map(([from, to]) => [onStage(from), onStage(to)]);
+const FLOORS = RIMS.map((rim) => rim.map(onStage));
+
 const P5 = window.p5;
 
 new P5((p) => {
-  function drawPolyline(points) {
-    for (let index = 1; index < points.length; index += 1) {
-      p.line(...onStage(points[index - 1]), ...onStage(points[index]));
+  function drawWalls() {
+    p.noStroke();
+    p.beginShape(p.TRIANGLES);
+    for (const { corners, colour } of WALLS) {
+      const [a, b, c, d] = corners;
+      p.fill(...colour);
+      p.vertex(...a); p.vertex(...b); p.vertex(...c);
+      p.vertex(...a); p.vertex(...c); p.vertex(...d);
+    }
+    p.endShape();
+  }
+
+  function drawFloors(alpha, weight) {
+    p.stroke(...GOLD_EDGE, alpha);
+    p.strokeWeight(weight * RENDER_SCALE);
+    for (const floor of FLOORS) {
+      for (let index = 1; index < floor.length; index += 1) {
+        p.line(...floor[index - 1], ...floor[index]);
+      }
     }
   }
 
   function drawScene(scene) {
     p.background(...GROUND);
-    // The eye of this frame: its field of view is the one that keeps the tower at its
-    // size, and the eye and what it looks at are the module's own points on the stage.
+    // The eye of this frame: the module's own point and its own field of view.
     p.perspective(scene.fieldOfView, 1, NEAR_PLANE, FAR_PLANE);
     p.camera(...onStage(scene.eye), ...onStage(scene.lookAt), 0, 1, 0);
+    // Everything on the stage is translucent, so the depth buffer has no work to do and
+    // would only cut the far wall out from behind the near one. The paint order is the
+    // order the walls are built in, which is one frame's order as much as another's.
+    const gl = p.drawingContext;
+    gl.disable(gl.DEPTH_TEST);
+    drawWalls();
     p.noFill();
-    p.stroke(...LINE);
+    p.stroke(...GOLD_EDGE, EDGE_ALPHA);
     p.strokeWeight(LINE_WEIGHT * RENDER_SCALE);
-    for (const floor of scene.floors) {
-      drawPolyline(floor);
+    for (const [from, to] of CORNERS) {
+      p.line(...from, ...to);
     }
-    for (const [from, to] of scene.verticals) {
-      p.line(...onStage(from), ...onStage(to));
+    drawFloors(EDGE_ALPHA, LINE_WEIGHT);
+    // The station's light: added rather than painted, so the layers pile up into a glow.
+    const strength = Math.max(scene.circleGlow, scene.squareGlow);
+    if (strength >= 0.01) {
+      p.blendMode(p.ADD);
+      for (let layer = 1; layer <= HALO_LAYERS; layer += 1) {
+        drawFloors(255 * strength * HALO_ALPHA, LINE_WEIGHT * (1 + HALO_SPREAD * layer));
+      }
+      p.blendMode(p.BLEND);
     }
-  }
-
-  /**
-   * The legend is 2D type, and WEBGL will not set type without a font loaded for it --
-   * so it is drawn on a plain surface of its own and laid over the frame as an image,
-   * under the stage's default eye rather than the walking one.
-   */
-  let overlay;
-
-  function drawOverlay(draw) {
-    if (!overlay) {
-      overlay = p.createGraphics(OUTPUT_SIZE, OUTPUT_SIZE);
-      overlay.pixelDensity(1);
-    }
-    overlay.clear();
-    overlay.push();
-    overlay.scale(RENDER_SCALE);
-    draw(overlay);
-    overlay.pop();
-    p.push();
-    p.perspective();
-    p.camera();
-    p.resetMatrix();
-    p.image(overlay, -OUTPUT_SIZE / 2, -OUTPUT_SIZE / 2);
-    p.pop();
-  }
-
-  function drawLegend() {
-    drawOverlay((surface) => {
-      drawKeyHint(surface, HINT_LEGEND, LOGICAL_SIZE, LOGICAL_SIZE, HINT.scale);
-    });
-  }
-
-  /**
-   * The hand is circles, which WEBGL draws without a font, so it goes straight onto the
-   * frame under the default eye: the exported clip must stay one canvas, because the
-   * renderer screenshots the page's only canvas frame by frame.
-   */
-  function drawHand(lever) {
-    const hand = pointerAtLever(lever, LOGICAL_SIZE, LOGICAL_SIZE);
-    p.push();
-    p.perspective();
-    p.camera();
-    p.resetMatrix();
-    p.translate(-OUTPUT_SIZE / 2, -OUTPUT_SIZE / 2);
-    p.scale(RENDER_SCALE);
-    drawPointerIndicator(p, hand.x, hand.y, LOGICAL_SIZE, LOGICAL_SIZE);
-    p.pop();
+    gl.enable(gl.DEPTH_TEST);
   }
 
   function publishState(frameIndex, scene) {
@@ -143,14 +152,17 @@ new P5((p) => {
       frameIndex,
       totalFrames: TOTAL_FRAMES,
       durationSeconds: DURATION_SECONDS,
-      lever: scene.lever,
+      act: scene.act,
+      onLine: scene.onLine,
       distance: scene.distance,
       fieldOfView: scene.fieldOfView,
       eye: scene.eye,
+      circleGlow: scene.circleGlow,
+      squareGlow: scene.squareGlow,
       floors: FLOOR_COUNT,
       rimSegments: RIM_SEGMENTS,
-      verticals: scene.verticals.length,
-      palette: "night",
+      walls: WALLS.length,
+      palette: "crystal",
       logicalSize: { width: LOGICAL_SIZE, height: LOGICAL_SIZE },
       outputSize: { width: OUTPUT_SIZE, height: OUTPUT_SIZE }
     };
@@ -180,31 +192,19 @@ new P5((p) => {
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();
-      // Every frame is the walk read at its index, so any one can stand alone.
+      // Every frame is the staging read at its index, so any one can stand alone.
       window.__renderFrame = (frameIndex) => {
-        const scene = sceneAtLever(leverAtFrame(frameIndex));
+        const scene = sceneAt(frameIndex);
         p.push();
         drawScene(scene);
         p.pop();
-        if (INDICATOR) {
-          // The hand that is walking the eye, where the page would have it.
-          drawHand(scene.lever);
-        }
-        if (HINT.shown) {
-          drawLegend();
-        }
         return Promise.resolve(publishState(frameIndex, scene));
       };
     }
-    const opening = sceneAtLever(0);
+    const opening = sceneAt(0);
     p.push();
     drawScene(opening);
     p.pop();
-    // The legend's surface is a second canvas, and a capture is checked at load for
-    // having exactly one; a thumbnail asks for the legend through __renderFrame anyway.
-    if (HINT.shown && !CAPTURE_MODE) {
-      drawLegend();
-    }
     publishState(0, opening);
   };
 
@@ -212,15 +212,11 @@ new P5((p) => {
     if (CAPTURE_MODE) {
       return;
     }
-    // The pointer's place across the canvas is how far the eye has walked.
-    const lever = leverFromPointer(p.mouseX, LOGICAL_SIZE);
-    const scene = sceneAtLever(lever);
+    const frameIndex = p.frameCount % TOTAL_FRAMES;
+    const scene = sceneAt(frameIndex);
     p.push();
     drawScene(scene);
     p.pop();
-    if (HINT.shown) {
-      drawLegend();
-    }
-    publishState(p.frameCount % TOTAL_FRAMES, scene);
+    publishState(frameIndex, scene);
   };
 });

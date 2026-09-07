@@ -18,12 +18,15 @@
  * floors: from the far eye it is a generator of the cylinder, from the near eye an edge
  * of the prism.
  *
- * Coordinates here are the tower's own: `x` across, `y` in depth away from the eyes, `z`
- * up. The sketch maps them onto its stage.
+ * The clip is a staged walk: the eye rests far off, walks in, rests near, and then a
+ * third eye leaves the line the two stations share and swings round and up to show the
+ * floors for what they are, before the eye returns and walks back out. Coordinates here
+ * are the tower's own: `x` across, `y` in depth away from the eyes, `z` up. The sketch
+ * maps them onto its stage.
  */
 export const LOGICAL_SIZE = 680;
 export const PLAYBACK_FPS = 30;
-export const DURATION_SECONDS = 10;
+export const DURATION_SECONDS = 12;
 export const TOTAL_FRAMES = PLAYBACK_FPS * DURATION_SECONDS;
 
 /** The eyes: one height, one line, two distances. */
@@ -45,17 +48,19 @@ export const STAGE_SCALE = 100;
 
 /**
  * The near eye's vertical field of view, and the rule that carries it to every other
- * distance: the tower keeps one angular height as the eye walks, so its picture stays one
- * size and only its shape changes. `tan(fov / 2) * distance` is the constant.
+ * distance. The tower is allowed to grow as the eye walks in, but not as fast as a fixed
+ * lens would let it: `tan(fov / 2)` goes as one over the square root of the distance, so
+ * the tower's angular height rises by the square root of the ratio of distances rather
+ * than by the ratio itself. What the reader sees is both an approach and a change of shape.
  */
 export const NEAR_FIELD_OF_VIEW = 62 * Math.PI / 180;
-export const FIELD_CONSTANT = Math.tan(NEAR_FIELD_OF_VIEW / 2) * NEAR_DISTANCE;
+export const FIELD_CONSTANT = Math.tan(NEAR_FIELD_OF_VIEW / 2) * Math.sqrt(NEAR_DISTANCE);
 
 export function fieldOfView(distance) {
   if (!(distance > 0)) {
     throw new RangeError("The eye stands at a positive distance.");
   }
-  return 2 * Math.atan(FIELD_CONSTANT / distance);
+  return 2 * Math.atan(FIELD_CONSTANT / Math.sqrt(distance));
 }
 
 export function eyeAt(distance) {
@@ -148,95 +153,200 @@ export function verticals() {
   return lines;
 }
 
-/*
- * The walk.
- *
- * The clip is a recorded walk: the eye rests far off, walks in to the near station,
- * rests there, walks back out and rests again, and the last frame is the first. On the
- * page the same lever is the pointer's place across the canvas.
+/**
+ * The walls: between two floors, at each sample, the vertical quad on the shared
+ * footprint. Its corners are the floors' own points and nothing else, and its normal is
+ * horizontal, at right angles to the footprint's run. From the far eye the walls turn
+ * round the tower like a cylinder's; from the near eye four of them lie flat.
  */
-export const REST_FAR_OPENING = 15;
-export const WALK_IN = 120;
-export const REST_NEAR = 30;
-export const WALK_OUT = 120;
-export const REST_FAR_CLOSING = TOTAL_FRAMES - REST_FAR_OPENING - WALK_IN - REST_NEAR - WALK_OUT;
+export function wallQuads(rims) {
+  const quads = [];
+  for (let floor = 1; floor < rims.length; floor += 1) {
+    const below = rims[floor - 1];
+    const above = rims[floor];
+    for (let index = 1; index < below.length; index += 1) {
+      const a = below[index - 1];
+      const b = below[index];
+      const across = b[0] - a[0];
+      const along = b[1] - a[1];
+      const length = Math.hypot(across, along);
+      quads.push({
+        corners: [a, b, above[index], above[index - 1]],
+        normal: [along / length, -across / length, 0]
+      });
+    }
+  }
+  return quads;
+}
 
 /**
- * How the lever is read as a distance. `reciprocal` spends the lever evenly in `1 / d`,
- * which is what the picture changes evenly in; `linear` spends it evenly in the
- * distance itself.
+ * How far the floors' picture stands from the nominal figure's, seen from an eye at
+ * `distance` on the stations' line: the largest angle, over all eight floors and all
+ * 363 vertices including both ends of each corner, between the ray to a floor point and
+ * the ray to the circle point or square point it answers to. In radians, and independent
+ * of any lens. Exactly nought at the figure's own station.
  */
-export const WALK_LAWS = ["reciprocal", "linear"];
-export const WALK_LAW = "reciprocal";
+export function deviation(distance, figure) {
+  if (figure !== "circle" && figure !== "square") {
+    throw new RangeError("The deviation is from the circle or from the square.");
+  }
+  const eye = eyeAt(distance);
+  const half = RIM_SEGMENTS / 2;
+  let worst = 0;
+  for (const height of FLOOR_HEIGHTS) {
+    const rim = rimAt(height);
+    for (let index = 0; index <= RIM_SEGMENTS + 1; index += 1) {
+      const sample = index <= half ? index : index - 1;
+      const angle = Math.PI + 2 * Math.PI * sample / RIM_SEGMENTS;
+      const corner = index === 0 || index === half || index === half + 1 || index === RIM_SEGMENTS + 1;
+      const x = corner ? (index === 0 || index === RIM_SEGMENTS + 1 ? -RADIUS : RADIUS) : RADIUS * Math.cos(angle);
+      const circleDepth = corner ? 0 : RADIUS * Math.sin(angle);
+      const squareDepth = index === 0 || index === half ? -RADIUS
+        : index === half + 1 || index === RIM_SEGMENTS + 1 ? RADIUS : Math.sign(circleDepth) * RADIUS;
+      const target = figure === "circle" ? [x, circleDepth, height] : [x, squareDepth, height];
+      const point = rim[index];
+      const a = [point[0] - eye[0], point[1] - eye[1], point[2] - eye[2]];
+      const b = [target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]];
+      const cross = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+      const sine = Math.hypot(...cross) / (Math.hypot(...a) * Math.hypot(...b));
+      worst = Math.max(worst, Math.asin(Math.min(1, sine)));
+    }
+  }
+  // At a figure's own station every ray pair is collinear -- proved as an integer identity
+  // by the exact arithmetic below -- and what the floating point leaves is the rounding of
+  // that collinearity, a few units in the seventeenth place. That is returned as the
+  // nought it is, rather than as a number that would light the station a hair short.
+  return worst < 1e-14 ? 0 : worst;
+}
 
-/** The lever, nought at the far station and one at the near, from the frame. */
-export function leverAtFrame(frameIndex) {
+/** The same deviation in the picture's own pixels, at the logical size, under the walk's lens. */
+export function deviationPixels(distance, figure) {
+  return deviation(distance, figure) * (LOGICAL_SIZE / 2) / Math.tan(fieldOfView(distance) / 2);
+}
+
+/**
+ * The station glow: one where the picture is the figure's, falling off with the deviation
+ * so that a few pixels of it are already half the light and a few dozen are none.
+ */
+export const GLOW_REACH = 6;
+
+export function glow(pixels) {
+  if (!(pixels >= 0)) {
+    throw new RangeError("A deviation is not negative.");
+  }
+  return Math.exp(-pixels / GLOW_REACH);
+}
+
+/*
+ * The staging.
+ *
+ * Three acts. The eye rests at the far station and walks in to the near one, where it
+ * rests again: the two appearances, set against each other. Then a third eye leaves the
+ * line the two stations share, swinging round and up while drawing back, and rests where
+ * the floors show as the bent curves they are on the one footprint they share. Then it
+ * returns to the line and walks out, and the last frame is the first.
+ */
+export const ACTS = [
+  ["far", 25], ["push", 55], ["near", 45], ["out", 50], ["hold", 50], ["back", 50], ["pull", 60], ["far", 25]
+];
+export const ACT_FRAMES = ACTS.reduce((sum, [, frames]) => sum + frames, 0);
+
+/** The walk spends its frames evenly in `1 / d`, which is what the picture changes evenly in. */
+export function distanceAtLever(lever) {
+  if (!(lever >= 0 && lever <= 1)) {
+    throw new RangeError("The lever runs from nought to one.");
+  }
+  if (lever === 0) return FAR_DISTANCE;
+  if (lever === 1) return NEAR_DISTANCE;
+  return 1 / ((1 - lever) / FAR_DISTANCE + lever / NEAR_DISTANCE);
+}
+
+/** Smoothstep: the walk sets off and arrives without a jolt. */
+export function eased(t) {
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * The third eye's path, as an orbit about the point both stations look at. It starts
+ * exactly at the near station and swings to an azimuth and elevation from which the
+ * bent floors and the footprint read, drawing back as it goes so that the whole tower
+ * stays in the frame.
+ */
+export const REVEAL_AZIMUTH = 62 * Math.PI / 180;
+export const REVEAL_ELEVATION = 48 * Math.PI / 180;
+export const REVEAL_RADIUS = 7;
+const NEAR_OFFSET = NEAR_EYE.map((part, axis) => part - LOOK_AT[axis]);
+export const ORBIT_RADIUS = Math.hypot(...NEAR_OFFSET);
+export const ORBIT_ELEVATION = Math.asin(NEAR_OFFSET[2] / ORBIT_RADIUS);
+
+export function orbitRadius(turn) {
+  return ORBIT_RADIUS + (REVEAL_RADIUS - ORBIT_RADIUS) * turn;
+}
+
+export function orbitEye(turn) {
+  if (!(turn >= 0 && turn <= 1)) {
+    throw new RangeError("The orbit runs from nought to one.");
+  }
+  if (turn === 0) return NEAR_EYE;
+  const azimuth = REVEAL_AZIMUTH * turn;
+  const elevation = ORBIT_ELEVATION + (REVEAL_ELEVATION - ORBIT_ELEVATION) * turn;
+  const radius = orbitRadius(turn);
+  return [
+    LOOK_AT[0] + radius * Math.cos(elevation) * Math.sin(azimuth),
+    LOOK_AT[1] - radius * Math.cos(elevation) * Math.cos(azimuth),
+    LOOK_AT[2] + radius * Math.sin(elevation)
+  ];
+}
+
+/** Which act a frame falls in, and how far through it. */
+export function actAt(frameIndex) {
   if (!Number.isSafeInteger(frameIndex)) {
     throw new TypeError("The frame index must be a safe integer.");
   }
   const frame = ((frameIndex % TOTAL_FRAMES) + TOTAL_FRAMES) % TOTAL_FRAMES;
-  if (frame < REST_FAR_OPENING) return 0;
-  if (frame < REST_FAR_OPENING + WALK_IN) return (frame - REST_FAR_OPENING) / WALK_IN;
-  if (frame < REST_FAR_OPENING + WALK_IN + REST_NEAR) return 1;
-  if (frame < TOTAL_FRAMES - REST_FAR_CLOSING) {
-    return 1 - (frame - REST_FAR_OPENING - WALK_IN - REST_NEAR) / WALK_OUT;
+  let start = 0;
+  for (const [name, frames] of ACTS) {
+    if (frame < start + frames) {
+      return { frame, name, progress: (frame - start) / frames };
+    }
+    start += frames;
   }
-  return 0;
-}
-
-/** The distance the lever stands for. The two stations are returned exactly. */
-export function distanceAtLever(lever, law = WALK_LAW) {
-  if (!(lever >= 0 && lever <= 1)) {
-    throw new RangeError("The lever runs from nought to one.");
-  }
-  if (!WALK_LAWS.includes(law)) {
-    throw new RangeError("The walk follows one of the named laws.");
-  }
-  if (lever === 0) return FAR_DISTANCE;
-  if (lever === 1) return NEAR_DISTANCE;
-  if (law === "linear") {
-    return FAR_DISTANCE + lever * (NEAR_DISTANCE - FAR_DISTANCE);
-  }
-  return 1 / ((1 - lever) / FAR_DISTANCE + lever / NEAR_DISTANCE);
+  throw new RangeError("The acts do not cover the clip.");
 }
 
 /**
- * The pointer's lane across the page, in fractions of the canvas: the lever runs from
- * the left inset to the right, and the clip's pointer sweeps that same lane so that where
- * the hand is drawn is where the hand would have to be. The lane lies under the tower's
- * foot, which at the near station reaches nine tenths of the way down the frame.
+ * The whole picture at one frame: where the eye is, how wide it sees, whether it is on
+ * the stations' line, and how brightly each station's figure is lit.
  */
-export const LANE_INSET = 0.08;
-export const LANE_HEIGHT = 0.955;
-
-export function leverFromPointer(pointerX, width) {
-  const inset = width * LANE_INSET;
-  const lever = (pointerX - inset) / (width - 2 * inset);
-  return Math.max(0, Math.min(1, lever));
-}
-
-export function pointerAtLever(lever, width, height) {
-  const inset = width * LANE_INSET;
-  return { x: inset + lever * (width - 2 * inset), y: height * LANE_HEIGHT };
-}
-
-/** The whole picture at one frame or one lever position. */
-export function sceneAtLever(lever, law = WALK_LAW) {
-  const distance = distanceAtLever(lever, law);
+export function sceneAt(frameIndex) {
+  const { frame, name, progress } = actAt(frameIndex);
+  let distance = null;
+  let turn = 0;
+  if (name === "far") distance = FAR_DISTANCE;
+  else if (name === "near") distance = NEAR_DISTANCE;
+  else if (name === "push") distance = distanceAtLever(eased(progress));
+  else if (name === "pull") distance = distanceAtLever(1 - eased(progress));
+  else if (name === "out") turn = eased(progress);
+  else if (name === "hold") turn = 1;
+  else turn = 1 - eased(progress);
+  const onLine = distance !== null;
+  const eye = onLine ? eyeAt(distance) : orbitEye(turn);
+  // Off the line the lens is read from a distance that starts at the near station's, so
+  // the field does not jump as the third eye sets off; and the near station's glow is
+  // carried out with the turn rather than dropped, for the same reason. Neither is a
+  // measurement: the deviation is defined on the stations' line only.
+  const lens = onLine ? distance : NEAR_DISTANCE + (REVEAL_RADIUS - NEAR_DISTANCE) * turn;
   return {
-    lever,
+    frameIndex: frame,
+    act: name,
+    onLine,
     distance,
-    fieldOfView: fieldOfView(distance),
-    eye: eyeAt(distance),
+    eye,
     lookAt: LOOK_AT,
-    floors: FLOOR_HEIGHTS.map((height) => rimAt(height)),
-    verticals: verticals()
+    fieldOfView: fieldOfView(lens),
+    circleGlow: onLine ? glow(deviationPixels(distance, "circle")) : 0,
+    squareGlow: onLine ? glow(deviationPixels(distance, "square")) : 1 - turn
   };
-}
-
-export function sceneAt(frameIndex, law = WALK_LAW) {
-  const frame = ((frameIndex % TOTAL_FRAMES) + TOTAL_FRAMES) % TOTAL_FRAMES;
-  return { frameIndex: frame, ...sceneAtLever(leverAtFrame(frame), law) };
 }
 
 /*

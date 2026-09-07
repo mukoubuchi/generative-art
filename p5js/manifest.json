@@ -1003,12 +1003,12 @@
         "sextus-ho-autos-pyrgos"
       ],
       "thumbnail": {
-        "frame": 75
+        "frame": 200
       },
       "render": {
         "kind": "video",
         "artifact": "exports/p5js/TheSameTower.mp4",
-        "durationSeconds": 10,
+        "durationSeconds": 12,
         "scale": 2
       }
     }

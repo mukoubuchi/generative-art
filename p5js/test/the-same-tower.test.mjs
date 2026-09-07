@@ -4,6 +4,8 @@ import test from "node:test";
 import { renderIndexPage } from "../lib/gallery.mjs";
 import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
+  ACTS,
+  ACT_FRAMES,
   DURATION_SECONDS,
   EYE_HEIGHT,
   FAR_DISTANCE,
@@ -12,28 +14,28 @@ import {
   FLOOR_COUNT,
   FLOOR_HEIGHTS,
   FLOOR_SPACING,
-  LANE_HEIGHT,
-  LANE_INSET,
+  GLOW_REACH,
   LOGICAL_SIZE,
   LOOK_AT,
   NEAR_DISTANCE,
   NEAR_EYE,
   NEAR_FIELD_OF_VIEW,
+  ORBIT_RADIUS,
   PLAYBACK_FPS,
   RADIUS,
-  REST_FAR_CLOSING,
-  REST_FAR_OPENING,
-  REST_NEAR,
+  REVEAL_AZIMUTH,
+  REVEAL_ELEVATION,
+  REVEAL_RADIUS,
   RIM_SEGMENTS,
   STAGE_SCALE,
   TOTAL_FRAMES,
   TOWER_MIDDLE,
-  WALK_IN,
-  WALK_LAW,
-  WALK_LAWS,
-  WALK_OUT,
+  actAt,
   cornerEnds,
+  deviation,
+  deviationPixels,
   distanceAtLever,
+  eased,
   exactEye,
   exactFloor,
   exactNominalPoints,
@@ -41,15 +43,14 @@ import {
   exactlyOnRay,
   eyeAt,
   fieldOfView,
-  leverAtFrame,
-  leverFromPointer,
-  pointerAtLever,
+  glow,
+  orbitEye,
   rimAt,
   rimPoint,
   rimShare,
   sceneAt,
-  sceneAtLever,
-  verticals
+  verticals,
+  wallQuads
 } from "../artworks/the-same-tower/the-same-tower.js";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
@@ -113,17 +114,12 @@ test("the two eyes, the tower and the clip keep their numbers", () => {
   assert.equal(STAGE_SCALE, 100);
   assert.equal(LOGICAL_SIZE, 680);
   assert.equal(PLAYBACK_FPS, 30);
-  assert.equal(DURATION_SECONDS, 10);
-  assert.equal(TOTAL_FRAMES, 300);
+  assert.equal(DURATION_SECONDS, 12);
+  assert.equal(TOTAL_FRAMES, 360);
   assert.deepEqual(FAR_EYE, [0, -12, 3]);
   assert.deepEqual(NEAR_EYE, [0, -4, 3]);
   assert.deepEqual(LOOK_AT, [0, 0, 1.75]);
-  assert.equal(REST_FAR_OPENING + WALK_IN + REST_NEAR + WALK_OUT + REST_FAR_CLOSING, TOTAL_FRAMES);
-  assert.deepEqual([REST_FAR_OPENING, WALK_IN, REST_NEAR, WALK_OUT, REST_FAR_CLOSING], [15, 120, 30, 120, 15]);
-  assert.deepEqual(WALK_LAWS, ["reciprocal", "linear"]);
-  assert.equal(WALK_LAW, "reciprocal");
-  assert.equal(LANE_INSET, 0.08);
-  assert.equal(LANE_HEIGHT, 0.955);
+  assert.equal(GLOW_REACH, 6);
 });
 
 test("at forty rational points on three floors the rim point is on both rays, as an integer identity", () => {
@@ -309,80 +305,192 @@ test("the four hairlines are vertical, run the tower's whole height, and stand a
   }
 });
 
-test("the eye keeps the tower at one angular height: tan of half the field times the distance is constant", () => {
+test("the walls are vertical quads whose corners are the floors' own points", () => {
+  const rims = FLOOR_HEIGHTS.map((height) => rimAt(height));
+  const quads = wallQuads(rims);
+  assert.equal(quads.length, (FLOOR_COUNT - 1) * (RIM_SEGMENTS + 2));
+  let index = 0;
+  for (let floor = 1; floor < FLOOR_COUNT; floor += 1) {
+    for (let sample = 1; sample < rims[floor].length; sample += 1) {
+      const quad = quads[index];
+      // The corners are the points themselves, not copies near them.
+      assert.equal(quad.corners[0], rims[floor - 1][sample - 1]);
+      assert.equal(quad.corners[1], rims[floor - 1][sample]);
+      assert.equal(quad.corners[2], rims[floor][sample]);
+      assert.equal(quad.corners[3], rims[floor][sample - 1]);
+      // The two side edges are exactly vertical: one footprint for every floor.
+      assert.equal(quad.corners[0][0], quad.corners[3][0]);
+      assert.equal(quad.corners[0][1], quad.corners[3][1]);
+      assert.equal(quad.corners[1][0], quad.corners[2][0]);
+      assert.equal(quad.corners[1][1], quad.corners[2][1]);
+      // The normal is horizontal, unit, and at right angles to the footprint's run.
+      assert.equal(quad.normal[2], 0);
+      assert.ok(Math.abs(Math.hypot(...quad.normal) - 1) < 1e-12);
+      const run = subtract(quad.corners[1], quad.corners[0]);
+      assert.ok(Math.abs(quad.normal[0] * run[0] + quad.normal[1] * run[1]) < 1e-12);
+      index += 1;
+    }
+  }
+  assert.equal(index, quads.length);
+});
+
+test("the eye's field widens as the square root of the approach: 62 degrees at the near station, 38.26 at the far", () => {
   assert.ok(Math.abs(NEAR_FIELD_OF_VIEW - 62 * Math.PI / 180) < 1e-15);
   assert.ok(Math.abs(fieldOfView(NEAR_DISTANCE) - NEAR_FIELD_OF_VIEW) < 1e-15);
-  assert.ok(Math.abs(fieldOfView(FAR_DISTANCE) * 180 / Math.PI - 22.651472074083998) < 1e-12);
+  assert.ok(Math.abs(fieldOfView(FAR_DISTANCE) * 180 / Math.PI - 38.26404047298219) < 1e-12);
   let previous = Infinity;
   for (let step = 0; step <= 80; step += 1) {
     const distance = NEAR_DISTANCE + (FAR_DISTANCE - NEAR_DISTANCE) * step / 80;
     const field = fieldOfView(distance);
-    assert.ok(Math.abs(Math.tan(field / 2) * distance - FIELD_CONSTANT) < 1e-14);
+    assert.ok(Math.abs(Math.tan(field / 2) * Math.sqrt(distance) - FIELD_CONSTANT) < 1e-14);
     assert.ok(field < previous);
     previous = field;
   }
+  // Between a fixed lens and a full dolly: the tower's angular height rises by the square
+  // root of the ratio of distances, neither by the ratio nor not at all.
+  const ratio = Math.tan(fieldOfView(FAR_DISTANCE) / 2) / Math.tan(fieldOfView(NEAR_DISTANCE) / 2);
+  assert.ok(Math.abs(ratio - Math.sqrt(NEAR_DISTANCE / FAR_DISTANCE)) < 1e-14);
   assert.throws(() => fieldOfView(0), RangeError);
   assert.throws(() => eyeAt(-1), RangeError);
   assert.deepEqual(eyeAt(7), [0, -7, EYE_HEIGHT]);
 });
 
-test("the walk rests at both stations exactly and closes on its first frame", () => {
-  for (let frame = 0; frame < REST_FAR_OPENING; frame += 1) assert.equal(leverAtFrame(frame), 0);
-  for (let frame = REST_FAR_OPENING + WALK_IN; frame < REST_FAR_OPENING + WALK_IN + REST_NEAR; frame += 1) {
-    assert.equal(leverAtFrame(frame), 1);
+test("the deviation is nought exactly at a figure's own station and positive everywhere else on the line", () => {
+  assert.equal(deviation(FAR_DISTANCE, "circle"), 0);
+  assert.equal(deviation(NEAR_DISTANCE, "square"), 0);
+  assert.equal(deviationPixels(FAR_DISTANCE, "circle"), 0);
+  assert.equal(deviationPixels(NEAR_DISTANCE, "square"), 0);
+  for (const distance of [2, 4.5, 5, 6, 8, 10, 11, 11.9, 20]) {
+    assert.ok(deviation(distance, "circle") > 0, `circle at ${distance}`);
+    assert.ok(deviation(distance, "square") > 0, `square at ${distance}`);
   }
-  for (let frame = TOTAL_FRAMES - REST_FAR_CLOSING; frame < TOTAL_FRAMES; frame += 1) assert.equal(leverAtFrame(frame), 0);
-  for (let frame = REST_FAR_OPENING + 1; frame <= REST_FAR_OPENING + WALK_IN; frame += 1) {
-    assert.ok(leverAtFrame(frame) > leverAtFrame(frame - 1));
+  assert.ok(deviation(FAR_DISTANCE, "square") > 0);
+  assert.ok(deviation(NEAR_DISTANCE, "circle") > 0);
+  // The radian measure knows nothing of the lens; the pixel measure is it times the lens's scale.
+  for (const distance of [5, 8, 11]) {
+    const scale = (LOGICAL_SIZE / 2) / Math.tan(fieldOfView(distance) / 2);
+    assert.ok(Math.abs(deviationPixels(distance, "circle") - deviation(distance, "circle") * scale) < 1e-9);
   }
-  const outStart = REST_FAR_OPENING + WALK_IN + REST_NEAR;
-  for (let frame = outStart + 1; frame <= outStart + WALK_OUT; frame += 1) {
-    assert.ok(leverAtFrame(frame) < leverAtFrame(frame - 1));
-  }
-  assert.equal(leverAtFrame(TOTAL_FRAMES), 0);
-  assert.deepEqual(sceneAt(TOTAL_FRAMES), sceneAt(0));
-  assert.deepEqual(sceneAt(-1), sceneAt(299));
-  assert.equal(sceneAt(75).distance, 6);
-  assert.equal(sceneAt(0).distance, FAR_DISTANCE);
-  assert.equal(sceneAt(150).distance, NEAR_DISTANCE);
-  assert.throws(() => leverAtFrame(1.5), TypeError);
+  // The values the notes give, under this definition and this lens.
+  const pixels = (distance, figure) => Number(deviationPixels(distance, figure).toFixed(2));
+  assert.deepEqual([11, 10, 8].map((d) => pixels(d, "circle")), [2.86, 6.58, 18.07]);
+  assert.deepEqual([4.5, 5, 6].map((d) => pixels(d, "square")), [5.28, 9.44, 15.11]);
+  assert.throws(() => deviation(8, "triangle"), RangeError);
 });
 
-test("the lever reads as a distance by the named law, and the stations are returned exactly", () => {
+test("the glow is one at nought, falls with the deviation, and never rises", () => {
+  assert.equal(glow(0), 1);
+  assert.ok(Math.abs(glow(GLOW_REACH) - Math.exp(-1)) < 1e-15);
+  let previous = 1;
+  for (let pixels = 0.5; pixels <= 100; pixels += 0.5) {
+    const value = glow(pixels);
+    assert.ok(value < previous);
+    assert.ok(value > 0);
+    previous = value;
+  }
+  assert.ok(glow(30) < 0.01);
+  assert.throws(() => glow(-1), RangeError);
+  // Along the walk in the circle's light only ever goes out; the square's only ever comes
+  // on once the eye is nearer than ten, which is where its deviation starts to fall.
+  let circleBefore = 1;
+  let squareBefore = 0;
+  for (let step = 0; step <= 100; step += 1) {
+    const distance = distanceAtLever(step / 100);
+    const circle = glow(deviationPixels(distance, "circle"));
+    const square = glow(deviationPixels(distance, "square"));
+    assert.ok(circle <= circleBefore + 1e-12);
+    if (distance <= 10) assert.ok(square >= squareBefore - 1e-12, `square at ${distance}`);
+    circleBefore = circle;
+    squareBefore = square;
+  }
+  // Far off, the square's light is out: under three hundredths at the far station.
+  assert.ok(glow(deviationPixels(FAR_DISTANCE, "square")) < 0.03);
+});
+
+test("the acts fill the clip, and the eye is exactly at the stations while it rests there", () => {
+  assert.deepEqual(ACTS, [
+    ["far", 25], ["push", 55], ["near", 45], ["out", 50], ["hold", 50], ["back", 50], ["pull", 60], ["far", 25]
+  ]);
+  assert.equal(ACT_FRAMES, TOTAL_FRAMES);
+  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+    const scene = sceneAt(frame);
+    if (scene.act === "far") {
+      assert.deepEqual(scene.eye, FAR_EYE);
+      assert.equal(scene.distance, FAR_DISTANCE);
+      assert.equal(scene.circleGlow, 1);
+    }
+    if (scene.act === "near") {
+      assert.deepEqual(scene.eye, NEAR_EYE);
+      assert.equal(scene.distance, NEAR_DISTANCE);
+      assert.equal(scene.squareGlow, 1);
+    }
+    if (scene.onLine) {
+      assert.equal(scene.eye[0], 0);
+      assert.equal(scene.eye[2], EYE_HEIGHT);
+      assert.ok(scene.distance >= NEAR_DISTANCE && scene.distance <= FAR_DISTANCE);
+    } else {
+      assert.equal(scene.distance, null);
+      assert.equal(scene.circleGlow, 0);
+    }
+  }
+  // The walk in is monotone, and so is the walk out; both are eased, so the first step
+  // off a station is smaller than an even step and the middle step is the even one.
+  for (let frame = 26; frame < 80; frame += 1) assert.ok(sceneAt(frame).distance <= sceneAt(frame - 1).distance);
+  for (let frame = 276; frame < 335; frame += 1) assert.ok(sceneAt(frame).distance >= sceneAt(frame - 1).distance);
+  assert.equal(sceneAt(52).distance, distanceAtLever(eased(27 / 55)));
+  assert.ok(sceneAt(26).distance > distanceAtLever(1 / 55));
+  assert.ok(sceneAt(79).distance < distanceAtLever(54 / 55));
+  assert.equal(sceneAt(305).distance, distanceAtLever(1 - eased(30 / 60)));
+  assert.ok(sceneAt(276).distance < distanceAtLever(1 - 1 / 60));
+  assert.equal(actAt(0).name, "far");
+  assert.equal(actAt(25).name, "push");
+  assert.equal(actAt(80).name, "near");
+  assert.equal(actAt(125).name, "out");
+  assert.equal(actAt(175).name, "hold");
+  assert.equal(actAt(225).name, "back");
+  assert.equal(actAt(275).name, "pull");
+  assert.equal(actAt(335).name, "far");
+  assert.equal(actAt(359).name, "far");
+  assert.deepEqual(sceneAt(TOTAL_FRAMES), sceneAt(0));
+  assert.deepEqual({ ...sceneAt(359), frameIndex: 0 }, sceneAt(0));
+  assert.deepEqual(sceneAt(-1), sceneAt(359));
+  assert.throws(() => actAt(1.5), TypeError);
+  // The walk in spends its frames evenly in 1 / d and returns the stations exactly.
   assert.equal(distanceAtLever(0), FAR_DISTANCE);
   assert.equal(distanceAtLever(1), NEAR_DISTANCE);
-  assert.equal(distanceAtLever(0, "linear"), FAR_DISTANCE);
-  assert.equal(distanceAtLever(1, "linear"), NEAR_DISTANCE);
-  for (let step = 0; step <= 100; step += 1) {
-    const lever = step / 100;
-    const reciprocal = distanceAtLever(lever, "reciprocal");
-    const linear = distanceAtLever(lever, "linear");
-    assert.ok(Math.abs(1 / reciprocal - ((1 - lever) / FAR_DISTANCE + lever / NEAR_DISTANCE)) < 1e-15);
-    assert.ok(Math.abs(linear - (FAR_DISTANCE + lever * (NEAR_DISTANCE - FAR_DISTANCE))) < 1e-12);
-    assert.ok(reciprocal >= NEAR_DISTANCE && reciprocal <= FAR_DISTANCE);
-    assert.ok(reciprocal <= linear + 1e-12);
-  }
   assert.equal(distanceAtLever(0.5), 6);
-  assert.equal(distanceAtLever(0.5, "linear"), 8);
   assert.throws(() => distanceAtLever(1.1), RangeError);
-  assert.throws(() => distanceAtLever(0.5, "eased"), RangeError);
-  assert.equal(sceneAtLever(0.5, "linear").distance, 8);
+  assert.equal(eased(0), 0);
+  assert.equal(eased(1), 1);
+  assert.equal(eased(0.5), 0.5);
 });
 
-test("the pointer's lane is the lever: inset at both ends, clamped outside, and its own inverse", () => {
-  const width = LOGICAL_SIZE;
-  assert.equal(leverFromPointer(0, width), 0);
-  assert.equal(leverFromPointer(width * LANE_INSET, width), 0);
-  assert.equal(leverFromPointer(width * (1 - LANE_INSET), width), 1);
-  assert.equal(leverFromPointer(width, width), 1);
-  assert.equal(leverFromPointer(-40, width), 0);
-  for (let step = 0; step <= 20; step += 1) {
-    const lever = step / 20;
-    const hand = pointerAtLever(lever, width, width);
-    assert.ok(Math.abs(leverFromPointer(hand.x, width) - lever) < 1e-12);
-    assert.equal(hand.y, width * LANE_HEIGHT);
+test("the third eye sets off from the near station, swings round and up, and comes back to it", () => {
+  assert.deepEqual(orbitEye(0), NEAR_EYE);
+  assert.ok(Math.abs(ORBIT_RADIUS - Math.hypot(0, 4, 1.25)) < 1e-12);
+  assert.ok(Math.abs(REVEAL_AZIMUTH - 62 * Math.PI / 180) < 1e-15);
+  assert.ok(Math.abs(REVEAL_ELEVATION - 48 * Math.PI / 180) < 1e-15);
+  assert.equal(REVEAL_RADIUS, 7);
+  const rest = orbitEye(1);
+  // Off the stations' line in both ways: across, and above the eyes' height.
+  assert.ok(rest[0] > 3);
+  assert.ok(rest[2] > EYE_HEIGHT + 3);
+  assert.ok(Math.abs(Math.hypot(...subtract(rest, LOOK_AT)) - REVEAL_RADIUS) < 1e-12);
+  // The whole rest is one eye: every frame of the hold is the same picture.
+  for (let frame = 175; frame < 225; frame += 1) assert.deepEqual(sceneAt(frame), { ...sceneAt(175), frameIndex: frame });
+  // The set-off and the return are the same path run both ways: frame 125 + s of the
+  // one is frame 275 - s of the other, the near station at both ends.
+  for (let step = 0; step <= 50; step += 1) {
+    const out = sceneAt(125 + step);
+    const back = sceneAt(275 - step);
+    for (let axis = 0; axis < 3; axis += 1) assert.ok(Math.abs(out.eye[axis] - back.eye[axis]) < 1e-12);
+    assert.ok(Math.abs(out.fieldOfView - back.fieldOfView) < 1e-12);
   }
-  assert.deepEqual(pointerAtLever(0, 680, 680), { x: 54.4, y: 649.4 });
+  // No jump at the line's edge: the frame before the set-off and the set-off itself agree.
+  assert.deepEqual(sceneAt(125).eye, sceneAt(124).eye);
+  assert.equal(sceneAt(125).fieldOfView, sceneAt(124).fieldOfView);
+  assert.equal(sceneAt(125).squareGlow, sceneAt(124).squareGlow);
+  assert.throws(() => orbitEye(1.5), RangeError);
 });
 
 test("the catalog keeps the clause as both editions print it", () => {
@@ -409,18 +517,26 @@ test("the notes name both editions, keep the extension as the project's, and say
   assert.match(section, /Bekker 1842/u);
   assert.match(section, /`στρογγύλος,\] Mutschmann 1912, p\. 12 : στρογγύλος Bekker 1842, p\. 9`/u);
   assert.match(section, /one footprint/u);
-  assert.match(section, /The distances, the floors and the walk are this project's construction/u);
+  assert.match(section, /The distances, the floors, the walls and the walk are this project's construction/u);
   assert.doesNotMatch(section, /Sextus (?:knew|drew|described) (?:a|the) (?:ambiguous|tower)/u);
   assert.match(section, /the ground floor's swing is \+1\/3 at the front of a corner and −3\/7 at its back/u);
   assert.match(section, /the top floor's, half a unit above the eyes, is −1\/18 and \+1\/14/u);
   assert.match(section, /closes the first section of the fifth mode/u);
+  assert.doesNotMatch(section, /closes the fifth mode/u);
   // The related form is quoted from pages that were read, with the editor's supplement marked.
   assert.match(section, /Mutschmann page 78\]\(https:\/\/archive\.org\/details\/sextiempiriciope01sext\/page\/n109\/mode\/1up\) prints `τὸν ⟨αὐτὸν⟩ πύργον ὁτὲ μὲν στρογγύλον, ὁτὲ δὲ τετράγωνον`/u);
   assert.match(section, /Bekker page 69\]\(https:\/\/archive\.org\/details\/sextusempiricus00bekkgoog\/page\/n76\/mode\/1up\) prints `τὸν πύργον ὁτὲ μὲν στρογγύλον ὁτὲ δὲ τετράγωνον`/u);
-  assert.doesNotMatch(section, /closes the fifth mode/u);
+  // The form is a clip because a reader's hand did not show the trick; the notes say so.
+  assert.match(section, /a reader who moved the pointer could not tell what the movement stood for/u);
+  assert.match(section, /The two stations lie on one line; the reveal is a third eye/u);
+  // The deviation's definition and the numbers under it.
+  assert.match(section, /the largest angle, over all eight floors and all 363 vertices/u);
+  assert.match(section, /2\.86, 6\.58 and 18\.07 pixels/u);
+  assert.match(section, /5\.28, 9\.44 and 15\.11/u);
+  assert.match(section, /62 degrees at the near station and 38\.26 at the far/u);
 });
 
-test("the manifest, notes, card, post and legend agree on the clip and the quotation", () => {
+test("the manifest, notes, card and post agree on the clip and the quotation", () => {
   const artwork = MANIFEST.artworks.find((entry) => entry.id === "the-same-tower");
   const quote = CATALOG.quotes.find((entry) => entry.id === "sextus-ho-autos-pyrgos");
   assert.equal(artwork.title, "The Same Tower");
@@ -428,11 +544,14 @@ test("the manifest, notes, card, post and legend agree on the clip and the quota
   assert.equal(artwork.interactivePath, "the-same-tower/");
   assert.deepEqual(artwork.canvas, { width: 680, height: 680 });
   assert.deepEqual(artwork.quoteIds, ["sextus-ho-autos-pyrgos"]);
-  assert.deepEqual(artwork.thumbnail, { frame: 75 });
+  // The thumbnail is the reveal's rest: the third eye, holding.
+  assert.deepEqual(artwork.thumbnail, { frame: 200 });
+  assert.equal(actAt(200).name, "hold");
   assert.deepEqual(artwork.render, {
-    kind: "video", artifact: "exports/p5js/TheSameTower.mp4", durationSeconds: 10, scale: 2
+    kind: "video", artifact: "exports/p5js/TheSameTower.mp4", durationSeconds: 12, scale: 2
   });
-  assert.match(NOTES, /\| `the-same-tower` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 10 seconds,/u);
+  assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
+  assert.match(NOTES, /\| `the-same-tower` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 12 seconds,/u);
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
   assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 167);
   assert.equal(body.split("\n")[0], quote.text);
@@ -444,55 +563,38 @@ test("the manifest, notes, card, post and legend agree on the clip and the quota
   assert.ok(card.includes(quote.text));
   assert.ok(card.includes(quote.author));
   assert.ok(card.includes(quote.source));
-  // The legend the sketch prints is the line the notes' table gives for it.
-  const source = readFileSync(SKETCH_URL, "utf8");
-  const legend = source.match(/\{ cap: "(?<cap>[^"]+)", text: "(?<text>[^"]+)" \}/u);
-  assert.ok(legend);
-  assert.equal(legend.groups.cap, "move");
-  assert.ok(NOTES.includes(`| \`the-same-tower\` | pointer | \`${legend.groups.cap}\` ${legend.groups.text} |`));
+  // No legend row: the artwork no longer answers to the reader.
+  assert.doesNotMatch(NOTES, /\| `the-same-tower` \| pointer \|/u);
 });
 
-test("the sketch's whole drawing vocabulary is lines and the eye, with the hand's circles for the clip", () => {
+test("the sketch's whole drawing vocabulary is faces, lines and the eye, and nothing of the lever remains", () => {
   const source = readFileSync(SKETCH_URL, "utf8");
   const called = new Set([...source.matchAll(/\bp\.([a-zA-Z]+)\(/gu)].map((match) => match[1]));
   assert.deepEqual([...called].sort(), [
-    "background", "camera", "createCanvas", "createGraphics", "frameRate", "image", "line",
-    "linePerspective", "noFill", "noLoop", "perspective", "pixelDensity", "pop", "push",
-    "resetMatrix", "scale", "setAttributes", "stroke", "strokeWeight", "translate"
+    "background", "beginShape", "blendMode", "camera", "createCanvas", "endShape", "fill",
+    "frameRate", "line", "linePerspective", "noFill", "noLoop", "noStroke", "perspective",
+    "pixelDensity", "pop", "push", "setAttributes", "stroke", "strokeWeight", "vertex"
   ]);
-  // No letter, numeral, arrow, face or nominal figure can reach the frame: nothing that
-  // could draw one is ever called on the stage. The legend's type goes on its own surface.
-  for (const forbidden of ["text", "rect", "vertex", "quad", "triangle", "arc", "box", "sphere", "cylinder", "circle", "ellipse"]) {
-    assert.ok(!called.has(forbidden), `${forbidden} must not be drawn on the stage`);
+  // No letter, numeral, arrow, hand or nominal figure can reach the frame: nothing that
+  // could draw one is ever called.
+  for (const forbidden of ["text", "rect", "circle", "ellipse", "arc", "box", "sphere", "cylinder", "image", "createGraphics", "translate"]) {
+    assert.ok(!called.has(forbidden), `${forbidden} must not be drawn`);
   }
-  // The eye is the sketch's own, not the shared pinned one.
-  assert.doesNotMatch(source, /pinLogicalCamera/u);
+  // The eye is the sketch's own, and the lever, the legend and the hand are gone.
+  assert.doesNotMatch(source, /pinLogicalCamera|drawKeyHint|hint-mode|input-indicator|leverFromPointer|pointerAtLever|mouseX|LANE_/u);
   assert.match(source, /p\.perspective\(scene\.fieldOfView, 1, NEAR_PLANE, FAR_PLANE\)/u);
   assert.match(source, /p\.camera\(\.\.\.onStage\(scene\.eye\), \.\.\.onStage\(scene\.lookAt\), 0, 1, 0\)/u);
+  assert.match(source, /p\.linePerspective\(false\)/u);
 });
-
-/** A stand-in for a 2D surface, enough for the legend to be set on it. */
-function recordingSurface(record) {
-  const surface = {
-    RGB: "RGB", LEFT: "LEFT", BOTTOM: "BOTTOM",
-    pixelDensity: () => {}, clear: () => {}, push: () => {}, pop: () => {}, scale: () => {},
-    colorMode: () => {}, noStroke: () => {}, noFill: () => {}, stroke: () => {}, strokeWeight: () => {},
-    fill: () => {}, textAlign: () => {}, textSize: () => {},
-    textWidth: (label) => label.length * 8,
-    rect: (...args) => record.rects.push(args),
-    text: (...args) => record.texts.push(args)
-  };
-  return surface;
-}
 
 async function loadSketch(search, record) {
   const noop = () => {};
   class RecordingP5 {
     constructor(define) {
       const p = {
-        WEBGL: "WEBGL",
-        mouseX: 0,
+        WEBGL: "WEBGL", TRIANGLES: "TRIANGLES", ADD: "ADD", BLEND: "BLEND",
         frameCount: 0,
+        drawingContext: { DEPTH_TEST: "DEPTH_TEST", disable: (what) => record.depth.push(["off", what]), enable: (what) => record.depth.push(["on", what]) },
         createCanvas: (...args) => { record.canvas = args; return { parent: noop }; },
         setAttributes: (...args) => record.attributes.push(args),
         linePerspective: (value) => record.linePerspective.push(value),
@@ -501,27 +603,20 @@ async function loadSketch(search, record) {
         noLoop: noop,
         background: (...colour) => {
           record.background = colour;
-          record.lines = [];
-          record.strokes = [];
-          record.weights = [];
-          record.perspective = [];
-          record.camera = [];
-          record.circles = [];
-          record.images = [];
-          record.translate = [];
+          record.lines = []; record.strokes = []; record.weights = []; record.perspective = [];
+          record.camera = []; record.fills = []; record.vertices = 0; record.shapes = []; record.blends = []; record.depth = [];
         },
         perspective: (...args) => record.perspective.push(args),
         camera: (...args) => record.camera.push(args),
-        resetMatrix: noop,
-        translate: (...args) => record.translate.push(args),
-        scale: (value) => record.scale.push(value),
-        noFill: noop, noStroke: noop, push: noop, pop: noop, colorMode: noop, fill: noop,
+        beginShape: (mode) => record.shapes.push(mode),
+        endShape: noop,
+        vertex: () => { record.vertices += 1; },
+        fill: (...colour) => record.fills.push(colour),
+        blendMode: (mode) => record.blends.push(mode),
+        noFill: noop, noStroke: noop, push: noop, pop: noop,
         stroke: (...colour) => record.strokes.push(colour),
         strokeWeight: (weight) => record.weights.push(weight),
-        line: (...args) => record.lines.push(args),
-        circle: (...args) => record.circles.push(args),
-        createGraphics: (...args) => { record.graphics.push(args); return recordingSurface(record); },
-        image: (...args) => record.images.push(args)
+        line: (...args) => record.lines.push(args)
       };
       define(p);
       record.p = p;
@@ -534,86 +629,68 @@ async function loadSketch(search, record) {
 
 function freshRecord() {
   return {
-    attributes: [], linePerspective: [], density: [], frameRate: [], scale: [], graphics: [], rects: [], texts: [],
-    lines: [], strokes: [], weights: [], perspective: [], camera: [], circles: [], images: [], translate: []
+    attributes: [], linePerspective: [], density: [], frameRate: [],
+    lines: [], strokes: [], weights: [], perspective: [], camera: [], fills: [], vertices: 0, shapes: [], blends: [], depth: []
   };
 }
 
-test("an export frame draws the eight floors and four hairlines under the walking eye, and the hand under the default one", async () => {
+test("an export frame draws the walls, the four hairlines and the floors under the module's eye, and the glow at a station", async () => {
   const priorWindow = globalThis.window;
   const record = freshRecord();
+  const wallCount = (FLOOR_COUNT - 1) * (RIM_SEGMENTS + 2);
+  const floorLines = FLOOR_COUNT * (RIM_SEGMENTS + 2);
   try {
     await loadSketch("?capture=1&renderScale=2", record);
     assert.deepEqual(record.canvas, [1360, 1360, "WEBGL"]);
     assert.deepEqual(record.attributes, [["preserveDrawingBuffer", true]]);
-    // Hairlines of one weight wherever they stand: the depth scaling of strokes is off.
     assert.deepEqual(record.linePerspective, [false]);
     assert.deepEqual(record.density, [1]);
     assert.deepEqual(record.frameRate, [30]);
-    // At load: one canvas only, the far station, no legend and no hand.
-    assert.deepEqual(record.graphics, []);
+    // At load: the far station, one canvas, the circle's glow full on.
     assert.deepEqual(record.background, [6, 7, 12]);
-    assert.deepEqual(record.circles, []);
     assert.deepEqual(record.perspective, [[fieldOfView(FAR_DISTANCE), 1, 50, 4000]]);
     assert.deepEqual(record.camera, [[0, -300, 1200, 0, -175, 0, 0, 1, 0]]);
-
-    const state = await window.__renderFrame(150);
-    const scene = sceneAt(150);
-    assert.equal(state.kind, "video");
-    assert.equal(state.frameIndex, 150);
-    assert.equal(state.totalFrames, 300);
-    assert.equal(state.durationSeconds, 10);
-    assert.equal(state.distance, NEAR_DISTANCE);
-    assert.equal(state.lever, 1);
-    assert.equal(state.fieldOfView, NEAR_FIELD_OF_VIEW);
-    assert.deepEqual(state.eye, NEAR_EYE);
-    assert.equal(state.floors, 8);
-    assert.equal(state.verticals, 4);
-    assert.equal(state.palette, "night");
-    assert.deepEqual(state.outputSize, { width: 1360, height: 1360 });
-
-    // The walking eye first, then the default one for the hand.
-    assert.deepEqual(record.perspective, [[NEAR_FIELD_OF_VIEW, 1, 50, 4000], []]);
-    assert.deepEqual(record.camera, [[0, -300, 400, 0, -175, 0, 0, 1, 0], []]);
-    assert.equal(record.lines.length, FLOOR_COUNT * (RIM_SEGMENTS + 2) + 4);
-    // The first line is the ground floor's left corner, front end, onto the stage.
-    const [x, y, z] = scene.floors[0][0];
-    assert.deepEqual(record.lines[0].slice(0, 3), [x * STAGE_SCALE, -z * STAGE_SCALE, -y * STAGE_SCALE]);
-    // The tower's one stroke, then the hand's white rim.
-    assert.deepEqual(record.strokes, [[246, 244, 236], [255, 255, 255, 235]]);
+    assert.deepEqual(record.shapes, ["TRIANGLES"]);
+    assert.equal(record.vertices, 6 * wallCount);
+    assert.equal(record.fills.length, wallCount);
+    assert.ok(record.fills.every((colour) => colour.length === 4 && colour[3] === 46));
+    assert.deepEqual(record.blends, ["ADD", "BLEND"]);
+    assert.deepEqual(record.depth, [["off", "DEPTH_TEST"], ["on", "DEPTH_TEST"]]);
+    // Four hairlines, the floors once, and the floors four times more as halo.
+    assert.equal(record.lines.length, 4 + floorLines * (1 + 4));
+    assert.deepEqual(record.strokes[0], [252, 204, 116, 235]);
+    assert.deepEqual(record.strokes[1], [252, 204, 116, 235]);
     assert.equal(record.weights[0], 2.8);
-    assert.equal(record.weights.length, 2);
-    assert.equal(record.circles.length, 1);
-    assert.deepEqual(record.circles[0].slice(0, 2), [625.6, 649.4]);
-    assert.deepEqual(record.translate, [[-680, -680]]);
-    assert.deepEqual(record.graphics, []);
-    assert.deepEqual(record.images, []);
+    assert.equal(record.strokes.length, 2 + 4);
+    assert.ok(record.strokes.slice(2).every((colour) => Math.abs(colour[3] - 255 * 0.045) < 1e-9));
+
+    const state = await window.__renderFrame(200);
+    const scene = sceneAt(200);
+    assert.equal(state.kind, "video");
+    assert.equal(state.frameIndex, 200);
+    assert.equal(state.totalFrames, 360);
+    assert.equal(state.durationSeconds, 12);
+    assert.equal(state.act, "hold");
+    assert.equal(state.onLine, false);
+    assert.equal(state.distance, null);
+    assert.deepEqual(state.eye, scene.eye);
+    assert.equal(state.walls, wallCount);
+    assert.equal(state.palette, "crystal");
+    assert.deepEqual(state.outputSize, { width: 1360, height: 1360 });
+    // Off the line at the rest: no glow, so no halo pass at all.
+    assert.deepEqual(record.blends, []);
+    assert.equal(record.lines.length, 4 + floorLines);
+    assert.deepEqual(record.camera, [[scene.eye[0] * STAGE_SCALE, -scene.eye[2] * STAGE_SCALE, -scene.eye[1] * STAGE_SCALE, 0, -175, 0, 0, 1, 0]]);
+    assert.deepEqual(record.perspective, [[scene.fieldOfView, 1, 50, 4000]]);
+
+    const near = await window.__renderFrame(100);
+    assert.equal(near.squareGlow, 1);
+    assert.deepEqual(record.camera, [[0, -300, 400, 0, -175, 0, 0, 1, 0]]);
+    assert.deepEqual(record.perspective, [[NEAR_FIELD_OF_VIEW, 1, 50, 4000]]);
 
     const opening = await window.__renderFrame(0);
-    assert.deepEqual(record.circles[0].slice(0, 2), [54.4, 649.4]);
-    // Frame 300 is frame 0's picture; the index is reported as asked, which the renderer requires.
-    assert.deepEqual({ ...await window.__renderFrame(300), frameIndex: 0 }, opening);
-  } finally {
-    if (priorWindow === undefined) delete globalThis.window;
-    else globalThis.window = priorWindow;
-  }
-});
-
-test("a thumbnail frame lays the legend over the frame on its own surface, and draws no hand", async () => {
-  const priorWindow = globalThis.window;
-  const record = freshRecord();
-  try {
-    await loadSketch("?capture=1&renderScale=1&hint=1&hintScale=1.7", record);
-    assert.deepEqual(record.graphics, []);
-    await window.__renderFrame(75);
-    assert.deepEqual(record.graphics, [[680, 680]]);
-    assert.equal(record.images.length, 1);
-    assert.deepEqual(record.images[0].slice(1), [-340, -340]);
-    assert.deepEqual(record.circles, []);
-    assert.ok(record.texts.some(([label]) => label === "move"));
-    assert.ok(record.texts.some(([label]) => label === "walk towards the tower and back"));
-    assert.equal(record.perspective.length, 2);
-    assert.deepEqual(record.perspective[0], [fieldOfView(6), 1, 50, 4000]);
+    assert.deepEqual({ ...await window.__renderFrame(360), frameIndex: 0 }, opening);
+    assert.deepEqual({ ...await window.__renderFrame(359), frameIndex: 0 }, opening);
   } finally {
     if (priorWindow === undefined) delete globalThis.window;
     else globalThis.window = priorWindow;
