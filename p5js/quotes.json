@@ -460,6 +460,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://www.qdl.qa/en/archive/81055/vdc_100023489696.0x00004a"
+    },
+    {
+      "id": "sextus-ho-autos-pyrgos",
+      "text": "ὁ αὐτὸς πύργος πόρρωθεν μὲν φαίνεται στρογγύλος ἐγγύθεν δὲ τετράγωνος",
+      "lang": "grc",
+      "author": "Σέξτος Ἐμπειρικός",
+      "source": "Pyrrhoniae hypotyposes I.118",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/sextiempiriciope01sext/page/n62/mode/1up"
     }
   ]
 }
