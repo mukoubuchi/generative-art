@@ -1033,6 +1033,28 @@
         "durationSeconds": 10,
         "scale": 2
       }
+    },
+    {
+      "id": "innumerable-straight-lines",
+      "title": "Innumerable Straight Lines",
+      "entry": "p5js/artworks/innumerable-straight-lines/index.html",
+      "interactivePath": "innumerable-straight-lines/",
+      "canvas": {
+        "width": 960,
+        "height": 640
+      },
+      "quoteIds": [
+        "wren-rectas-innumeras"
+      ],
+      "thumbnail": {
+        "frame": 180
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/InnumerableStraightLines.mp4",
+        "durationSeconds": 12,
+        "scale": 2
+      }
     }
   ]
 }

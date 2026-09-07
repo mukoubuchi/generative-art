@@ -296,7 +296,7 @@ test("the Arabic catalog text is Rosen's page reading, codepoint for codepoint",
   );
 
   assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "ar").length, 2);
-  assert.equal(CATALOG.quotes.length, 48);
+  assert.equal(CATALOG.quotes.length, 49);
 });
 
 test("the gallery card and post carry the same Arabic record within the post limit", () => {
