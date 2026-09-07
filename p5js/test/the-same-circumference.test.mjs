@@ -356,7 +356,7 @@ test("the catalog keeps the clause as the first edition prints it", () => {
   assert.equal(quote.source, "Discorsi e dimostrazioni matematiche, giornata terza");
   assert.equal(quote.year, 1638);
   assert.equal(quote.publicDomain, true);
-  assert.equal(quote.sourceUrl, "https://archive.org/details/discorsiedimostr00gali/page/n197/mode/1up");
+  assert.equal(quote.sourceUrl, "https://archive.org/details/discorsiedimostr00gali/page/n196/mode/1up");
   assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "it").length, 2);
 });
 
@@ -366,8 +366,8 @@ test("the notes name both editions, keep the second family as the project's, and
   assert.match(section, /Elzevir 1638/u);
   assert.match(section, /Favaro 1898/u);
   assert.match(section, /`successiuamente\] Elzevir 1638, p\. 185 : successivamente Favaro 1898, p\. 224`/u);
-  assert.match(section, /page 185\]\(https:\/\/archive\.org\/details\/discorsiedimostr00gali\/page\/n197\/mode\/1up\)/u);
-  assert.match(section, /page 224\]\(https:\/\/archive\.org\/details\/agh6462\.0008\.001\.umich\.edu\/page\/n222\/mode\/1up\)/u);
+  assert.match(section, /page 185\]\(https:\/\/archive\.org\/details\/discorsiedimostr00gali\/page\/n196\/mode\/1up\)/u);
+  assert.match(section, /page 224\]\(https:\/\/archive\.org\/details\/agh6462\.0008\.001\.umich\.edu\/page\/n221\/mode\/1up\)/u);
   assert.match(section, /The second family, the touching and the strides read off it are this project's construction/u);
   assert.match(section, /none of it is attributed to the text/u);
   assert.doesNotMatch(section, /Galileo (?:drew|knew|described) (?:the|a) (?:second|arriving|touching|kiss)/u);
