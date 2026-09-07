@@ -1013,10 +1013,10 @@
       }
     },
     {
-      "id": "the-same-circumference",
-      "title": "The Same Circumference",
-      "entry": "p5js/artworks/the-same-circumference/index.html",
-      "interactivePath": "the-same-circumference/",
+      "id": "all-on-one-circumference",
+      "title": "All on One Circumference",
+      "entry": "p5js/artworks/all-on-one-circumference/index.html",
+      "interactivePath": "all-on-one-circumference/",
       "canvas": {
         "width": 680,
         "height": 680
@@ -1029,7 +1029,7 @@
       },
       "render": {
         "kind": "video",
-        "artifact": "exports/p5js/TheSameCircumference.mp4",
+        "artifact": "exports/p5js/AllOnOneCircumference.mp4",
         "durationSeconds": 10,
         "scale": 2
       }

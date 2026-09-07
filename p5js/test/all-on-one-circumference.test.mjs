@@ -37,12 +37,12 @@ import {
   tickFractions,
   tickFrames,
   topBody
-} from "../artworks/the-same-circumference/the-same-circumference.js";
+} from "../artworks/all-on-one-circumference/all-on-one-circumference.js";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 const CATALOG = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
 const NOTES = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-const SKETCH_URL = new URL("../artworks/the-same-circumference/sketch.js", import.meta.url);
+const SKETCH_URL = new URL("../artworks/all-on-one-circumference/sketch.js", import.meta.url);
 
 /** Rational points of the rim: the places where the arithmetic can be exact. */
 const RATIONAL_POINTS = [[3n, 4n, 5n], [5n, 12n, 13n], [8n, 15n, 17n], [20n, 21n, 29n], [7n, 24n, 25n]];
@@ -361,7 +361,7 @@ test("the catalog keeps the clause as the first edition prints it", () => {
 });
 
 test("the notes name both editions, keep the second family as the project's, and give the numbers the tests hold", () => {
-  const section = NOTES.slice(NOTES.indexOf("The Same Circumference starts from"), NOTES.indexOf("## Install"));
+  const section = NOTES.slice(NOTES.indexOf("All on One Circumference starts from"), NOTES.indexOf("## Install"));
   assert.ok(section.length > 0, "the notes must open the section with what it starts from");
   assert.match(section, /Elzevir 1638/u);
   assert.match(section, /Favaro 1898/u);
@@ -379,43 +379,52 @@ test("the notes name both editions, keep the second family as the project's, and
   assert.match(section, /every 45 frames/u);
   assert.match(section, /The thumbnail is frame 135/u);
   assert.match(section, /eighty-eight code points/u);
+  // The bodies are stars at level one half: the notes give the recipe's numbers at that level.
+  assert.match(section, /Each body is a star and not a dot, lit as Troubling of a Star lights its bobs/u);
+  assert.match(section, /six additive layers of the family's colour widening from a radius of two and five sixths to seventeen at an alpha of fourteen/u);
+  assert.match(section, /a core of the same colour of radius four at an alpha of a hundred and ninety-five/u);
+  assert.match(section, /a white heart of radius two at a hundred and eighty-five/u);
+  assert.match(section, /at a level of one half/u);
+  assert.match(section, /The stars are added rather than painted/u);
+  assert.match(section, /the shared body, drawn last in bone/u);
+  assert.doesNotMatch(section, /the shared body is bone, with a halo/u);
 });
 
 test("the manifest, notes, card and post agree on the clip and the quotation", () => {
-  const artwork = MANIFEST.artworks.find((entry) => entry.id === "the-same-circumference");
+  const artwork = MANIFEST.artworks.find((entry) => entry.id === "all-on-one-circumference");
   const quote = CATALOG.quotes.find((entry) => entry.id === "galileo-istessa-circonferenza");
-  assert.equal(artwork.title, "The Same Circumference");
-  assert.equal(artwork.entry, "p5js/artworks/the-same-circumference/index.html");
-  assert.equal(artwork.interactivePath, "the-same-circumference/");
+  assert.equal(artwork.title, "All on One Circumference");
+  assert.equal(artwork.entry, "p5js/artworks/all-on-one-circumference/index.html");
+  assert.equal(artwork.interactivePath, "all-on-one-circumference/");
   assert.deepEqual(artwork.canvas, { width: 680, height: 680 });
   assert.deepEqual(artwork.quoteIds, ["galileo-istessa-circonferenza"]);
   // The thumbnail is the third tick: the two circles touching at the third mark.
   assert.deepEqual(artwork.thumbnail, { frame: 135 });
   assert.equal(tickFrames()[2], 135);
   assert.deepEqual(artwork.render, {
-    kind: "video", artifact: "exports/p5js/TheSameCircumference.mp4", durationSeconds: 10, scale: 2
+    kind: "video", artifact: "exports/p5js/AllOnOneCircumference.mp4", durationSeconds: 10, scale: 2
   });
   assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
-  assert.match(NOTES, /\| `the-same-circumference` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 10 seconds,/u);
+  assert.match(NOTES, /\| `all-on-one-circumference` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 10 seconds,/u);
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
   assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 208);
   assert.equal(body.split("\n")[0], quote.text);
   const index = renderIndexPage(MANIFEST, CATALOG);
-  const start = index.indexOf('<h2 class="card__title">The Same Circumference</h2>');
+  const start = index.indexOf('<h2 class="card__title">All on One Circumference</h2>');
   assert.ok(start >= 0);
   const card = index.slice(start, index.indexOf("</li>", start));
   assert.match(card, /<blockquote class="card__quote" lang="it">/u);
   assert.ok(card.includes(quote.text));
   assert.ok(card.includes(quote.author));
   assert.ok(card.includes(quote.source));
-  assert.doesNotMatch(NOTES, /\| `the-same-circumference` \| pointer \|/u);
+  assert.doesNotMatch(NOTES, /\| `all-on-one-circumference` \| pointer \|/u);
 });
 
 test("the sketch's whole drawing vocabulary is circles and lines", () => {
   const source = readFileSync(SKETCH_URL, "utf8");
   const called = new Set([...source.matchAll(/\bp\.([a-zA-Z]+)\(/gu)].map((match) => match[1]));
   assert.deepEqual([...called].sort(), [
-    "background", "circle", "createCanvas", "fill", "frameRate", "line", "noFill",
+    "background", "blendMode", "circle", "createCanvas", "fill", "frameRate", "line", "noFill",
     "noLoop", "noStroke", "pixelDensity", "pop", "push", "scale", "stroke",
     "strokeWeight", "translate"
   ]);
@@ -430,7 +439,7 @@ test("the sketch's whole drawing vocabulary is circles and lines", () => {
 
 test("an export frame draws the rim, the chords, the stamps, the two circles and every body", async () => {
   const priorWindow = globalThis.window;
-  const calls = { circles: [], lines: [], scale: [], density: [], frameRate: [] };
+  const calls = { circles: [], lines: [], scale: [], density: [], frameRate: [], blends: [] };
   const noop = () => {};
   class RecordingP5 {
     constructor(define) {
@@ -439,8 +448,11 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
         background: (...colour) => {
           calls.background = colour;
           calls.circles = []; calls.lines = []; calls.strokes = []; calls.fills = []; calls.weights = [];
+          calls.blends = [];
         },
         circle: (...args) => calls.circles.push(args),
+        ADD: "add", BLEND: "blend",
+        blendMode: (mode) => calls.blends.push([mode, calls.circles.length]),
         line: (...args) => calls.lines.push(args),
         scale: (value) => calls.scale.push(value),
         translate: (...value) => { calls.translate = value; },
@@ -464,10 +476,11 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
     assert.deepEqual(calls.background, [6, 7, 12]);
     assert.deepEqual(calls.translate, [340, 340]);
     assert.ok(calls.scale.every((value) => value === 2));
-    // The opening frame: the chords, the rim, the arriving circle on the rim, the bodies.
+    // The opening frame: the chords, the rim, the arriving circle on the rim, the bodies --
+    // sixty-nine of them, each a star of six halo layers, a core and a heart.
     assert.equal(calls.lines.length, 69);
     assert.deepEqual(calls.lines[34], [0, -240, 0, 240]);
-    assert.equal(calls.circles.length, 1 + 1 + 34 + 34 + 2);
+    assert.equal(calls.circles.length, 1 + 1 + 69 * 8);
     assert.deepEqual(calls.circles[0], [0, 0, 480]);
     assert.deepEqual(calls.circles[1], [0, 0, 480]);
     assert.deepEqual(calls.strokes.slice(0, 3), [[246, 244, 236, 46], [246, 244, 236, 110], [104, 144, 204, 190]]);
@@ -475,20 +488,30 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
 
     const state = await window.__renderFrame(135);
     const scene = sceneAt(135);
-    // Three stamps of two circles and a mark, the two circles, the bodies, the halo and the shared body.
+    // Three stamps of two circles and a mark, the two circles, then the sixty-nine stars.
     assert.equal(calls.lines.length, 69);
-    assert.equal(calls.circles.length, 1 + 3 * 3 + 2 + 34 + 34 + 2);
+    assert.equal(calls.circles.length, 1 + 3 * 3 + 2 + 69 * 8);
     const [, ...drawn] = calls.circles;
     assert.deepEqual(drawn[0], [0, -225, 30]);
     assert.deepEqual(drawn[1], [0, 15, 450]);
     assert.deepEqual(drawn[2], [0, -210, 5]);
     assert.deepEqual(drawn[9], [0, -105, 270]);
     assert.deepEqual(drawn[10], [0, 135, 210]);
-    assert.deepEqual(drawn[11], [...scene.layers[0].state.topBodies[0], 7]);
-    assert.deepEqual(drawn[drawn.length - 1], [0, 30, 9]);
-    assert.deepEqual(drawn[drawn.length - 2], [0, 30, 22]);
-    assert.deepEqual(calls.fills.at(-1), [246, 244, 236, 255]);
-    assert.deepEqual(calls.fills.at(-2), [246, 244, 236, 56]);
+    // The stars are added, not painted, and only the stars: the blend is switched to ADD
+    // after the circles of the figure and back after the last star.
+    assert.deepEqual(calls.blends, [["add", 1 + 3 * 3 + 2], ["blend", 1 + 3 * 3 + 2 + 69 * 8]]);
+    // The first body's outermost halo layer, at level a half: radius (11 + 46 / 2) / 2 = 17.
+    assert.deepEqual(drawn[11], [...scene.layers[0].state.topBodies[0], 34]);
+    // The shared body last: its core (radius 4) and its white heart (radius 2), in bone.
+    assert.deepEqual(drawn[drawn.length - 1], [0, 30, 4]);
+    assert.deepEqual(drawn[drawn.length - 2], [0, 30, 8]);
+    assert.deepEqual(drawn[drawn.length - 3], [0, 30, 34 / 6]);
+    assert.deepEqual(calls.fills.at(-1), [248, 250, 255, 185]);
+    assert.deepEqual(calls.fills.at(-2), [246, 244, 236, 195]);
+    assert.deepEqual(calls.fills.at(-3), [246, 244, 236, 14]);
+    // Every body is one star: gold for the falling family, steel for the arriving one.
+    assert.deepEqual(calls.fills[calls.fills.length - 69 * 8], [252, 204, 116, 14]);
+    assert.deepEqual(calls.fills[calls.fills.length - 35 * 8], [156, 192, 240, 14]);
     assert.equal(state.kind, "video");
     assert.equal(state.frameIndex, 135);
     assert.equal(state.totalFrames, 300);
@@ -503,7 +526,18 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
     const rest = await window.__renderFrame(200);
     assert.equal(rest.act, "rest");
     // The arriving circle is a point at the rest, so it is not drawn as a circle.
-    assert.equal(calls.circles.length, 1 + 3 * 3 + 1 + 34 + 34 + 2);
+    assert.equal(calls.circles.length, 1 + 3 * 3 + 1 + 69 * 8);
+    // In the clearing the stars fade with their layer: at frame 285 the finished picture is
+    // at a quarter and the opening one at three quarters, and every part of a star -- halo,
+    // core and heart -- carries its layer's alpha.
+    const clearing = await window.__renderFrame(285);
+    assert.deepEqual(clearing.layers.map((layer) => layer.alpha), [0.25, 0.75]);
+    const alphas = calls.fills.map((colour) => colour[3]);
+    assert.equal(alphas.filter((alpha) => alpha === 14 * 0.25).length, 69 * 6);
+    assert.equal(alphas.filter((alpha) => alpha === 14 * 0.75).length, 69 * 6);
+    assert.equal(alphas.filter((alpha) => alpha === 195 * 0.25).length, 69);
+    assert.equal(alphas.filter((alpha) => alpha === 185 * 0.75).length, 69);
+    assert.deepEqual(calls.fills.at(-1), [248, 250, 255, 185 * 0.75]);
     assert.deepEqual(await window.__renderFrame(300), await window.__renderFrame(0));
   } finally {
     if (priorWindow === undefined) delete globalThis.window;

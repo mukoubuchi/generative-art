@@ -48,7 +48,7 @@ const AWAITING_SCHEDULE = [
   "made-whole",
   "between-two-ends",
   "the-same-tower",
-  "the-same-circumference"
+  "all-on-one-circumference"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
