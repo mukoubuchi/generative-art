@@ -490,6 +490,16 @@
       "year": 1669,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/philosophicaltra4166roya/page/n77/mode/1up"
+    },
+    {
+      "id": "platon-en-de-tautei",
+      "text": "κατὰ μίαν ἑκάστην προαιρούμενος μέχρι τῆς ἑπτακαιδεκάποδος· ἐν δὲ ταύτῃ πως ἐνέσχετο",
+      "lang": "grc",
+      "author": "Πλάτων",
+      "source": "Theaetetus 147d",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/theaetetuswithtr00platuoft/page/n31/mode/1up"
     }
   ]
 }

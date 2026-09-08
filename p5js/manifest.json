@@ -1055,6 +1055,28 @@
         "durationSeconds": 12,
         "scale": 2
       }
+    },
+    {
+      "id": "the-seventeen-foot",
+      "title": "The Seventeen-Foot",
+      "entry": "p5js/artworks/the-seventeen-foot/index.html",
+      "interactivePath": "the-seventeen-foot/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "platon-en-de-tautei"
+      ],
+      "thumbnail": {
+        "frame": 196
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/TheSeventeenFoot.mp4",
+        "durationSeconds": 10,
+        "scale": 2
+      }
     }
   ]
 }
