@@ -251,7 +251,15 @@ test("the notes name both printings, keep the sculpture as the project's, and sa
   // The pin's numbers, and the stage's measured lift.
   assert.match(section, /one hundred and nineteen sixty-fifths and the waist is five thirteenths/u);
   assert.match(section, /lifted by twenty-seven logical pixels/u);
-  assert.match(section, /67 above and 66 below and 295 either side/u);
+  assert.match(section, /66 above and 66 below and 294 either side/u);
+  assert.match(section, /between 9\.83 and 14\.27 per cent/u);
+  // Three metals, and the mark's meaning said in the notes.
+  assert.match(section, /five of them for a plain rod, at 2\.6 logical pixels from its own line and 1\.1 thick, seven for a marked one at 3\.4 and 1\.3/u);
+  assert.match(section, /four thin rings, standing at four points round the tube it would have had, of seventy-two segments each/u);
+  assert.match(section, /silver for the thirty rods.*copper for the six that mark every sixth.*gold for the collars/su);
+  assert.match(section, /that sixfold mark is the reading the loop closes on/u);
+  assert.match(section, /drawn in straight lines and nothing else/u);
+  assert.doesNotMatch(section, /drawn as shaded faces/u);
 });
 
 test("the manifest, notes, card and post agree on the clip and the quotation", () => {
@@ -289,11 +297,13 @@ test("the sketch's whole drawing vocabulary is shaded faces and the stage, with 
   const source = readFileSync(SKETCH_URL, "utf8");
   const called = new Set([...source.matchAll(/\bp\.([a-zA-Z]+)\(/gu)].map((match) => match[1]));
   assert.deepEqual([...called].sort(), [
-    "background", "beginShape", "createCanvas", "endShape", "fill", "frameRate", "noLoop",
-    "noStroke", "pixelDensity", "pop", "push", "rotateX", "rotateY", "setAttributes",
-    "translate", "vertex"
+    "background", "createCanvas", "frameRate", "line", "linePerspective", "noFill", "noLoop",
+    "pixelDensity", "pop", "push", "rotateX", "rotateY", "setAttributes", "stroke",
+    "strokeWeight", "translate"
   ]);
-  for (const forbidden of ["text", "rect", "circle", "ellipse", "line", "cylinder", "torus", "sphere", "box", "image", "createGraphics",
+  // Nothing is filled and nothing is a face: the figure is drawn in lines throughout.
+  for (const forbidden of ["text", "rect", "circle", "ellipse", "fill", "beginShape", "vertex", "endShape",
+    "cylinder", "torus", "sphere", "box", "image", "createGraphics",
     "ambientLight", "directionalLight", "pointLight", "specularMaterial", "shininess", "camera", "perspective", "ortho"]) {
     assert.ok(!called.has(forbidden), `${forbidden} must not be called`);
   }
@@ -317,16 +327,16 @@ async function loadSketch(search, record) {
         noLoop: noop,
         background: (...colour) => {
           record.background = colour;
-          record.fills = []; record.vertices = 0; record.points = []; record.shapes = []; record.translate = []; record.rotateX = []; record.rotateY = [];
+          record.lines = []; record.strokes = []; record.weights = []; record.translate = []; record.rotateX = []; record.rotateY = [];
         },
         translate: (...args) => record.translate.push(args),
         rotateX: (value) => record.rotateX.push(value),
         rotateY: (value) => record.rotateY.push(value),
-        beginShape: (mode) => record.shapes.push(mode),
-        endShape: noop,
-        vertex: (...args) => { record.vertices += 1; if (record.points.length < 96) record.points.push(args); },
-        fill: (...colour) => record.fills.push(colour),
-        noStroke: noop, push: noop, pop: noop
+        linePerspective: (value) => record.linePerspective.push(value),
+        line: (...args) => record.lines.push({ ends: args, stroke: record.strokes.at(-1), weight: record.weights.at(-1) }),
+        stroke: (...colour) => record.strokes.push(colour),
+        strokeWeight: (value) => record.weights.push(value),
+        noFill: noop, push: noop, pop: noop
       };
       define(p);
       record.p = p;
@@ -337,11 +347,13 @@ async function loadSketch(search, record) {
   await import(`${SKETCH_URL.href}?${search.slice(1)}`);
 }
 
-test("an export frame draws thirty-six tubes and two collars under the pinned camera, turned by the frame's spin", async () => {
+test("an export frame draws thirty-six bundles and two collars in lines under the pinned camera, turned by the frame's spin", async () => {
   const priorWindow = globalThis.window;
-  const record = { attributes: [], density: [], frameRate: [], perspective: [], fills: [], vertices: 0, points: [], shapes: [], translate: [], rotateX: [], rotateY: [] };
-  const tubeVertices = 8 * 6;
-  const collarVertices = 72 * 10 * 6;
+  const record = { attributes: [], density: [], frameRate: [], perspective: [], lines: [], strokes: [], weights: [], linePerspective: [], translate: [], rotateX: [], rotateY: [] };
+  // Thirty rods of five hairlines, six accents of seven, and two collars of four rings of
+  // seventy-two segments each.
+  const rodLines = 30 * 5 + 6 * 7;
+  const collarLines = 2 * 4 * 72;
   try {
     await loadSketch("?capture=1&renderScale=2", record);
     assert.deepEqual(record.canvas, [1920, 1280, "WEBGL"]);
@@ -354,33 +366,62 @@ test("an export frame draws thirty-six tubes and two collars under the pinned ca
     assert.deepEqual(record.translate, [[0, -27, 0]]);
     assert.deepEqual(record.rotateX, [-0.32]);
     assert.deepEqual(record.rotateY, [0.35]);
-    assert.equal(record.shapes.length, ROD_COUNT + 2);
-    assert.ok(record.shapes.every((mode) => mode === "TRIANGLES"));
-    assert.equal(record.vertices, ROD_COUNT * tubeVertices + 2 * collarVertices);
-    // One fill per tube face and one per collar vertex, every one opaque.
-    assert.equal(record.fills.length, ROD_COUNT * 8 + 2 * 720 * 6);
-    assert.ok(record.fills.every((colour) => colour.length === 3));
-    // The first tube is an accent and the second a plain rod: measured from the recorded
-    // vertices, the accent is 3.4 logical pixels thick and the plain rod 2.6, at the export's 2x.
-    const radiusOf = (points, rod) => {
-      const axis = rod.top.map((part, axisIndex) => (part - rod.bottom[axisIndex]) * 160);
+    // Every line's width is its own, and none of them thins with distance.
+    assert.deepEqual(record.linePerspective, [false]);
+    assert.equal(record.lines.length, rodLines + collarLines);
+    // The bundles come first, then the two collars.
+    const rods = record.lines.slice(0, rodLines);
+    const collars = record.lines.slice(rodLines);
+    assert.equal(collars.length, collarLines);
+    assert.ok(collars.every(({ weight }) => weight === 1.6 * 2));
+    // An accent is seven lines at 1.3, a plain rod five at 1.1, at the export's 2x.
+    assert.equal(rods.filter(({ weight }) => weight === 1.3 * 2).length, 6 * 7);
+    assert.equal(rods.filter(({ weight }) => weight === 1.1 * 2).length, 30 * 5);
+    // The hairlines of a bundle stand on the circle the rod's tube would have had: the
+    // accent's at 3.4 logical pixels from its own line, the plain rod's at 2.6, and every
+    // one of them parallel to it.
+    const radiusOf = ({ ends }, rod) => {
       const stageBottom = [rod.bottom[0] * 160, -rod.bottom[1] * 160, rod.bottom[2] * 160];
-      const stageAxis = [axis[0], -axis[1], axis[2]];
+      const stageAxis = [(rod.top[0] - rod.bottom[0]) * 160, -(rod.top[1] - rod.bottom[1]) * 160, (rod.top[2] - rod.bottom[2]) * 160];
       const length = Math.hypot(...stageAxis);
-      return points.map((point) => {
-        const d = point.map((part, axisIndex) => part - stageBottom[axisIndex]);
+      const offset = (point) => {
+        const d = point.map((part, axis) => part - stageBottom[axis]);
         const along = (d[0] * stageAxis[0] + d[1] * stageAxis[1] + d[2] * stageAxis[2]) / length;
         return Math.sqrt(Math.max(0, d[0] ** 2 + d[1] ** 2 + d[2] ** 2 - along ** 2));
-      });
+      };
+      return [offset(ends.slice(0, 3)), offset(ends.slice(3, 6))];
     };
     const untwisted = sceneAt(0);
-    const accentRadii = radiusOf(record.points.slice(0, 48), untwisted.rods[0]);
-    const plainRadii = radiusOf(record.points.slice(48, 96), untwisted.rods[1]);
-    assert.ok(accentRadii.every((radius) => Math.abs(radius - 3.4) < 1e-9));
-    assert.ok(plainRadii.every((radius) => Math.abs(radius - 2.6) < 1e-9));
+    for (const line of rods.slice(0, 7)) {
+      const [bottom, top] = radiusOf(line, untwisted.rods[0]);
+      assert.ok(Math.abs(bottom - 3.4) < 1e-9 && Math.abs(top - 3.4) < 1e-9, "an accent's hairline stands 3.4 off its rod");
+    }
+    for (const line of rods.slice(7, 12)) {
+      const [bottom, top] = radiusOf(line, untwisted.rods[1]);
+      assert.ok(Math.abs(bottom - 2.6) < 1e-9 && Math.abs(top - 2.6) < 1e-9, "a rod's hairline stands 2.6 off its rod");
+    }
+    // Three metals, and each of the three used: a bundle's lines differ only in how the
+    // two lights fall on them, so every line of one rod is that metal dimmed.
+    const shares = (colour, metal) => colour.every((part, axis) => Math.abs(part / metal[axis] - colour[0] / metal[0]) < 1e-9);
+    assert.ok(rods.slice(0, 7).every(({ stroke }) => shares(stroke, [196, 106, 74])), "the accents are copper");
+    assert.ok(rods.slice(7, 12).every(({ stroke }) => shares(stroke, [246, 244, 236])), "the rods are silver");
+    assert.ok(collars.every(({ stroke }) => shares(stroke, [252, 204, 116])), "the collars are gold");
+    // The lights do fall: a bundle drawn flat in its metal would read as a ribbon, not a
+    // rod, so the lines of one bundle differ in brightness, and the first accent's line and
+    // the first rod's are these, which is the metal through the duals' two lights.
+    const brightness = ({ stroke }) => stroke[0] + stroke[1] + stroke[2];
+    const spread = (lines) => Math.max(...lines.map(brightness)) / Math.min(...lines.map(brightness));
+    assert.ok(spread(rods.slice(0, 7)) > 2, "an accent's bundle must be shaded across");
+    assert.ok(spread(rods.slice(7, 12)) > 1.8, "a rod's bundle must be shaded across");
+    assert.ok(spread(collars) > 2, "a collar's rings must be shaded round");
+    const near = (colour, expected) => colour.every((part, axis) => Math.abs(part - expected[axis]) < 1e-6);
+    assert.ok(near(rods[0].stroke, [174.93, 94.605, 66.045]), "the accent's first hairline is copper at the lights");
+    assert.ok(near(rods[7].stroke, [219.555, 217.77, 210.63]), "the rod's first hairline is silver at the lights");
+    assert.ok(near(collars[0].stroke, [194.255461, 157.25442, 89.41918]), "the collar's first segment is gold at the lights");
     // And the register is the collection's literals, by name.
     const source = readFileSync(SKETCH_URL, "utf8");
-    for (const literal of ["const GROUND = [6, 7, 12];", "const ROD = [196, 106, 74];", "const ACCENT = [222, 158, 96];", "const COLLAR = [252, 204, 116];"]) {
+    for (const literal of ["const GROUND = [6, 7, 12];", "const ROD = [246, 244, 236];", "const ACCENT = [196, 106, 74];", "const COLLAR = [252, 204, 116];",
+      "const ROD_LINES = 5;", "const ACCENT_LINES = 7;", "const COLLAR_RINGS = 4;"]) {
       assert.ok(source.includes(literal), `${literal} must be the register`);
     }
 
@@ -393,7 +434,7 @@ test("an export frame draws thirty-six tubes and two collars under the pinned ca
     assert.ok(Math.abs(state.height - FULL_HEIGHT) < 1e-15);
     assert.ok(Math.abs(state.waist - WAIST) < 1e-15);
     assert.equal(state.rods, 36);
-    assert.equal(state.palette, "terracotta");
+    assert.equal(state.palette, "three metals");
     assert.deepEqual(state.outputSize, { width: 1920, height: 1280 });
     assert.ok(Math.abs(record.rotateY[0] - (0.35 + TURNTABLE / 2)) < 1e-15);
 
