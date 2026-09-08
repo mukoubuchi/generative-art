@@ -238,18 +238,36 @@ export function glow(pixels) {
 }
 
 /*
- * The staging.
+ * The staging, as one continuous move.
  *
- * Three acts. The eye rests at the far station and walks in to the near one, where it
- * rests again: the two appearances, set against each other. Then a third eye leaves the
- * line the two stations share, swinging round and up while drawing back, and rests where
- * the floors show as the bent curves they are on the one footprint they share. Then it
- * returns to the line and walks out, and the last frame is the first.
+ * The eye stands at the far station, walks in to the near one, waits a beat there, and is
+ * then whipped round and up in six tenths of a second to where the floors show as the bent
+ * curves they are on the one footprint they share; it settles, holds, comes back to the
+ * line and walks out, and the last frame is the first.
+ *
+ * Every stretch is smootherstep, whose first and second derivatives vanish at both ends,
+ * and each stretch begins exactly where the one before it ended, so neither speed nor
+ * acceleration jumps at a join. The stations are moments of zero speed rather than dead
+ * stops. An earlier staging ran each act's progress from nought to one step short of one,
+ * so the walk arrived still moving and the next act's constant stopped it dead: the clip
+ * had two such cliffs in it, and forty per cent of its frames stood still.
  */
 export const ACTS = [
-  ["far", 25], ["push", 55], ["near", 45], ["out", 50], ["hold", 50], ["back", 50], ["pull", 60], ["far", 25]
+  ["in", 110], ["near", 16], ["whip", 18], ["settle", 30], ["hold", 30], ["back", 60], ["out", 96]
 ];
 export const ACT_FRAMES = ACTS.reduce((sum, [, frames]) => sum + frames, 0);
+/** How far the whip carries the turn before the settle takes it the rest of the way. */
+export const WHIP_SHARE = 0.9;
+/** The frames the eye stands exactly at a station: the first, and the end of the walk in. */
+export const FAR_FRAME = 0;
+export const NEAR_FRAME = ACTS[0][1];
+/**
+ * The arrival beat: at a station's own frame the station's light swells by this much and
+ * falls back over these frames. It is a beat of the staging and not a measurement -- the
+ * deviation and the glow it lights are measured, and this is laid over them.
+ */
+export const ARRIVAL_SWELL = 1.9;
+export const ARRIVAL_FALL = 18;
 
 /** The walk spends its frames evenly in `1 / d`, which is what the picture changes evenly in. */
 export function distanceAtLever(lever) {
@@ -261,9 +279,13 @@ export function distanceAtLever(lever) {
   return 1 / ((1 - lever) / FAR_DISTANCE + lever / NEAR_DISTANCE);
 }
 
-/** Smoothstep: the walk sets off and arrives without a jolt. */
+/**
+ * Smootherstep: the walk sets off and arrives with neither speed nor acceleration on it,
+ * which is what lets one stretch of the move be joined to the next without a jolt.
+ */
 export function eased(t) {
-  return t * t * (3 - 2 * t);
+  const u = Math.min(Math.max(t, 0), 1);
+  return u * u * u * (u * (u * 6 - 15) + 10);
 }
 
 /**
@@ -298,6 +320,34 @@ export function orbitEye(turn) {
   ];
 }
 
+/**
+ * How far the walk and the turn have come at a frame. The walk runs from the far station
+ * to the near one and back; the turn takes the third eye off the line and back.
+ */
+export function stagingAt(frameIndex) {
+  const { name, progress } = actAt(frameIndex);
+  if (name === "in") return { act: name, walk: eased(progress), turn: 0 };
+  if (name === "near") return { act: name, walk: 1, turn: 0 };
+  if (name === "whip") return { act: name, walk: 1, turn: WHIP_SHARE * eased(progress) };
+  if (name === "settle") return { act: name, walk: 1, turn: WHIP_SHARE + (1 - WHIP_SHARE) * eased(progress) };
+  if (name === "hold") return { act: name, walk: 1, turn: 1 };
+  if (name === "back") return { act: name, walk: 1, turn: 1 - eased(progress) };
+  return { act: name, walk: 1 - eased(progress), turn: 0 };
+}
+
+/**
+ * The arrival beat at a frame: one everywhere except in the frames just after a station,
+ * where the station's light swells and falls back. Staging, not measurement.
+ */
+export function arrivalAt(frameIndex) {
+  const frame = actAt(frameIndex).frame;
+  const since = (station) => (frame - station + TOTAL_FRAMES) % TOTAL_FRAMES;
+  const beat = Math.min(since(FAR_FRAME), since(NEAR_FRAME));
+  if (beat >= ARRIVAL_FALL) return 1;
+  const left = 1 - beat / ARRIVAL_FALL;
+  return 1 + (ARRIVAL_SWELL - 1) * left * left;
+}
+
 /** Which act a frame falls in, and how far through it. */
 export function actAt(frameIndex) {
   if (!Number.isSafeInteger(frameIndex)) {
@@ -319,17 +369,10 @@ export function actAt(frameIndex) {
  * the stations' line, and how brightly each station's figure is lit.
  */
 export function sceneAt(frameIndex) {
-  const { frame, name, progress } = actAt(frameIndex);
-  let distance = null;
-  let turn = 0;
-  if (name === "far") distance = FAR_DISTANCE;
-  else if (name === "near") distance = NEAR_DISTANCE;
-  else if (name === "push") distance = distanceAtLever(eased(progress));
-  else if (name === "pull") distance = distanceAtLever(1 - eased(progress));
-  else if (name === "out") turn = eased(progress);
-  else if (name === "hold") turn = 1;
-  else turn = 1 - eased(progress);
-  const onLine = distance !== null;
+  const { frame } = actAt(frameIndex);
+  const { act, walk, turn } = stagingAt(frameIndex);
+  const onLine = turn === 0;
+  const distance = onLine ? distanceAtLever(walk) : null;
   const eye = onLine ? eyeAt(distance) : orbitEye(turn);
   // Off the line the lens is read from a distance that starts at the near station's, so
   // the field does not jump as the third eye sets off; and the near station's glow is
@@ -338,15 +381,29 @@ export function sceneAt(frameIndex) {
   const lens = onLine ? distance : NEAR_DISTANCE + (REVEAL_RADIUS - NEAR_DISTANCE) * turn;
   return {
     frameIndex: frame,
-    act: name,
+    act,
+    walk,
+    turn,
     onLine,
     distance,
     eye,
     lookAt: LOOK_AT,
     fieldOfView: fieldOfView(lens),
+    // The two glows are measurements; the arrival is the beat laid over them.
     circleGlow: onLine ? glow(deviationPixels(distance, "circle")) : 0,
-    squareGlow: onLine ? glow(deviationPixels(distance, "square")) : 1 - turn
+    squareGlow: onLine ? glow(deviationPixels(distance, "square")) : 1 - turn,
+    arrival: arrivalAt(frameIndex)
   };
+}
+
+/**
+ * How far the eye moves between this frame and the next, in the tower's own units: the
+ * move's speed, which the tests hold to arriving at nought rather than being stopped at it.
+ */
+export function eyeStepAt(frameIndex) {
+  const here = sceneAt(frameIndex).eye;
+  const next = sceneAt(frameIndex + 1).eye;
+  return Math.hypot(next[0] - here[0], next[1] - here[1], next[2] - here[2]);
 }
 
 /*
