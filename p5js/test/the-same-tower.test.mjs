@@ -624,7 +624,12 @@ test("the notes name both editions, keep the extension as the project's, and say
   assert.match(section, /two cliffs in it — 0\.39 of a level of grey falling to nought at the end of the walk in, and 0\.65 at the end of the third eye's swing/u);
   assert.match(section, /one jump the other way, from nothing to 1\.04 as the third eye set off/u);
   assert.match(section, /A hundred and forty-five of its three hundred and sixty frames stood still, the longest stretch of them fifty frames/u);
-  assert.match(section, /no cliff at all, forty-one frames still, the longest stretch thirty-two, and a peak of 14\.5 against the old 9\.6/u);
+  assert.match(section, /neither of those cliffs, forty-one frames still, the longest stretch thirty-two, and a peak of 14\.5 against the old 9\.6/u);
+  // The steps that remain are named rather than claimed away.
+  assert.match(section, /Three abrupt steps remain in the series, and all three are named/u);
+  assert.match(section, /the light jumps 3\.41 between the last frame of the walk in and the near station's own frame, and 1\.30 across the loop's join/u);
+  assert.match(section, /the whip's landing, 0\.73 falling to 0\.03, which is a twentieth of the whip's own peak/u);
+  assert.match(section, /Nothing in the walks stops with speed on it/u);
   // The arrival beat, said as staging and not as measurement.
   assert.match(section, /an arrival beat/u);
   assert.match(section, /multiplied by nineteen tenths and the multiplier falls back to one over eighteen frames/u);
