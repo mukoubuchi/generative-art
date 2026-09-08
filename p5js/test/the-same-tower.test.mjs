@@ -682,8 +682,8 @@ test("the sketch's whole drawing vocabulary is faces, lines and the eye, and not
   const source = readFileSync(SKETCH_URL, "utf8");
   const called = new Set([...source.matchAll(/\bp\.([a-zA-Z]+)\(/gu)].map((match) => match[1]));
   assert.deepEqual([...called].sort(), [
-    "background", "beginShape", "blendMode", "camera", "createCanvas", "endShape", "fill",
-    "frameRate", "line", "linePerspective", "noFill", "noLoop", "noStroke", "perspective",
+    "background", "beginShape", "blendMode", "buildGeometry", "camera", "createCanvas", "endShape", "fill",
+    "frameRate", "line", "linePerspective", "model", "noFill", "noLoop", "noStroke", "perspective",
     "pixelDensity", "pop", "push", "setAttributes", "stroke", "strokeWeight", "vertex"
   ]);
   // No letter, numeral, arrow, hand or nominal figure can reach the frame: nothing that
@@ -702,6 +702,7 @@ async function loadSketch(search, record) {
   const noop = () => {};
   class RecordingP5 {
     constructor(define) {
+      let target = record;
       const p = {
         WEBGL: "WEBGL", TRIANGLES: "TRIANGLES", ADD: "ADD", BLEND: "BLEND",
         frameCount: 0,
@@ -711,35 +712,59 @@ async function loadSketch(search, record) {
         linePerspective: (value) => record.linePerspective.push(value),
         pixelDensity: (value) => record.density.push(value),
         frameRate: (value) => record.frameRate.push(value),
+        millis: () => record.p5TimeMs,
         noLoop: noop,
         background: (...colour) => {
           record.background = colour;
           record.lines = []; record.strokes = []; record.weights = []; record.perspective = [];
           record.camera = []; record.fills = []; record.vertices = 0; record.shapes = []; record.blends = []; record.depth = [];
+          record.models = []; record.directLines = 0; record.directVertices = 0;
         },
         perspective: (...args) => record.perspective.push(args),
         camera: (...args) => record.camera.push(args),
-        beginShape: (mode) => record.shapes.push(mode),
+        beginShape: (mode) => target.shapes.push(mode),
         endShape: noop,
-        vertex: () => { record.vertices += 1; },
-        fill: (...colour) => record.fills.push(colour),
+        vertex: () => {
+          target.vertices += 1;
+          if (target === record) record.directVertices += 1;
+        },
+        fill: (...colour) => target.fills.push(colour),
         blendMode: (mode) => record.blends.push(mode),
         noFill: noop, noStroke: noop, push: noop, pop: noop,
         stroke: (...colour) => record.strokes.push(colour),
         strokeWeight: (weight) => record.weights.push(weight),
-        line: (...args) => record.lines.push(args)
+        line: (...args) => {
+          target.lines.push(args);
+          if (target === record) record.directLines += 1;
+        },
+        buildGeometry: (build) => {
+          const geometry = { lines: [], fills: [], vertices: 0, shapes: [] };
+          const previous = target;
+          target = geometry;
+          try { build(); } finally { target = previous; }
+          record.geometries.push(geometry);
+          return geometry;
+        },
+        model: (geometry) => {
+          record.models.push(geometry);
+          record.lines.push(...geometry.lines);
+          record.fills.push(...geometry.fills);
+          record.vertices += geometry.vertices;
+          record.shapes.push(...geometry.shapes);
+        }
       };
       define(p);
       record.p = p;
       p.setup();
     }
   }
-  globalThis.window = { p5: RecordingP5, location: { search } };
+  globalThis.window = { p5: RecordingP5, location: { search }, performance: { now: () => record.nowMs } };
   await import(`${SKETCH_URL.href}?${search.slice(1)}`);
 }
 
 function freshRecord() {
   return {
+    nowMs: 1000, p5TimeMs: 1000, geometries: [], models: [], directLines: 0, directVertices: 0,
     attributes: [], linePerspective: [], density: [], frameRate: [],
     lines: [], strokes: [], weights: [], perspective: [], camera: [], fills: [], vertices: 0, shapes: [], blends: [], depth: []
   };
@@ -764,14 +789,14 @@ test("an export frame draws the walls, the four hairlines and the floors under t
     assert.deepEqual(record.camera, [[0, -300, 1200, 0, -175, 0, 0, 1, 0]]);
     assert.deepEqual(record.shapes, ["TRIANGLES"]);
     assert.equal(record.vertices, 6 * wallCount);
-    assert.equal(record.fills.length, wallCount);
+    assert.equal(record.fills.length, wallCount + 1);
     assert.ok(record.fills.every((colour) => colour.length === 4 && colour[3] === 46));
     // A wall's face is the same starlight as the lines, dimmed by the two lights and by
     // nothing else: every face is that one colour scaled, and the brightest is all of it.
     const ofStarlight = (colour) =>
       Math.abs(colour[0] / 202 - colour[1] / 192) < 1e-9 && Math.abs(colour[0] / 202 - colour[2] / 232) < 1e-9;
     assert.ok(record.fills.every(ofStarlight), "a wall's face must be starlight at some brightness");
-    const brightest = Math.max(...record.fills.map((colour) => colour[0] / 202));
+    const brightest = Math.max(...record.fills.slice(1).map((colour) => colour[0] / 202));
     assert.ok(brightest > 0.99 && brightest <= 1.05, `the brightest wall is ${brightest} of starlight`);
     assert.deepEqual(record.blends, ["ADD", "BLEND"]);
     assert.deepEqual(record.depth, [["off", "DEPTH_TEST"], ["on", "DEPTH_TEST"]]);
@@ -788,6 +813,16 @@ test("an export frame draws the walls, the four hairlines and the floors under t
     assert.deepEqual(record.strokes[6].slice(0, 3), [248, 250, 255]);
     assert.ok(Math.abs(record.strokes[6][3] - 255 * (ARRIVAL_SWELL - 1) * 0.05) < 1e-9);
     assert.equal(record.weights[6], 1.4 * 1.6 * 2);
+    // The same segment endpoints and wall colours are retained, but no geometry is
+    // reconstructed while drawing. Glow passes reuse the one floor model.
+    assert.equal(record.geometries.length, 3);
+    const [walls, corners, floors] = record.geometries;
+    assert.equal(walls.vertices, 6 * wallCount);
+    assert.equal(corners.lines.length, 4);
+    assert.equal(floors.lines.length, floorLines);
+    assert.deepEqual(record.models, [walls, corners, floors, floors, floors, floors, floors, floors]);
+    assert.equal(record.directLines, 0);
+    assert.equal(record.directVertices, 0);
 
     const state = await window.__renderFrame(200);
     const scene = sceneAt(200);
@@ -806,6 +841,7 @@ test("an export frame draws the walls, the four hairlines and the floors under t
     // Off the line at the rest: no glow, so no halo pass at all.
     assert.deepEqual(record.blends, []);
     assert.equal(record.lines.length, 4 + floorLines);
+    assert.deepEqual(record.models, [walls, corners, floors]);
     assert.deepEqual(record.camera, [[scene.eye[0] * STAGE_SCALE, -scene.eye[2] * STAGE_SCALE, -scene.eye[1] * STAGE_SCALE, 0, -175, 0, 0, 1, 0]]);
     assert.deepEqual(record.perspective, [[scene.fieldOfView, 1, 50, 4000]]);
 
@@ -833,6 +869,56 @@ test("an export frame draws the walls, the four hairlines and the floors under t
     assert.ok(last.walk < 1e-4 && last.walk > 0);
     assert.equal(last.arrival, 1);
     assert.equal(opening.arrival, ARRIVAL_SWELL);
+    assert.equal(record.geometries.length, 3);
+    assert.equal(record.directLines, 0);
+    assert.equal(record.directVertices, 0);
+  } finally {
+    if (priorWindow === undefined) delete globalThis.window;
+    else globalThis.window = priorWindow;
+  }
+});
+
+test("page playback follows elapsed time even when draws are missed, and closes at twelve seconds", async () => {
+  const priorWindow = globalThis.window;
+  const record = freshRecord();
+  try {
+    await loadSketch("", record);
+    assert.equal(window.__ARTWORK_STATE__.frameIndex, 0);
+    assert.equal(window.__renderFrame, undefined);
+    const start = record.nowMs;
+    // p5 2.3.2 resets millis() after setup; that must not send playback backwards.
+    record.p5TimeMs = 0;
+    record.nowMs = start + 16;
+    record.p.draw();
+    assert.equal(window.__ARTWORK_STATE__.frameIndex, 0);
+    record.p.frameCount = 1;
+    record.nowMs = start + 1500;
+    record.p.draw();
+    assert.equal(window.__ARTWORK_STATE__.frameIndex, 45);
+    assert.deepEqual(window.__ARTWORK_STATE__.eye, sceneAt(45).eye);
+
+    // Only one more draw happens during this stall, but three seconds pass in the work.
+    record.p.frameCount += 1;
+    record.nowMs += 3000;
+    record.p.draw();
+    assert.equal(window.__ARTWORK_STATE__.frameIndex, 135);
+    assert.equal(window.__ARTWORK_STATE__.act, "whip");
+
+    record.nowMs = start + 12000;
+    record.p.draw();
+    assert.equal(window.__ARTWORK_STATE__.frameIndex, 0);
+    assert.deepEqual(window.__ARTWORK_STATE__.eye, FAR_EYE);
+    record.nowMs += 1000;
+    record.p.draw();
+    assert.equal(window.__ARTWORK_STATE__.frameIndex, 30);
+
+    // Drawing more often cannot speed up the clock either.
+    record.p.frameCount = 999;
+    record.p.draw();
+    assert.equal(window.__ARTWORK_STATE__.frameIndex, 30);
+    assert.equal(record.geometries.length, 3);
+    assert.equal(record.directLines, 0);
+    assert.equal(record.directVertices, 0);
   } finally {
     if (priorWindow === undefined) delete globalThis.window;
     else globalThis.window = priorWindow;

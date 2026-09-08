@@ -101,7 +101,12 @@ const FLOORS = RIMS.map((rim) => rim.map(onStage));
 const P5 = window.p5;
 
 new P5((p) => {
-  function drawWalls() {
+  let wallGeometry;
+  let cornerGeometry;
+  let floorGeometry;
+  let playbackStartedAt;
+
+  function buildWalls() {
     p.noStroke();
     p.beginShape(p.TRIANGLES);
     for (const { corners, colour } of WALLS) {
@@ -113,14 +118,21 @@ new P5((p) => {
     p.endShape();
   }
 
-  function drawFloors(alpha, weight, tint = STARLIGHT_EDGE) {
-    p.stroke(tint[0], tint[1], tint[2], alpha);
-    p.strokeWeight(weight * RENDER_SCALE);
+  function buildFloors() {
+    p.noFill();
+    // Keep every segment separate, including its end caps. Joining adjacent segments
+    // into a polyline changes how the translucent strokes overlap at their ends.
     for (const floor of FLOORS) {
       for (let index = 1; index < floor.length; index += 1) {
         p.line(...floor[index - 1], ...floor[index]);
       }
     }
+  }
+
+  function drawFloors(alpha, weight, tint = STARLIGHT_EDGE) {
+    p.stroke(tint[0], tint[1], tint[2], alpha);
+    p.strokeWeight(weight * RENDER_SCALE);
+    p.model(floorGeometry);
   }
 
   function drawScene(scene) {
@@ -133,13 +145,13 @@ new P5((p) => {
     // order the walls are built in, which is one frame's order as much as another's.
     const gl = p.drawingContext;
     gl.disable(gl.DEPTH_TEST);
-    drawWalls();
+    p.noStroke();
+    p.fill(...STARLIGHT_FACE, FACE_ALPHA);
+    p.model(wallGeometry);
     p.noFill();
     p.stroke(...STARLIGHT_EDGE, EDGE_ALPHA);
     p.strokeWeight(LINE_WEIGHT * RENDER_SCALE);
-    for (const [from, to] of CORNERS) {
-      p.line(...from, ...to);
-    }
+    p.model(cornerGeometry);
     drawFloors(EDGE_ALPHA, LINE_WEIGHT);
     // The station's light: added rather than painted, so the layers pile up into a glow.
     // The measured glow is what the halo is worth; the arrival beat is what it is
@@ -206,6 +218,16 @@ new P5((p) => {
     // the geometry does not differ at all.
     p.linePerspective(false);
     p.frameRate(PLAYBACK_FPS);
+    // Build the fixed tower once. Each model reuses its GPU buffers, while stroke
+    // colour and width remain per-pass uniforms for the changing station glow.
+    wallGeometry = p.buildGeometry(buildWalls);
+    cornerGeometry = p.buildGeometry(() => {
+      p.noFill();
+      for (const [from, to] of CORNERS) {
+        p.line(...from, ...to);
+      }
+    });
+    floorGeometry = p.buildGeometry(buildFloors);
     if (CAPTURE_MODE) {
       p.noLoop();
       // Every frame is the staging read at its index, so any one can stand alone.
@@ -222,13 +244,19 @@ new P5((p) => {
     drawScene(opening);
     p.pop();
     publishState(0, opening);
+    // p5 resets millis() after setup. The browser's monotonic clock keeps one origin
+    // across that reset, with loading and geometry building outside the performance.
+    playbackStartedAt = window.performance.now();
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
       return;
     }
-    const frameIndex = p.frameCount % TOTAL_FRAMES;
+    // A missed draw skips ahead in the staging instead of making the whole walk slow.
+    // Export still addresses every frame explicitly through __renderFrame above.
+    const elapsed = window.performance.now() - playbackStartedAt;
+    const frameIndex = Math.floor(elapsed * PLAYBACK_FPS / 1000) % TOTAL_FRAMES;
     const scene = sceneAt(frameIndex);
     p.push();
     drawScene(scene);
