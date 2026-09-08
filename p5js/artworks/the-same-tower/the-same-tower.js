@@ -53,7 +53,7 @@ export const STAGE_SCALE = 100;
  * the tower's angular height rises by the square root of the ratio of distances rather
  * than by the ratio itself. What the reader sees is both an approach and a change of shape.
  */
-export const NEAR_FIELD_OF_VIEW = 62 * Math.PI / 180;
+export const NEAR_FIELD_OF_VIEW = 68 * Math.PI / 180;
 export const FIELD_CONSTANT = Math.tan(NEAR_FIELD_OF_VIEW / 2) * Math.sqrt(NEAR_DISTANCE);
 
 export function fieldOfView(distance) {
