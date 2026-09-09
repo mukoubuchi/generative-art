@@ -997,6 +997,20 @@ GitHub Pages is enabled and served from this workflow, and the repository is pub
 
 When a deployment does happen, a further job measures the result — see [measuring the site a reader actually gets](#measuring-the-site-a-reader-actually-gets). It takes the address from the deployment's own output rather than having one written into it, waits for the deployed commit's marker to appear on the live pages, and is allowed twenty-five minutes so that it outlasts its own ten-minute wait: a job cut off at the moment its wait expired would report that it was cancelled rather than what it had been waiting for. It runs on a deployment and nowhere else. On a push there is nothing new being served, so the same check would measure the previous deployment and pass every time.
 
+### Checking that a release reached its readers
+
+A release is not one act but six, and any one of them can be the one that did not happen. A tag can point at a commit that was never pushed; a push can be green while the site keeps serving the commit before it; a deploy can succeed against a build a stale cache then hides. So the six are read from six different places and only count as a release if they name one commit between them:
+
+```
+npm run verify:release -- v1.2.3
+```
+
+The six are the annotated tag's own commit, the remote `main`, the local `HEAD`, the commit the deploying workflow run was started on, the commit of the newest Pages deployment, and the build stamp on the served index — the last fetched with a unique query and a no-store header, so that it is the stamp on the page being measured rather than on some other file a cache happened to refresh. With no run id given, the newest `workflow_dispatch` run of `pages.yml` on the tag's commit is used, because a push run builds without publishing and its success says nothing about what a reader receives.
+
+The catalogue's size is then counted three ways against the manifest — the anchors to artwork pages, the thumbnail URLs, and the card titles — and the script says only whether they agree. Three counts of one thing exist so that a disagreement is visible: a single count can be wrong without looking wrong, and the first version of this check counted matching *lines* rather than occurrences and reported 697 works for a gallery of fifty. Nothing compared that number to anything, so nothing caught it.
+
+The script exits non-zero when the six disagree or the counts do, which is what makes it able to say no. Pointing it at a superseded tag is the check on that: run against the tag before the current one, the tag and its workflow run name the old commit while the remote, the deployment and the live page name the new one, and it reports the mismatch and exits 1.
+
 ### What the gallery does without JavaScript, and without motion
 
 The entrance is an enhancement rather than a precondition. The stylesheet hides a card only under a `js` class that the page sets on itself before the first paint, so a browser that never runs the script shows every card instead of an empty page. Under `prefers-reduced-motion` the animations are switched off and everything is simply present.
