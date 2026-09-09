@@ -53,13 +53,6 @@ const MARK_SIZE = 5;
  * a half, which is the brightness the reader chose over dots and over a stronger star. The
  * shared body -- the one on the perpendicular that both families run -- is the same star in
  * bone, drawn last over the two families.
- *
- * A body's star is divided by how many bodies stand within one halo of it, so that bodies
- * on the same spot are worth one star between them. At the top of the fall every chord of
- * the falling family starts at the one point, and at the bottom every chord of the arriving
- * family ends at the one point; added without the division, thirty-five stars there sum
- * past white and the ends of the perpendicular become discs of forty pixels. The light says
- * where a body is, not how many chords happen to end there.
  */
 const STAR_LEVEL = 0.5;
 const STAR_LAYERS = 6;
@@ -81,15 +74,6 @@ new P5((p) => {
     p.stroke(...colour, alpha);
     p.strokeWeight(weight);
     p.circle(circle.center[0], circle.center[1], 2 * circle.radius);
-  }
-
-  /** How many bodies stand within one halo of this one, itself included. */
-  function crowdAt(point, bodies) {
-    let crowd = 0;
-    for (const other of bodies) {
-      if (Math.hypot(other[0] - point[0], other[1] - point[1]) <= STAR_HALO) crowd += 1;
-    }
-    return crowd;
   }
 
   /** One body as a star: the halo's layers widening outwards, then the core, then the heart. */
@@ -118,12 +102,10 @@ new P5((p) => {
     drawCircle(state.bottom, STEEL_FACE, CIRCLE_ALPHA * alpha, CIRCLE_WEIGHT);
 
     p.noStroke();
-    // Added rather than painted, but a crowd is worth one star between them: bodies on one
-    // spot are one light, not a bleached disc.
+    // Added rather than painted, so the stars pile up into light where the bodies crowd.
     p.blendMode(p.ADD);
-    const bodiesHere = [...state.topBodies, ...state.bottomBodies, state.kiss];
     for (const [bodies, tint] of [[state.topBodies, GOLD_EDGE], [state.bottomBodies, STEEL_EDGE], [[state.kiss], BONE]]) {
-      for (const body of bodies) star(body, tint, alpha / crowdAt(body, bodiesHere));
+      for (const body of bodies) star(body, tint, alpha);
     }
     p.blendMode(p.BLEND);
   }

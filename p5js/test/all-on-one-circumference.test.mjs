@@ -385,11 +385,8 @@ test("the notes name both editions, keep the second family as the project's, and
   assert.match(section, /a core of the same colour of radius four at an alpha of a hundred and ninety-five/u);
   assert.match(section, /a white heart of radius two at a hundred and eighty-five/u);
   assert.match(section, /at a level of one half/u);
-  assert.match(section, /The stars are added rather than painted, but a body's star is divided by how many bodies stand within one halo of it/u);
-  assert.match(section, /the light says where a body is, not how many chords happen to end there/u);
-  assert.match(section, /a disc of thirty-four by thirty-two pixels at the opening and thirty-four by thirty-four at the rest/u);
-  assert.match(section, /the same measurement gives eight by three and eight by four, which is one star/u);
-  assert.match(section, /The shared body, drawn last in bone/u);
+  assert.match(section, /The stars are added rather than painted/u);
+  assert.match(section, /the shared body, drawn last in bone/u);
   assert.doesNotMatch(section, /the shared body is bone, with a halo/u);
 });
 
@@ -440,34 +437,9 @@ test("the sketch's whole drawing vocabulary is circles and lines", () => {
   assert.doesNotMatch(source, /drawKeyHint|hint-mode|input-indicator|mouseX/u);
 });
 
-/** The rim's ends in the sketch's own coordinates, where the perpendicular meets the rim. */
-const TOP_ON_PAGE = [0, -RIM_RADIUS];
-const BOTTOM_ON_PAGE = [0, RIM_RADIUS];
-
-/**
- * The light standing at one point of the page: how many stars are drawn there and what the
- * halo's outermost layer, the core and the heart come to when they are added together.
- */
-function lightAt(calls, [x, y]) {
-  const here = calls.painted
-    .filter(({ circle }) => Math.abs(circle[0] - x) < 1e-9 && Math.abs(circle[1] - y) < 1e-9);
-  const sum = (diameter) => here
-    .filter(({ circle }) => Math.abs(circle[2] - diameter) < 1e-9)
-    .reduce((total, { fill }) => total + fill[3], 0);
-  // Summing thirty-five thirty-fifths leaves float dust; a billionth is far below any
-  // difference that a change in the drawing could make.
-  const settled = (total) => Math.round(total * 1e9) / 1e9;
-  return {
-    stars: here.filter(({ circle }) => Math.abs(circle[2] - 34) < 1e-9).length,
-    halo: settled(sum(34)),
-    core: settled(sum(8)),
-    heart: settled(sum(4))
-  };
-}
-
 test("an export frame draws the rim, the chords, the stamps, the two circles and every body", async () => {
   const priorWindow = globalThis.window;
-  const calls = { circles: [], lines: [], scale: [], density: [], frameRate: [], blends: [], painted: [] };
+  const calls = { circles: [], lines: [], scale: [], density: [], frameRate: [], blends: [] };
   const noop = () => {};
   class RecordingP5 {
     constructor(define) {
@@ -476,11 +448,9 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
         background: (...colour) => {
           calls.background = colour;
           calls.circles = []; calls.lines = []; calls.strokes = []; calls.fills = []; calls.weights = [];
-          calls.blends = []; calls.painted = [];
+          calls.blends = [];
         },
-        // Each circle is kept with the fill standing at the time, so that a star's layers
-        // can be read back without counting which circles were stroked instead.
-        circle: (...args) => { calls.circles.push(args); calls.painted.push({ circle: args, fill: calls.fills.at(-1) }); },
+        circle: (...args) => calls.circles.push(args),
         ADD: "add", BLEND: "blend",
         blendMode: (mode) => calls.blends.push([mode, calls.circles.length]),
         line: (...args) => calls.lines.push(args),
@@ -516,18 +486,6 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
     assert.deepEqual(calls.strokes.slice(0, 3), [[246, 244, 236, 46], [246, 244, 236, 110], [104, 144, 204, 190]]);
     assert.deepEqual(calls.weights.slice(0, 3), [0.7, 1, 1.3]);
 
-    // At the top of the fall every chord of the falling family starts at the one point, so
-    // thirty-five stars stand there -- and, divided by the crowd, they are worth one star
-    // between them rather than a bleached disc.
-    assert.deepEqual(lightAt(calls, TOP_ON_PAGE), { stars: 35, halo: 14, core: 195, heart: 185 });
-    assert.deepEqual(lightAt(calls, BOTTOM_ON_PAGE), { stars: 0, halo: 0, core: 0, heart: 0 });
-
-    const landed = await window.__renderFrame(180);
-    assert.equal(landed.act, "rest");
-    // And at the bottom, where every chord of the arriving family ends.
-    assert.deepEqual(lightAt(calls, BOTTOM_ON_PAGE), { stars: 35, halo: 14, core: 195, heart: 185 });
-    assert.deepEqual(lightAt(calls, TOP_ON_PAGE), { stars: 0, halo: 0, core: 0, heart: 0 });
-
     const state = await window.__renderFrame(135);
     const scene = sceneAt(135);
     // Three stamps of two circles and a mark, the two circles, then the sixty-nine stars.
@@ -551,11 +509,9 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
     assert.deepEqual(calls.fills.at(-1), [248, 250, 255, 185]);
     assert.deepEqual(calls.fills.at(-2), [246, 244, 236, 195]);
     assert.deepEqual(calls.fills.at(-3), [246, 244, 236, 14]);
-    // Every body is one star: gold for the falling family, steel for the arriving one. A
-    // body standing alone gets the whole star; the arriving family's first body has its
-    // mirror image within a halo of it, so the two share one star between them.
+    // Every body is one star: gold for the falling family, steel for the arriving one.
     assert.deepEqual(calls.fills[calls.fills.length - 69 * 8], [252, 204, 116, 14]);
-    assert.deepEqual(calls.fills[calls.fills.length - 35 * 8], [156, 192, 240, 14 / 2]);
+    assert.deepEqual(calls.fills[calls.fills.length - 35 * 8], [156, 192, 240, 14]);
     assert.equal(state.kind, "video");
     assert.equal(state.frameIndex, 135);
     assert.equal(state.totalFrames, 300);
@@ -573,13 +529,15 @@ test("an export frame draws the rim, the chords, the stamps, the two circles and
     assert.equal(calls.circles.length, 1 + 3 * 3 + 1 + 69 * 8);
     // In the clearing the stars fade with their layer: at frame 285 the finished picture is
     // at a quarter and the opening one at three quarters, and every part of a star -- halo,
-    // core and heart -- carries its layer's alpha, the piles at both ends still worth one
-    // star each.
+    // core and heart -- carries its layer's alpha.
     const clearing = await window.__renderFrame(285);
     assert.deepEqual(clearing.layers.map((layer) => layer.alpha), [0.25, 0.75]);
-    assert.deepEqual(lightAt(calls, BOTTOM_ON_PAGE), { stars: 35, halo: 14 * 0.25, core: 195 * 0.25, heart: 185 * 0.25 });
-    assert.deepEqual(lightAt(calls, TOP_ON_PAGE), { stars: 35, halo: 14 * 0.75, core: 195 * 0.75, heart: 185 * 0.75 });
-    assert.deepEqual(calls.fills.at(-1), [248, 250, 255, 185 * 0.75 / 35]);
+    const alphas = calls.fills.map((colour) => colour[3]);
+    assert.equal(alphas.filter((alpha) => alpha === 14 * 0.25).length, 69 * 6);
+    assert.equal(alphas.filter((alpha) => alpha === 14 * 0.75).length, 69 * 6);
+    assert.equal(alphas.filter((alpha) => alpha === 195 * 0.25).length, 69);
+    assert.equal(alphas.filter((alpha) => alpha === 185 * 0.75).length, 69);
+    assert.deepEqual(calls.fills.at(-1), [248, 250, 255, 185 * 0.75]);
     assert.deepEqual(await window.__renderFrame(300), await window.__renderFrame(0));
   } finally {
     if (priorWindow === undefined) delete globalThis.window;
