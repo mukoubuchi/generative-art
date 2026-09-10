@@ -92,7 +92,7 @@ new P5((p) => {
       p.pixelDensity(1);
     }
     p.setAttributes("preserveDrawingBuffer", true);
-    // One weight for every line wherever it stands: a drawing's hairline, not a wire
+    // One weight for every line wherever it stands: a drawing's stroke, not a wire
     // that thickens as it comes nearer. It is also what lets the far station's picture be
     // held against a drawn circle pixel for pixel -- the floor's points lie at other
     // depths than the circle's, and a stroke scaled by depth would differ in width where

@@ -3,7 +3,8 @@ import { FLOOR_HEIGHTS, STAGE_SCALE, rimAt, verticals } from "./the-same-tower.j
 /** The warm white ground shared by The Hat, Herringbone and Pinwheel. */
 export const GROUND = [230, 224, 208];
 export const INK = [0, 0, 0];
-export const CORE_WEIGHT = 0.65;
+// Match Platonic Duals' screen-space edges while keeping overlapping floors distinct.
+export const CORE_WEIGHT = 1.7;
 export const CORE_ALPHA = 255;
 
 export function onStage([x, y, z]) {
