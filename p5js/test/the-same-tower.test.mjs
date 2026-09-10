@@ -61,8 +61,7 @@ import {
   wallQuads
 } from "../artworks/the-same-tower/the-same-tower.js";
 import {
-  CORE_ALPHA, CORE_WEIGHT, FLOOR_BUNDLE_RADIUS, GROUND, SEA_GLASS, STARLIGHT,
-  WALL_HATCHES, onStage, towerEtching
+  CORE_ALPHA, CORE_WEIGHT, GROUND, INK, onStage, towerEtching
 } from "../artworks/the-same-tower/etching.js";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
@@ -126,8 +125,8 @@ test("the two eyes, the tower and the clip keep their numbers", () => {
   assert.equal(STAGE_SCALE, 100);
   assert.equal(LOGICAL_SIZE, 680);
   assert.equal(PLAYBACK_FPS, 30);
-  assert.equal(DURATION_SECONDS, 12);
-  assert.equal(TOTAL_FRAMES, 360);
+  assert.equal(DURATION_SECONDS, 13);
+  assert.equal(TOTAL_FRAMES, 390);
   assert.deepEqual(FAR_EYE, [0, -12, 3]);
   assert.deepEqual(NEAR_EYE, [0, -4, 3]);
   assert.deepEqual(LOOK_AT, [0, 0, 1.75]);
@@ -421,19 +420,21 @@ test("the glow is one at nought, falls with the deviation, and never rises", () 
 
 test("the move is one continuous stretch, and the eye stands exactly at a station on the station's own frame", () => {
   assert.deepEqual(ACTS, [
-    ["in", 110], ["near", 16], ["whip", 18], ["settle", 30], ["hold", 30], ["back", 60], ["out", 96]
+    ["far", 30], ["in", 110], ["near", 16], ["whip", 18], ["settle", 30], ["hold", 30], ["back", 60], ["out", 96]
   ]);
   assert.equal(ACT_FRAMES, TOTAL_FRAMES);
-  assert.equal(NEAR_FRAME, 110);
+  assert.equal(NEAR_FRAME, 140);
   assert.equal(FAR_FRAME, 0);
-  assert.equal(actAt(0).name, "in");
-  assert.equal(actAt(110).name, "near");
-  assert.equal(actAt(126).name, "whip");
-  assert.equal(actAt(144).name, "settle");
-  assert.equal(actAt(174).name, "hold");
-  assert.equal(actAt(204).name, "back");
-  assert.equal(actAt(264).name, "out");
-  assert.equal(actAt(359).name, "out");
+  for (let frame = 0; frame <= 30; frame += 1) assert.deepEqual(sceneAt(frame).eye, FAR_EYE);
+  assert.ok(sceneAt(31).distance < FAR_DISTANCE);
+  assert.equal(actAt(0).name, "far");
+  assert.equal(actAt(140).name, "near");
+  assert.equal(actAt(156).name, "whip");
+  assert.equal(actAt(174).name, "settle");
+  assert.equal(actAt(204).name, "hold");
+  assert.equal(actAt(234).name, "back");
+  assert.equal(actAt(294).name, "out");
+  assert.equal(actAt(389).name, "out");
   assert.throws(() => actAt(1.5), TypeError);
 
   // The stations: the eye is exactly the module's own far and near eyes on their frames,
@@ -459,19 +460,19 @@ test("the move is one continuous stretch, and the eye stands exactly at a statio
   // The walk in is monotone and so is the walk out, and each stretch begins exactly where
   // the one before it ended: the staging's walk and turn are continuous at every join.
   for (let frame = 1; frame < NEAR_FRAME; frame += 1) assert.ok(sceneAt(frame).distance <= sceneAt(frame - 1).distance);
-  for (let frame = 265; frame < TOTAL_FRAMES; frame += 1) assert.ok(sceneAt(frame).distance >= sceneAt(frame - 1).distance);
-  assert.equal(stagingAt(110).walk, 1);
-  assert.equal(stagingAt(126).turn, 0);
-  assert.equal(stagingAt(144).turn, WHIP_SHARE);
-  assert.equal(stagingAt(174).turn, 1);
+  for (let frame = 295; frame < TOTAL_FRAMES; frame += 1) assert.ok(sceneAt(frame).distance >= sceneAt(frame - 1).distance);
+  assert.equal(stagingAt(140).walk, 1);
+  assert.equal(stagingAt(156).turn, 0);
+  assert.equal(stagingAt(174).turn, WHIP_SHARE);
   assert.equal(stagingAt(204).turn, 1);
-  assert.equal(stagingAt(264).turn, 0);
-  assert.equal(stagingAt(264).walk, 1);
+  assert.equal(stagingAt(234).turn, 1);
+  assert.equal(stagingAt(294).turn, 0);
+  assert.equal(stagingAt(294).walk, 1);
   // The whip carries nine tenths of the turn in eighteen frames and the settle the rest in
   // thirty, so the reveal arrives fast and comes to rest slowly.
-  assert.equal(stagingAt(135).turn, WHIP_SHARE * eased(9 / 18));
-  assert.equal(stagingAt(159).turn, WHIP_SHARE + (1 - WHIP_SHARE) * eased(15 / 30));
-  assert.ok(stagingAt(135).turn > stagingAt(134).turn);
+  assert.equal(stagingAt(165).turn, WHIP_SHARE * eased(9 / 18));
+  assert.equal(stagingAt(189).turn, WHIP_SHARE + (1 - WHIP_SHARE) * eased(15 / 30));
+  assert.ok(stagingAt(165).turn > stagingAt(164).turn);
 
   /*
    * No cliff. The old staging ran each act's progress to one step short of one, so the
@@ -505,7 +506,7 @@ test("the move is one continuous stretch, and the eye stands exactly at a statio
   assert.ok(Math.abs(oldLastStep - 0.0077) < 1e-4);
 
   assert.deepEqual(sceneAt(TOTAL_FRAMES), sceneAt(0));
-  assert.deepEqual(sceneAt(-1), sceneAt(359));
+  assert.deepEqual(sceneAt(-1), sceneAt(389));
   // The walk spends its frames evenly in 1 / d and returns the stations exactly.
   assert.equal(distanceAtLever(0), FAR_DISTANCE);
   assert.equal(distanceAtLever(1), NEAR_DISTANCE);
@@ -532,12 +533,12 @@ test("the arrival beat swells the station's light and falls back, and is not a m
     assert.ok(arrivalAt(NEAR_FRAME + beat) < arrivalAt(NEAR_FRAME + beat - 1));
   }
   // Between the beats it is exactly one, so the glow is the measurement and nothing else.
-  for (const frame of [60, 100, 150, 200, 250, 300, 359]) assert.equal(arrivalAt(frame), 1);
+  for (const frame of [60, 100, 180, 230, 280, 330, 389]) assert.equal(arrivalAt(frame), 1);
   // The glow it multiplies is still the measured one: nothing here touches the deviation.
   assert.equal(sceneAt(NEAR_FRAME).squareGlow, glow(deviationPixels(NEAR_DISTANCE, "square")));
   assert.equal(sceneAt(FAR_FRAME).circleGlow, glow(deviationPixels(FAR_DISTANCE, "circle")));
   assert.equal(sceneAt(NEAR_FRAME).arrival, ARRIVAL_SWELL);
-  assert.equal(sceneAt(200).arrival, 1);
+  assert.equal(sceneAt(230).arrival, 1);
 });
 
 test("the third eye sets off from the near station, swings round and up, and comes back to it", () => {
@@ -552,7 +553,7 @@ test("the third eye sets off from the near station, swings round and up, and com
   assert.ok(rest[2] > EYE_HEIGHT + 3);
   assert.ok(Math.abs(Math.hypot(...subtract(rest, LOOK_AT)) - REVEAL_RADIUS) < 1e-12);
   // The whole hold is one eye: every frame of it is the same picture.
-  for (let frame = 174; frame < 204; frame += 1) assert.deepEqual(sceneAt(frame), { ...sceneAt(174), frameIndex: frame });
+  for (let frame = 204; frame < 234; frame += 1) assert.deepEqual(sceneAt(frame), { ...sceneAt(204), frameIndex: frame });
   // Out and back are the same path at the same turns: the third eye returns by the way it
   // went, with the near station at both ends.
   for (const turn of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1]) {
@@ -560,17 +561,17 @@ test("the third eye sets off from the near station, swings round and up, and com
     const back = orbitEye(turn);
     for (let axis = 0; axis < 3; axis += 1) assert.equal(out[axis], back[axis]);
   }
-  assert.deepEqual(sceneAt(204).eye, sceneAt(174).eye);
+  assert.deepEqual(sceneAt(234).eye, sceneAt(204).eye);
   // The return's last frame is a thousandth of a unit short of the station and the walk
   // out's first frame is the station itself, so the two stretches meet on it.
-  assert.ok(Math.hypot(...subtract(sceneAt(263).eye, NEAR_EYE)) < 1e-3);
-  assert.deepEqual(sceneAt(264).eye, NEAR_EYE);
+  assert.ok(Math.hypot(...subtract(sceneAt(293).eye, NEAR_EYE)) < 1e-3);
+  assert.deepEqual(sceneAt(294).eye, NEAR_EYE);
   // No jump at the line's edge: the last frame on the line and the first off it agree, and
   // the whip's first step is smaller than its middle one.
-  assert.deepEqual(sceneAt(126).eye, sceneAt(125).eye);
-  assert.equal(sceneAt(126).fieldOfView, sceneAt(125).fieldOfView);
-  assert.equal(sceneAt(126).squareGlow, sceneAt(125).squareGlow);
-  assert.ok(eyeStepAt(126) < eyeStepAt(135));
+  assert.deepEqual(sceneAt(156).eye, sceneAt(155).eye);
+  assert.equal(sceneAt(156).fieldOfView, sceneAt(155).fieldOfView);
+  assert.equal(sceneAt(156).squareGlow, sceneAt(155).squareGlow);
+  assert.ok(eyeStepAt(156) < eyeStepAt(165));
   assert.throws(() => orbitEye(1.5), RangeError);
 });
 
@@ -624,23 +625,17 @@ test("the notes name both editions, keep the extension as the project's, and say
   assert.match(section, /The staging is one continuous move/u);
   assert.match(section, /whipped round in eighteen — six tenths of a second/u);
   assert.match(section, /Every stretch is smootherstep, whose first and second derivatives vanish at both ends/u);
-  assert.match(section, /the stations are moments of zero speed rather than dead stops/u);
+  assert.match(section, /the opening pause and station holds meet the moving stretches at zero speed/u);
   assert.match(section, /Nothing in the walks stops with speed on it/u);
   // The arrival beat, said as staging and not as measurement.
   assert.match(section, /an arrival beat/u);
   assert.match(section, /multiplied by nineteen tenths and the multiplier falls back to one over eighteen frames/u);
   assert.match(section, /The glow it multiplies is the measurement and is unchanged; the beat is staging/u);
-  // Both existing palettes are named, and the linework is distinguished from a filled wall.
-  assert.match(section, /Recursive Pentagram's pale purple starlight/u);
-  assert.match(section, /Möbius Band's sea glass and deep teal ground/u);
+  assert.match(section, /black single lines/u);
+  assert.match(section, /warm white ground shared by The Hat, Herringbone and Pinwheel/u);
   assert.match(section, /No face is filled/u);
-  assert.match(section, /four companion hairlines/u);
-  assert.match(section, /forty-eight vertical hatches/u);
-  assert.match(section, /Innumerable Straight Lines/u);
+  assert.match(section, /thirty frames \(one second\)/u);
   assert.match(section, /elapsed time/u);
-  assert.match(section, /the arrival's heart is the only white/u);
-  assert.doesNotMatch(section, /Platonic Duals' gold/u);
-  assert.doesNotMatch(section, /Night ground/u);
   // The frame the notes name is the frame the manifest carries, and it is in the hold.
   const shown = MANIFEST.artworks.find((entry) => entry.id === "the-same-tower").thumbnail.frame;
   assert.match(section, new RegExp(`The thumbnail is frame ${shown}, the middle of the reveal's hold`, "u"));
@@ -656,15 +651,15 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.deepEqual(artwork.canvas, { width: 680, height: 680 });
   assert.deepEqual(artwork.quoteIds, ["sextus-ho-autos-pyrgos"]);
   // The thumbnail is the middle of the reveal's hold: the third eye, holding.
-  assert.deepEqual(artwork.thumbnail, { frame: 190 });
-  assert.equal(sceneAt(190).act, "hold");
-  assert.equal(sceneAt(190).turn, 1);
-  assert.equal(actAt(200).name, "hold");
+  assert.deepEqual(artwork.thumbnail, { frame: 220 });
+  assert.equal(sceneAt(220).act, "hold");
+  assert.equal(sceneAt(220).turn, 1);
+  assert.equal(actAt(230).name, "hold");
   assert.deepEqual(artwork.render, {
-    kind: "video", artifact: "exports/p5js/TheSameTower.mp4", durationSeconds: 12, scale: 2
+    kind: "video", artifact: "exports/p5js/TheSameTower.mp4", durationSeconds: 13, scale: 2
   });
   assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
-  assert.match(NOTES, /\| `the-same-tower` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 12 seconds,/u);
+  assert.match(NOTES, /\| `the-same-tower` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 13 seconds,/u);
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
   assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 167);
   assert.equal(body.split("\n")[0], quote.text);
@@ -684,7 +679,7 @@ test("the sketch's whole drawing vocabulary is lines and the eye, and nothing of
   const source = readFileSync(SKETCH_URL, "utf8");
   const called = new Set([...source.matchAll(/\bp\.([a-zA-Z]+)\(/gu)].map((match) => match[1]));
   assert.deepEqual([...called].sort(), [
-    "background", "blendMode", "buildGeometry", "camera", "createCanvas", "frameRate", "line",
+    "background", "buildGeometry", "camera", "createCanvas", "frameRate", "line",
     "linePerspective", "model", "noFill", "noLoop", "perspective", "pixelDensity",
     "pop", "push", "setAttributes", "stroke", "strokeWeight"
   ]);
@@ -700,85 +695,22 @@ test("the sketch's whole drawing vocabulary is lines and the eye, and nothing of
   assert.match(source, /p\.linePerspective\(false\)/u);
 });
 
-test("the etching keeps the exact floor centreline and borrows the two existing palettes", () => {
+test("black single lines follow the exact floors and four corner axes on the existing warm white ground", () => {
   const layers = towerEtching();
-  const core = layers.filter((layer) => layer.role === "floor-core");
-  assert.equal(core.length, 1);
-  assert.deepEqual(core[0].colour, [202, 192, 232]);
-  assert.equal(core[0].alpha, CORE_ALPHA);
-  assert.equal(core[0].weight, CORE_WEIGHT);
-  const reference = readFileSync(new URL("../artworks/moebius-band/sketch.js", import.meta.url), "utf8");
-  const palette = (name) => JSON.parse(reference.match(new RegExp(`const ${name} = (\\[[^\\]]+\\]);`, "u"))[1]);
-  assert.deepEqual(GROUND, palette("BACKGROUND"));
-  assert.deepEqual(SEA_GLASS, palette("GLASS"));
-  assert.deepEqual(core[0].segments, FLOOR_HEIGHTS.flatMap((height) => {
+  assert.equal(layers.length, 1);
+  const [layer] = layers;
+  assert.deepEqual(layer.colour, [0, 0, 0]);
+  assert.deepEqual(INK, [0, 0, 0]);
+  assert.equal(layer.alpha, 255);
+  assert.equal(layer.weight, CORE_WEIGHT);
+  const reference = readFileSync(new URL("../artworks/the-hat/sketch.js", import.meta.url), "utf8");
+  assert.deepEqual(GROUND, JSON.parse(reference.match(/const GROUND = (\[[^\]]+\]);/u)[1]));
+  const floors = FLOOR_HEIGHTS.flatMap((height) => {
     const rim = rimAt(height);
     return rim.slice(1).map((to, index) => [onStage(rim[index]), onStage(to)]);
-  }));
-  assert.ok(layers.length < 24, "normal shading must stay batched into a small number of models");
-  for (const layer of layers) {
-    assert.ok(layer.alpha > 0 && layer.alpha < 255);
-    assert.ok(layer.weight > 0 && layer.weight < 1);
-    const tint = layer.role === "floor-core" || layer.colour[2] > layer.colour[1] ? STARLIGHT : SEA_GLASS;
-    const brightness = layer.colour[0] / tint[0];
-    assert.ok(brightness > 0 && brightness <= 1);
-    assert.ok(layer.colour.every((part, axis) => Math.abs(part / tint[axis] - brightness) < 1e-12));
-    for (const line of layer.segments) {
-      assert.equal(line.length, 2);
-      assert.ok(line.every((point) => point.length === 3 && point.every(Number.isFinite)));
-      assert.ok(Math.hypot(...subtract(line[0], line[1])) > 1e-8);
-    }
-  }
-});
-
-function nearestSegment(point, segments) {
-  let nearest = { distance: Infinity };
-  for (const [index, [from, to]] of segments.entries()) {
-    const direction = subtract(to, from);
-    const delta = subtract(point, from);
-    const dot = (a, b) => a.reduce((sum, part, axis) => sum + part * b[axis], 0);
-    const t = Math.max(0, Math.min(1, dot(delta, direction) / dot(direction, direction)));
-    const distance = Math.hypot(...delta.map((part, axis) => part - t * direction[axis]));
-    if (distance < nearest.distance) nearest = { distance, index, t };
-  }
-  return nearest;
-}
-
-test("the companion hairlines close without seams and stay close to the mathematical floors", () => {
-  const layers = towerEtching();
-  const lines = layers.filter((layer) => layer.role === "floor-hatch").flatMap((layer) => layer.segments);
-  const core = layers.find((layer) => layer.role === "floor-core").segments;
-  assert.equal(lines.length, 4 * core.length);
-  const balance = new Map();
-  const key = (point) => point.map((part) => part.toFixed(7)).join(",");
-  for (const [from, to] of lines) {
-    balance.set(key(from), (balance.get(key(from)) ?? 0) + 1);
-    balance.set(key(to), (balance.get(key(to)) ?? 0) - 1);
-  }
-  assert.ok([...balance.values()].every((value) => value === 0), "every hairline endpoint needs a continuation");
-  // Sample across all tonal groups: the companions give a narrow thickness, never a
-  // second displaced floor. The core is independently generated by the geometry module.
-  for (let index = 0; index < lines.length; index += 79) {
-    const { distance } = nearestSegment(lines[index][0], core);
-    assert.ok(distance > 0.1 * FLOOR_BUNDLE_RADIUS && distance <= FLOOR_BUNDLE_RADIUS + 1e-8);
-  }
-  assert.ok(new Set(layers.filter((layer) => layer.role === "floor-hatch").map((layer) => layer.colour.join(","))).size > 4);
-});
-
-test("the sparse wall hatches join corresponding points of the ruled surface", () => {
-  const hatches = towerEtching().filter((layer) => layer.role === "wall-hatch").flatMap((layer) => layer.segments);
-  assert.equal(hatches.length, WALL_HATCHES);
-  const lower = rimAt(FLOOR_HEIGHTS[0]).map(onStage);
-  const upper = rimAt(FLOOR_HEIGHTS.at(-1)).map(onStage);
-  const edges = lower.slice(1).map((to, index) => [lower[index], to]);
-  for (const [from, to] of hatches) {
-    assert.ok(Math.abs(from[0] - to[0]) < 1e-10 && Math.abs(from[2] - to[2]) < 1e-10);
-    assert.ok(to[1] < from[1]);
-    const { distance, index, t } = nearestSegment(from, edges);
-    assert.ok(distance < 1e-9);
-    const expected = upper[index].map((part, axis) => part + t * (upper[index + 1][axis] - part));
-    assert.ok(Math.hypot(...subtract(to, expected)) < 1e-9);
-  }
+  });
+  assert.deepEqual(layer.segments, [...floors, ...verticals().map((ends) => ends.map(onStage))]);
+  assert.equal(layer.segments.length, FLOOR_COUNT * (RIM_SEGMENTS + 2) + 4);
 });
 
 async function loadSketch(search, record) {
@@ -853,12 +785,11 @@ function freshRecord() {
   };
 }
 
-test("export draws the cached etching without faces, under the exact eye and its restrained station light", async () => {
+test("export draws each black line once, with a static opening and no glow passes", async () => {
   const priorWindow = globalThis.window;
   const record = freshRecord();
-  const etching = towerEtching();
-  const hatchLines = etching.reduce((count, layer) => count + layer.segments.length, 0);
-  const floorLines = FLOOR_COUNT * (RIM_SEGMENTS + 2);
+  const layers = towerEtching();
+  const lineCount = FLOOR_COUNT * (RIM_SEGMENTS + 2) + 4;
   try {
     await loadSketch("?capture=1&renderScale=2", record);
     assert.deepEqual(record.canvas, [1360, 1360, "WEBGL"]);
@@ -866,84 +797,39 @@ test("export draws the cached etching without faces, under the exact eye and its
     assert.deepEqual(record.linePerspective, [false]);
     assert.deepEqual(record.density, [1]);
     assert.deepEqual(record.frameRate, [30]);
-    assert.deepEqual(record.background, GROUND);
-    assert.deepEqual(record.perspective, [[fieldOfView(FAR_DISTANCE), 1, 50, 4000]]);
-    assert.deepEqual(record.camera, [[0, -300, 1200, 0, -175, 0, 0, 1, 0]]);
-    assert.deepEqual(record.shapes, []);
-    assert.equal(record.vertices, 0);
-    assert.deepEqual(record.fills, []);
-    assert.deepEqual(record.blends, ["ADD", "BLEND"]);
-    assert.deepEqual(record.depth, [["off", "DEPTH_TEST"], ["on", "DEPTH_TEST"]]);
-    assert.equal(record.geometries.length, etching.length);
-    const core = record.geometries.at(-1);
-    for (const [index, layer] of etching.entries()) {
-      assert.deepEqual(record.geometries[index].lines, layer.segments.map((line) => line.flat()));
-      assert.deepEqual(record.strokes[index], [...layer.colour, layer.alpha]);
-      assert.equal(record.weights[index], layer.weight * 2);
+    assert.equal(record.geometries.length, 1);
+    assert.deepEqual(record.geometries[0].lines, layers[0].segments.map((line) => line.flat()));
+    for (const frame of [0, 15, 29, 30, NEAR_FRAME, 220, 389, 390]) {
+      const state = await window.__renderFrame(frame);
+      const scene = sceneAt(frame);
+      assert.equal(state.totalFrames, 390);
+      assert.equal(state.durationSeconds, 13);
+      assert.deepEqual(state.eye, scene.eye);
+      assert.equal(state.walls, 0);
+      assert.equal(state.lineSegments, lineCount);
+      assert.equal(state.drawingLayers, 1);
+      assert.equal(state.palette, "black on warm white");
+      assert.deepEqual(state.outputSize, { width: 1360, height: 1360 });
+      assert.deepEqual(record.background, GROUND);
+      assert.deepEqual(record.strokes, [[0, 0, 0, CORE_ALPHA]]);
+      assert.deepEqual(record.weights, [CORE_WEIGHT * 2]);
+      assert.deepEqual(record.models, record.geometries);
+      assert.equal(record.lines.length, lineCount);
+      assert.deepEqual(record.blends, []);
+      assert.deepEqual(record.fills, []);
+      assert.equal(record.vertices, 0);
+      assert.deepEqual(record.camera, [[...onStage(scene.eye), ...onStage(scene.lookAt), 0, 1, 0]]);
+      assert.deepEqual(record.perspective, [[scene.fieldOfView, 1, 50, 4000]]);
     }
-    // The two halos and white arrival heart reuse the exact floor model. Their widths
-    // scale with the export, while colour and alpha stay in the page's register.
-    assert.deepEqual(record.models, [...record.geometries, core, core, core]);
-    assert.equal(record.lines.length, hatchLines + 3 * floorLines);
-    const light = record.strokes.slice(etching.length);
-    assert.deepEqual(light[0].slice(0, 3), SEA_GLASS);
-    assert.deepEqual(light[1].slice(0, 3), STARLIGHT);
-    assert.ok(light.slice(0, 2).every((colour) => Math.abs(colour[3] - 255 * 0.018 * ARRIVAL_SWELL) < 1e-9));
-    assert.deepEqual(light[2].slice(0, 3), [248, 250, 255]);
-    assert.ok(Math.abs(light[2][3] - 255 * (ARRIVAL_SWELL - 1) * 0.025) < 1e-9);
-    assert.equal(record.weights.at(-1), CORE_WEIGHT * 1.2 * 2);
-
-    const state = await window.__renderFrame(200);
-    const scene = sceneAt(200);
-    assert.equal(state.kind, "video");
-    assert.equal(state.frameIndex, 200);
-    assert.equal(state.totalFrames, 360);
-    assert.equal(state.durationSeconds, 12);
-    assert.equal(state.act, "hold");
-    assert.equal(state.arrival, 1);
-    assert.equal(state.onLine, false);
-    assert.equal(state.distance, null);
-    assert.deepEqual(state.eye, scene.eye);
-    assert.equal(state.walls, 0);
-    assert.equal(state.hatchLines, hatchLines);
-    assert.equal(state.drawingLayers, etching.length);
-    assert.equal(state.palette, "starlight and sea glass");
-    assert.deepEqual(state.outputSize, { width: 1360, height: 1360 });
-    assert.deepEqual(record.blends, []);
-    assert.equal(record.lines.length, hatchLines);
-    assert.deepEqual(record.models, record.geometries);
-    assert.deepEqual(record.camera, [[...onStage(scene.eye), ...onStage(scene.lookAt), 0, 1, 0]]);
-    assert.deepEqual(record.perspective, [[scene.fieldOfView, 1, 50, 4000]]);
-
-    const near = await window.__renderFrame(NEAR_FRAME);
-    assert.equal(near.squareGlow, 1);
-    assert.equal(near.arrival, ARRIVAL_SWELL);
-    assert.deepEqual(record.camera, [[0, -300, 400, 0, -175, 0, 0, 1, 0]]);
-    assert.deepEqual(record.perspective, [[NEAR_FIELD_OF_VIEW, 1, 50, 4000]]);
-    assert.equal(record.lines.length, hatchLines + 3 * floorLines);
-    const beforeTheBeat = await window.__renderFrame(NEAR_FRAME - 1);
-    assert.equal(beforeTheBeat.arrival, 1);
-    assert.ok(beforeTheBeat.squareGlow > 0.99);
-    assert.equal(record.lines.length, hatchLines + 2 * floorLines);
-
-    const opening = await window.__renderFrame(0);
-    assert.deepEqual({ ...await window.__renderFrame(360), frameIndex: 0 }, opening);
-    const last = await window.__renderFrame(359);
-    assert.equal(last.act, "out");
-    assert.ok(last.walk < 1e-4 && last.walk > 0);
-    assert.equal(last.arrival, 1);
-    assert.equal(opening.arrival, ARRIVAL_SWELL);
-    // Out-of-order captures and repeated frames must not allocate any new geometry.
-    assert.equal(record.geometries.length, etching.length);
+    assert.equal(record.geometries.length, 1);
     assert.equal(record.directLines, 0);
-    assert.equal(record.directVertices, 0);
   } finally {
     if (priorWindow === undefined) delete globalThis.window;
     else globalThis.window = priorWindow;
   }
 });
 
-test("page playback follows elapsed time even when draws are missed, and closes at twelve seconds", async () => {
+test("page playback follows elapsed time even when draws are missed, and closes at thirteen seconds", async () => {
   const priorWindow = globalThis.window;
   const record = freshRecord();
   try {
@@ -967,9 +853,9 @@ test("page playback follows elapsed time even when draws are missed, and closes 
     record.nowMs += 3000;
     record.p.draw();
     assert.equal(window.__ARTWORK_STATE__.frameIndex, 135);
-    assert.equal(window.__ARTWORK_STATE__.act, "whip");
+    assert.equal(window.__ARTWORK_STATE__.act, "in");
 
-    record.nowMs = start + 12000;
+    record.nowMs = start + 13000;
     record.p.draw();
     assert.equal(window.__ARTWORK_STATE__.frameIndex, 0);
     assert.deepEqual(window.__ARTWORK_STATE__.eye, FAR_EYE);

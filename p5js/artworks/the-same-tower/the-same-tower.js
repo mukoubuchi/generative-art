@@ -26,7 +26,7 @@
  */
 export const LOGICAL_SIZE = 680;
 export const PLAYBACK_FPS = 30;
-export const DURATION_SECONDS = 12;
+export const DURATION_SECONDS = 13;
 export const TOTAL_FRAMES = PLAYBACK_FPS * DURATION_SECONDS;
 
 /** The eyes: one height, one line, two distances. */
@@ -240,27 +240,26 @@ export function glow(pixels) {
 /*
  * The staging, as one continuous move.
  *
- * The eye stands at the far station, walks in to the near one, waits a beat there, and is
- * then whipped round and up in six tenths of a second to where the floors show as the bent
+ * The eye stands at the far station for one second, walks in to the near one, waits a
+ * beat there, and is then whipped round and up in six tenths of a second to where the floors show as the bent
  * curves they are on the one footprint they share; it settles, holds, comes back to the
  * line and walks out, and the last frame is the first.
  *
  * Every stretch is smootherstep, whose first and second derivatives vanish at both ends,
  * and each stretch begins exactly where the one before it ended, so neither speed nor
- * acceleration jumps at a join. The stations are moments of zero speed rather than dead
- * stops. An earlier staging ran each act's progress from nought to one step short of one,
+ * acceleration jumps at a join. The opening pause and station holds meet the moving stretches at zero speed. An earlier staging ran each act's progress from nought to one step short of one,
  * so the walk arrived still moving and the next act's constant stopped it dead: the clip
  * had two such cliffs in it, and forty per cent of its frames stood still.
  */
 export const ACTS = [
-  ["in", 110], ["near", 16], ["whip", 18], ["settle", 30], ["hold", 30], ["back", 60], ["out", 96]
+  ["far", 30], ["in", 110], ["near", 16], ["whip", 18], ["settle", 30], ["hold", 30], ["back", 60], ["out", 96]
 ];
 export const ACT_FRAMES = ACTS.reduce((sum, [, frames]) => sum + frames, 0);
 /** How far the whip carries the turn before the settle takes it the rest of the way. */
 export const WHIP_SHARE = 0.9;
 /** The frames the eye stands exactly at a station: the first, and the end of the walk in. */
 export const FAR_FRAME = 0;
-export const NEAR_FRAME = ACTS[0][1];
+export const NEAR_FRAME = ACTS[0][1] + ACTS[1][1];
 /**
  * The arrival beat: at a station's own frame the station's light swells by this much and
  * falls back over these frames. It is a beat of the staging and not a measurement -- the
@@ -326,6 +325,7 @@ export function orbitEye(turn) {
  */
 export function stagingAt(frameIndex) {
   const { name, progress } = actAt(frameIndex);
+  if (name === "far") return { act: name, walk: 0, turn: 0 };
   if (name === "in") return { act: name, walk: eased(progress), turn: 0 };
   if (name === "near") return { act: name, walk: 1, turn: 0 };
   if (name === "whip") return { act: name, walk: 1, turn: WHIP_SHARE * eased(progress) };
