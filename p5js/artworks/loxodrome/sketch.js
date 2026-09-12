@@ -15,6 +15,7 @@ import {
   depthFloor,
   figureFrame,
   graticuleCurves,
+  gridInk,
   morphAt,
   sceneAt,
   splitByDepth,
@@ -177,7 +178,9 @@ new P5((p) => {
     const framed = { ...scene, scale: scene.scale * RENDER_SCALE };
     const grid = runsOf(GRATICULE_CURVES, framed);
     const courses = runsOf(courseCurvesFor(scene.bearing), framed);
-    drawLayer(grid, GRATICULE, GRATICULE_NEAR, GRATICULE_FAR, GRATICULE_WEIGHT, scene.roundness);
+    // The grid gives way as the sheet opens; the courses do not.
+    const ink = gridInk(scene.open);
+    drawLayer(grid, GRATICULE, GRATICULE_NEAR * ink, GRATICULE_FAR * ink, GRATICULE_WEIGHT, scene.roundness);
     context.globalCompositeOperation = "lighter";
     drawLayer(courses, COURSE, HALO_NEAR, HALO_FAR, HALO_WEIGHT, scene.roundness);
     drawLayer(courses, COURSE, COURSE_NEAR, COURSE_FAR, COURSE_WEIGHT, scene.roundness);

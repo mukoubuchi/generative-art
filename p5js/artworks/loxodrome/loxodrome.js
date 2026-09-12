@@ -429,6 +429,24 @@ export function roundness(open) {
 }
 
 /**
+ * What is left of the grid once the sheet is flat.
+ *
+ * On the globe the grid is the figure's frame and the courses are read against it. On the
+ * chart it stops being that: every line of it is straight, and so are the courses, and the
+ * page reads as ruled paper with the courses one more ruling on it. So the grid gives way
+ * as the sheet opens, in proportion to how far open it is — the globe is untouched, and
+ * the chart keeps just enough of it for the one thing the grid says there that nothing
+ * else does: the parallels crowd at the equator and stand apart at the edge, which is the
+ * stretch that put the pole out of reach.
+ */
+export const GRID_ON_THE_CHART = 0.45;
+
+/** How much of the grid's ink is laid down at a given opening. */
+export function gridInk(open) {
+  return 1 - (1 - GRID_ON_THE_CHART) * Math.min(1, Math.max(0, open));
+}
+
+/**
  * The scale the figure is drawn at, from the box's longest side rather than from
  * the view. A reader turning the globe by hand is turning the figure, not the zoom,
  * and a fit that answered to the view would rescale under the drag.

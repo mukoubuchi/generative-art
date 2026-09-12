@@ -14,6 +14,7 @@ import {
   DURATION_SECONDS,
   FLATNESS_FLOOR,
   FRAME_FILL,
+  GRID_ON_THE_CHART,
   LOGICAL_SIZE,
   MAXIMUM_BEARING,
   MERIDIAN_STEP,
@@ -38,6 +39,7 @@ import {
   graticuleCurves,
   greatCircleBearing,
   greatCirclePoints,
+  gridInk,
   isometricLatitude,
   latitudeFromIsometric,
   measuredBearing,
@@ -427,6 +429,53 @@ test("the far half is drawn fainter, and stops being a half before the sheet is 
   assert.equal(figureFrame(1).roundness, 0);
 });
 
+test("the grid gives way as the sheet opens, and not one shade before it does", () => {
+  assert.equal(GRID_ON_THE_CHART, 0.45);
+  assert.equal(gridInk(0), 1);
+  // One less fifty-five hundredths is not exactly forty-five in binary, and the drawing
+  // uses the number this returns rather than the one it is named for.
+  assert.ok(Math.abs(gridInk(1) - GRID_ON_THE_CHART) < 1e-15);
+  assert.ok(gridInk(0.5) > gridInk(0.75) && gridInk(0.75) > gridInk(1));
+
+  // The negative control, and the condition the change was accepted under: while the
+  // figure is round the grid is untouched, so those frames are the drawing they already
+  // were. Measured on the pictures as well -- frames 0, 90 and 175 came back identical to
+  // the byte, 0 of 1,849,600 differing.
+  let untouched = 0;
+  let given = 0;
+  let previous = Infinity;
+  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+    const scene = sceneAt(frame);
+    const ink = gridInk(scene.open);
+    if (scene.open === 0) {
+      assert.equal(ink, 1, `frame ${frame} dims the grid on a figure that is still round`);
+      untouched += 1;
+    } else {
+      assert.ok(ink < 1 && ink >= GRID_ON_THE_CHART - 1e-15, `frame ${frame} is out of range at ${ink}`);
+      given += 1;
+    }
+    // Continuous, because the opening is: no frame of the clip steps the grid.
+    if (scene.act === "open") {
+      assert.ok(ink <= previous + 1e-12, `frame ${frame} brightens the grid while opening`);
+      assert.ok(previous - ink < 0.04, `frame ${frame} steps the grid by ${previous - ink}`);
+    }
+    previous = ink;
+  }
+  assert.equal(untouched, 230);
+  assert.equal(given, 130);
+  // Not vacuous: both kinds of frame are in the clip, and the acts that do it are the ones
+  // where the figure is opening, held open, or closing.
+  assert.ok(untouched > 0 && given > 0);
+  // The last frame at full grid is the opening act's own first one, where the sheet has
+  // not started to open, and the clip's last frame, where it has finished closing.
+  for (const frame of [0, 90, 175, 228, TOTAL_FRAMES - 1]) {
+    assert.equal(gridInk(sceneAt(frame).open), 1, `frame ${frame} is not at full grid`);
+  }
+  assert.equal(sceneAt(228).act, "open");
+  assert.ok(gridInk(sceneAt(229).open) < 1, "the opening act does not start dimming the grid");
+  assert.ok(gridInk(sceneAt(300).open) < 0.46);
+});
+
 test("the grid fits the frame at every frame of the clip, and the courses run off it", () => {
   const curves = graticuleCurves();
   const half = LOGICAL_SIZE / 2;
@@ -539,6 +588,10 @@ test("the sketch draws the module's points and prints the legend", () => {
   // Added ink accumulates between strokes and not within one, so each run is stroked on
   // its own — which is what leaves the blaze on the poles.
   assert.match(SKETCH, /for \(const run of runs\) \{[\s\S]*?context\.beginPath\(\);[\s\S]*?context\.stroke\(\);\n {4}\}/u);
+  // The grid's ink answers to the opening; the courses' does not.
+  assert.match(SKETCH, /const ink = gridInk\(scene\.open\);/u);
+  assert.match(SKETCH, /GRATICULE_NEAR \* ink, GRATICULE_FAR \* ink/u);
+  assert.doesNotMatch(SKETCH, /COURSE_NEAR \* ink|HALO_NEAR \* ink/u);
   assert.match(SKETCH, /splitByDepth\(viewCurve\(points, scene\), floor\)/u);
   assert.match(SKETCH, /depthFloor\(scene\.scale\)/u);
   assert.match(SKETCH, /return Promise\.resolve\(publishState\(/u);
@@ -601,6 +654,9 @@ test("the notes give the numbers the tests hold and keep the two straightenings 
   assert.match(section, /137 milliseconds/u);
   assert.match(section, /0\.36 milliseconds/u);
   assert.match(section, /reaches 162 and no pixel is white/u);
+  assert.match(section, /1 − 0\.55 × open/u);
+  assert.match(section, /0\.4471/u);
+  assert.match(section, /261,120 pixels/u);
   assert.match(section, /six courses/iu);
   assert.match(section, /1841/u);
   assert.match(README, /\| \[Loxodrome\]\(p5js\/artworks\/loxodrome\/\) \|/u);
