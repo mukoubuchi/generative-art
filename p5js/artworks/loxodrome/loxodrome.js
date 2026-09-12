@@ -46,12 +46,31 @@ export const FRAME_FILL = 0.86;
 export const OPENING_BEARING = degrees(70);
 export const UNWOUND_BEARING = degrees(20);
 /**
- * The live page's limits. Nought is the meridian itself; the upper limit is short
- * of a right angle, where the course would be a parallel and would reach no pole
- * at all.
+ * The live page's limits.
+ *
+ * Nought is the meridian itself. The upper limit is not set by the geometry, which goes on
+ * being true up to the right angle at which a course would be a parallel and reach no pole
+ * at all; it is set by the chart, which is where the figure runs out of room first. On the
+ * chart the courses are parallel straight lines whose number grows with `tan β`, and the
+ * distance between neighbours is `(2π / courses) · cos β` — so past a certain bearing they
+ * close up, their light piles up between them, and the sheet fills in. Eighty degrees
+ * leaves them 16.92 pixels apart, about half the spacing at the bearing the clip opens on,
+ * which is dense enough to read as a crowded sheet and open enough to read as lines.
  */
 export const MINIMUM_BEARING = 0;
-export const MAXIMUM_BEARING = degrees(88);
+export const MAXIMUM_BEARING = degrees(80);
+
+/**
+ * The distance between neighbouring courses on the opened chart, in logical pixels.
+ *
+ * Every drawn piece lies on a line `λ = a + tan β · ψ`, and the intercepts `a` are the
+ * course origins together with every shift of a whole turn the date line cuts introduce —
+ * one arithmetic progression of step `2π / courses`. The perpendicular distance between
+ * neighbours follows, and is what decides whether the chart reads as lines or as a wash.
+ */
+export function chartSpacing(bearing, courses = COURSES) {
+  return (2 * Math.PI / courses) * Math.cos(bearing) * figureFrame(1).scale;
+}
 
 /** The chart's own edge: the last latitude its grid is drawn to. */
 export const CHART_EDGE_LATITUDE = degrees(85);
@@ -291,6 +310,38 @@ export function graticuleCurves() {
     curves.push({ kind: "meridian", at: lambda, points });
   }
   return curves;
+}
+
+/**
+ * How much of the chart the courses cover, as a share of the canvas.
+ *
+ * The spacing above says how far apart neighbours are; this says how much ink the sheet
+ * actually receives, which is the thing that decides whether it reads as a wash. It is the
+ * drawn length that falls inside the canvas times the width of a stroke, over the canvas's
+ * area. The length has to be clipped to the canvas to mean anything — the courses are
+ * drawn nearly twice as far up the chart as the frame shows, so counting all of it against
+ * the frame's area reports a figure for a picture nobody sees.
+ */
+export function chartCoverage(bearing, strokeWidth = 1.4) {
+  const scene = { ...sceneAt(300), bearing };
+  const half = LOGICAL_SIZE / 2;
+  let inside = 0;
+  for (const piece of courseCurves(bearing).flatMap((course) => course.pieces)) {
+    const drawn = viewCurve(piece, scene);
+    for (let index = 1; index < drawn.length; index += 1) {
+      const [fromX, fromY] = drawn[index - 1];
+      const [toX, toY] = drawn[index];
+      const span = Math.hypot(toX - fromX, toY - fromY);
+      const steps = Math.max(1, Math.ceil(span / 2));
+      for (let step = 0; step < steps; step += 1) {
+        const t = (step + 0.5) / steps;
+        if (Math.abs(fromX + (toX - fromX) * t) <= half && Math.abs(fromY + (toY - fromY) * t) <= half) {
+          inside += span / steps;
+        }
+      }
+    }
+  }
+  return inside * strokeWidth / (LOGICAL_SIZE * LOGICAL_SIZE);
 }
 
 /**

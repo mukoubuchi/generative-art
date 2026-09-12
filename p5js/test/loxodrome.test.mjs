@@ -18,6 +18,7 @@ import {
   LOGICAL_SIZE,
   MAXIMUM_BEARING,
   MERIDIAN_STEP,
+  MINIMUM_BEARING,
   OPENING_BEARING,
   PLAYBACK_FPS,
   SPHERE_SCALE,
@@ -25,8 +26,11 @@ import {
   TOTAL_FRAMES,
   UNWOUND_BEARING,
   actAt,
+  chartCoverage,
+  chartSpacing,
   courseChordLength,
   courseCurve,
+  courseCurves,
   courseLength,
   courseLongitude,
   courseOrigins,
@@ -524,8 +528,90 @@ test("a course stops where its own turns close up, not where the geometry does",
   // The sampling follows the bearing, because a tighter coil needs more of it.
   assert.ok(courseSamples(UNWOUND_BEARING) < courseSamples(OPENING_BEARING));
   assert.equal(courseSamples(UNWOUND_BEARING), COURSE_MINIMUM_SAMPLES);
-  assert.equal(courseSamples(MAXIMUM_BEARING), COURSE_MAXIMUM_SAMPLES);
   assert.equal(courseSamples(OPENING_BEARING), 756);
+  // The ceiling is a guard rather than a working limit: no bearing the reader can reach
+  // asks for as many samples as it allows, so no course is ever drawn coarser than the
+  // three degrees of longitude a step is meant to be. It used to be reached at 84 degrees,
+  // which the page could reach, and the courses went to dashes there.
+  assert.equal(courseSamples(MAXIMUM_BEARING), 1560);
+  assert.ok(courseSamples(MAXIMUM_BEARING) < COURSE_MAXIMUM_SAMPLES);
+  for (let degree = 0; degree <= 80; degree += 1) {
+    assert.ok(courseSamples(degrees(degree)) < COURSE_MAXIMUM_SAMPLES, `${degree} degrees hits the ceiling`);
+  }
+  // Not vacuous: the ceiling is a real one, and a bearing past the limit does reach it.
+  assert.equal(courseSamples(degrees(84)), COURSE_MAXIMUM_SAMPLES);
+});
+
+test("the chart stays a set of lines at every bearing the reader can reach", () => {
+  // What the limit is for. On the chart the courses are parallel straight lines whose
+  // number grows with tan of the bearing, so past some bearing they close up and the sheet
+  // fills in with their light. At 88 degrees, which the page used to allow, they stand
+  // 3.40 pixels apart and the chart came out as an even wash -- 86.7 per cent of the
+  // canvas lit, measured on the page itself.
+  assert.equal(Math.round(MAXIMUM_BEARING * 180 / Math.PI), 80);
+  assert.equal(MINIMUM_BEARING, 0);
+
+  // The spacing is exact, and it is checked against the drawing rather than trusted: the
+  // gaps between where the drawn pieces cross a line laid across the courses.
+  const scene = sceneAt(300);
+  for (const degree of [20, 45, 70, 80]) {
+    const bearing = degrees(degree);
+    const slope = Math.tan(bearing);
+    const length = Math.hypot(1, slope);
+    const crossings = [];
+    for (const piece of courseCurves(bearing).flatMap((course) => course.pieces)) {
+      const drawn = viewCurve(piece, { ...scene, bearing });
+      for (let index = 1; index < drawn.length; index += 1) {
+        const [fromX, fromY] = drawn[index - 1];
+        const [toX, toY] = drawn[index];
+        const alongFrom = (fromX * slope + fromY) / length;
+        const alongTo = (toX * slope + toY) / length;
+        if ((alongFrom <= 0) !== (alongTo <= 0)) {
+          const t = alongFrom / (alongFrom - alongTo);
+          const acrossFrom = (fromX - fromY * slope) / length;
+          const acrossTo = (toX - toY * slope) / length;
+          crossings.push(acrossFrom + (acrossTo - acrossFrom) * t);
+        }
+      }
+    }
+    crossings.sort((a, b) => a - b);
+    const gaps = crossings.slice(1).map((at, index) => at - crossings[index]).filter((gap) => gap > 0.01);
+    assert.ok(gaps.length > 4, `${degree} degrees gave only ${gaps.length} gaps to measure`);
+    const widest = Math.max(...gaps);
+    assert.ok(Math.abs(widest - chartSpacing(bearing)) < 0.01,
+      `${degree} degrees: the drawing spaces them ${widest} and the formula says ${chartSpacing(bearing)}`);
+  }
+  assert.equal(chartSpacing(MAXIMUM_BEARING).toFixed(2), "16.92");
+  assert.equal(chartSpacing(OPENING_BEARING).toFixed(2), "33.34");
+  assert.equal(chartSpacing(degrees(88)).toFixed(2), "3.40");
+
+  // Spacing alone does not settle it, so it is not what the limit is held by. A halo is
+  // five pixels wide, and 84 degrees clears that with 10.19 -- yet 84 degrees is a wash.
+  // What tracks the wash is how much of the canvas the strokes cover, which is measured
+  // from the length that falls inside the frame.
+  assert.ok(chartSpacing(degrees(84)) > 2 * 5);
+  const atLimit = chartCoverage(MAXIMUM_BEARING);
+  const atOpening = chartCoverage(OPENING_BEARING);
+  assert.equal((100 * atLimit).toFixed(2), "7.11");
+  assert.equal((100 * atOpening).toFixed(2), "3.61");
+  // Twice the clip's own density and no more. On the page this reads as 27 per cent of the
+  // canvas lit against 21 at the opening bearing, where the lines are still distinct.
+  assert.ok(atLimit < 0.08, `the limit covers ${(100 * atLimit).toFixed(2)} per cent`);
+  assert.ok(atLimit < 2.2 * atOpening);
+
+  // The negative controls: every bearing the limit now excludes is one this would reject.
+  for (const degree of [84, 86, 88]) {
+    assert.ok(chartCoverage(degrees(degree)) > 0.08,
+      `${degree} degrees would have passed at ${(100 * chartCoverage(degrees(degree))).toFixed(2)} per cent`);
+    assert.ok(degrees(degree) > MAXIMUM_BEARING, `${degree} degrees is still reachable`);
+  }
+  // Monotone, so the limit is a limit rather than one lucky bearing.
+  let previous = 0;
+  for (let degree = 0; degree <= 88; degree += 4) {
+    const coverage = chartCoverage(degrees(degree));
+    assert.ok(coverage >= previous, `the chart thins out between ${degree - 4} and ${degree} degrees`);
+    previous = coverage;
+  }
 });
 
 test("six courses, evenly spaced and off the grid's own longitudes", () => {
@@ -657,6 +743,15 @@ test("the notes give the numbers the tests hold and keep the two straightenings 
   assert.match(section, /1 − 0\.55 × open/u);
   assert.match(section, /0\.4471/u);
   assert.match(section, /261,120 pixels/u);
+  // The limit, and the two numbers that decide it rather than the one that does not.
+  assert.match(section, /the meridian and 80°/u);
+  assert.doesNotMatch(section, /the meridian and 88°/u);
+  assert.match(section, /3\.40 pixels apart/u);
+  assert.match(section, /16\.92 pixels apart/u);
+  assert.match(section, /86\.7 per cent of the canvas lit/u);
+  assert.match(section, /7\.11 at the limit/u);
+  assert.match(section, /1\.97 times as far up the chart/u);
+  assert.match(section, /1560/u);
   assert.match(section, /six courses/iu);
   assert.match(section, /1841/u);
   assert.match(README, /\| \[Loxodrome\]\(p5js\/artworks\/loxodrome\/\) \|/u);
