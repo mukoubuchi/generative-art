@@ -70,6 +70,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [All on One Circumference](p5js/artworks/all-on-one-circumference/) | Bodies let go on every chord from the top of one circle and on every chord to its bottom, always two circles that touch on the perpendicular, the strides between the marks they leave the odd numbers, rendered as an MP4 |
 | [Innumerable Straight Lines](p5js/artworks/innumerable-straight-lines/) | Thirty-six straight rods between two collars turned against each other, the surface they lie on pinching to a waist while every rod stays straight, rendered as an MP4 |
 | [The Seventeen-Foot](p5js/artworks/the-seventeen-foot/) | Theodorus's roots laid one after another as sixteen right triangles on one origin, and a seventeenth that comes as far as crossing the opening side and goes back, rendered as an MP4 |
+| [Eyed Awry](p5js/artworks/eyed-awry/) | Three beams of cubes that close into a triangle along one axis and fall apart off it, in black single lines on warm white, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
 

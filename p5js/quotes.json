@@ -500,6 +500,16 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/theaetetuswithtr00platuoft/page/n31/mode/1up"
+    },
+    {
+      "id": "shakespeare-eyed-awry",
+      "text": "Like perspectiues,which rightly gazde vpon Shew nothing but confusion; eyde awry, Distinguish forme",
+      "lang": "en",
+      "author": "William Shakespeare",
+      "source": "Richard II, II.2",
+      "year": 1597,
+      "publicDomain": true,
+      "sourceUrl": "https://internetshakespeare.uvic.ca/media/facsimile/shakespeare/BritishLibrary/R2_Q1/Q1_R2_036-550w.jpg"
     }
   ]
 }
