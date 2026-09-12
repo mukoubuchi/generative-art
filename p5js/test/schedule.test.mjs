@@ -51,7 +51,8 @@ const AWAITING_SCHEDULE = [
   "all-on-one-circumference",
   "innumerable-straight-lines",
   "the-seventeen-foot",
-  "eyed-awry"
+  "eyed-awry",
+  "loxodrome"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {

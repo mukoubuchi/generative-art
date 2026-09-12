@@ -71,6 +71,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Innumerable Straight Lines](p5js/artworks/innumerable-straight-lines/) | Thirty-six straight rods between two collars turned against each other, the surface they lie on pinching to a waist while every rod stays straight, rendered as an MP4 |
 | [The Seventeen-Foot](p5js/artworks/the-seventeen-foot/) | Theodorus's roots laid one after another as sixteen right triangles on one origin, and a seventeenth that comes as far as crossing the opening side and goes back, rendered as an MP4 |
 | [Eyed Awry](p5js/artworks/eyed-awry/) | Three beams of cubes that close into a triangle along one axis and fall apart off it, in black single lines on warm white, rendered as an MP4 |
+| [Loxodrome](p5js/artworks/loxodrome/) | Six courses held at one bearing, winding into a blaze at each pole, and the chart that straightens them into parallel lines by putting the poles out of its reach, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, the English aphorism policy, source notes, and the nightly publishing workflow.
 

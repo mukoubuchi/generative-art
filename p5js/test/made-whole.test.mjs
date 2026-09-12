@@ -296,7 +296,7 @@ test("the archived original: Arabic catalog text is Rosen's page reading, codepo
   );
 
   assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "ar").length, 2);
-  assert.equal(CATALOG.quotes.length, 51);
+  assert.equal(CATALOG.quotes.length, 52);
 });
 
 test("the gallery card and post carry the same English record within the post limit", () => {

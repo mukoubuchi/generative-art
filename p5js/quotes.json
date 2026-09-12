@@ -960,6 +960,16 @@
         "publicDomain": true,
         "sourceUrl": "https://internetshakespeare.uvic.ca/media/facsimile/shakespeare/BritishLibrary/R2_Q1/Q1_R2_036-550w.jpg"
       }
+    },
+    {
+      "id": "emerson-zigzag-line",
+      "text": "The voyage of the best ship is a zigzag line of a hundred tacks. \u2026 See the line from a sufficient distance, and it straightens itself to the average tendency.",
+      "lang": "en",
+      "author": "Ralph Waldo Emerson",
+      "source": "Essays: First Series \u2014 Self-Reliance",
+      "year": 1841,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/emersonralessays00emerrich/page/n60/mode/1up"
     }
   ]
 }

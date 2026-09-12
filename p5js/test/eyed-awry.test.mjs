@@ -248,7 +248,7 @@ test("the archived original: catalog keeps the quarto's clause, letter for lette
     quote.sourceUrl,
     "https://internetshakespeare.uvic.ca/media/facsimile/shakespeare/BritishLibrary/R2_Q1/Q1_R2_036-550w.jpg"
   );
-  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "en").length, 7);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "en").length, 8);
   assert.equal(CATALOG.quotes.filter((entry) => entry.author === "William Shakespeare").length, 1);
 });
 

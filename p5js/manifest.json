@@ -1099,6 +1099,28 @@
         "durationSeconds": 13,
         "scale": 2
       }
+    },
+    {
+      "id": "loxodrome",
+      "title": "Loxodrome",
+      "entry": "p5js/artworks/loxodrome/index.html",
+      "interactivePath": "loxodrome/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "emerson-zigzag-line"
+      ],
+      "thumbnail": {
+        "frame": 90
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/Loxodrome.mp4",
+        "durationSeconds": 12,
+        "scale": 2
+      }
     }
   ]
 }
