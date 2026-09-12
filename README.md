@@ -72,7 +72,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [The Seventeen-Foot](p5js/artworks/the-seventeen-foot/) | Theodorus's roots laid one after another as sixteen right triangles on one origin, and a seventeenth that comes as far as crossing the opening side and goes back, rendered as an MP4 |
 | [Eyed Awry](p5js/artworks/eyed-awry/) | Three beams of cubes that close into a triangle along one axis and fall apart off it, in black single lines on warm white, rendered as an MP4 |
 
-See [p5js/README.md](p5js/README.md) for rendering, dry runs, quote provenance, and the nightly publishing workflow.
+See [p5js/README.md](p5js/README.md) for rendering, dry runs, the English aphorism policy, source notes, and the nightly publishing workflow.
 
 ## Adding sketches
 

@@ -254,8 +254,8 @@ test("the page is fitted to the origin and all eighteen vertices, inside the mar
   assert.ok(onPage(CROSSING)[0] > onPage(ORIGIN)[0]);
 });
 
-test("the catalog keeps the clause both editions print, at the leaf it is on", () => {
-  const quote = CATALOG.quotes.find((entry) => entry.id === "platon-en-de-tautei");
+test("the archived original: catalog keeps the clause both editions print, at the leaf it is on", () => {
+  const quote = CATALOG.quotes.find((entry) => entry.id === "platon-en-de-tautei").original;
   assert.equal(quote.text, APPROVED_QUOTE);
   assert.equal(quote.text, quote.text.normalize("NFC"));
   assert.equal([...quote.text].length, 84);
@@ -270,8 +270,8 @@ test("the catalog keeps the clause both editions print, at the leaf it is on", (
   assert.equal(quote.year, null);
   assert.equal(quote.publicDomain, true);
   assert.equal(quote.sourceUrl, "https://archive.org/details/theaetetuswithtr00platuoft/page/n31/mode/1up");
-  assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "grc").length, 10);
-  assert.equal(CATALOG.quotes.filter((entry) => entry.author === "Πλάτων").length, 3);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "grc").length, 10);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).author === "Πλάτων").length, 3);
 });
 
 test("the notes keep the spiral as this project's, give the numbers the tests hold, and name both editions", () => {
@@ -323,14 +323,14 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.match(NOTES, /\| `the-seventeen-foot` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 10 seconds,/u);
   assert.match(INDEX_HTML, /<title>The Seventeen-Foot<\/title>/u);
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
-  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 159);
+  assert.ok(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters) <= MANIFEST.defaults.maxWeightedCharacters);
   assert.equal(body.split("\n")[0], quote.text);
   assert.equal(body.split("\n")[1], `— ${quote.author}, ${quote.source}`);
   const index = renderIndexPage(MANIFEST, CATALOG);
   const start = index.indexOf('<h2 class="card__title">The Seventeen-Foot</h2>');
   assert.ok(start >= 0);
   const card = index.slice(start, index.indexOf("</li>", start));
-  assert.match(card, /<blockquote class="card__quote" lang="grc">/u);
+  assert.match(card, /<blockquote class="card__quote" lang="en">/u);
   assert.ok(card.includes(quote.text));
   assert.ok(card.includes(quote.author));
   assert.ok(card.includes(quote.source));

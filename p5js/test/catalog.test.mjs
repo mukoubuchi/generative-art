@@ -18,7 +18,7 @@ test("every registered artwork is publishable", async () => {
   assert.ok(manifest.artworks.length > 0);
   assert.equal(eligible.length, manifest.artworks.length);
   assert.deepEqual(warnings, []);
-  assert.ok(quoteCatalog.quotes.some((quote) => quote.lang !== "en"));
+  assert.ok(quoteCatalog.quotes.every((quote) => quote.lang === "en"));
   assert.ok(manifest.artworks.every((artwork) => (
     artwork.canvas.width <= 1280
     && artwork.canvas.height <= 720

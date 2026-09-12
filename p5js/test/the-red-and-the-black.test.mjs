@@ -373,9 +373,9 @@ test("the picture is drawn from the list that defines the figure", () => {
   assert.equal(PAINTING_ORDER.filter((step) => step.road === BLACK).length, 3);
 });
 
-test("the catalog keeps the first edition's reading of the sentence", () => {
+test("the archived original: catalog keeps the first edition's reading of the sentence", () => {
   const catalog = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
-  const quote = catalog.quotes.find((entry) => entry.id === "stendhal-cessa-de-parler");
+  const quote = catalog.quotes.find((entry) => entry.id === "stendhal-cessa-de-parler").original;
   assert.equal(
     quote.text,
     "Tout-à-coup Julien cessa de parler de Napoléon ; il annonça le projet de se faire prêtre…"

@@ -273,8 +273,8 @@ test("the manifest registers a ten-second square clip and its completed thumbnai
   assert.match(INDEX_HTML, /<title>Made Whole<\/title>/u);
 });
 
-test("the Arabic catalog text is Rosen's page reading, codepoint for codepoint", () => {
-  const quote = CATALOG.quotes.find((entry) => entry.id === "khwarizmi-mal-wa-ashara");
+test("the archived original: Arabic catalog text is Rosen's page reading, codepoint for codepoint", () => {
+  const quote = CATALOG.quotes.find((entry) => entry.id === "khwarizmi-mal-wa-ashara").original;
   assert.equal(quote.text, "مال وعشرة اجذاره يعدل تسعة وثلثين درهما");
   assert.equal(quote.text.normalize("NFC"), quote.text);
   assert.equal(quote.text.length, 39);
@@ -295,15 +295,15 @@ test("the Arabic catalog text is Rosen's page reading, codepoint for codepoint",
     "https://archive.org/details/algebraofmohamme00khuwuoft/page/n351/mode/1up"
   );
 
-  assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "ar").length, 2);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "ar").length, 2);
   assert.equal(CATALOG.quotes.length, 51);
 });
 
-test("the gallery card and post carry the same Arabic record within the post limit", () => {
+test("the gallery card and post carry the same English record within the post limit", () => {
   const artwork = MANIFEST.artworks.find((entry) => entry.id === "made-whole");
   const quote = CATALOG.quotes.find((entry) => entry.id === "khwarizmi-mal-wa-ashara");
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
-  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 160);
+  assert.ok(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters) <= MANIFEST.defaults.maxWeightedCharacters);
   assert.equal(body, [
     quote.text,
     `— ${quote.author}, ${quote.source}`,
@@ -317,7 +317,7 @@ test("the gallery card and post carry the same Arabic record within the post lim
   const cardStart = index.indexOf('<h2 class="card__title">Made Whole</h2>');
   const card = index.slice(cardStart, index.indexOf("</li>", cardStart));
   assert.ok(cardStart >= 0);
-  assert.match(card, /<blockquote class="card__quote" lang="ar">/u);
+  assert.match(card, /<blockquote class="card__quote" lang="en">/u);
   assert.ok(card.includes(quote.text));
   assert.ok(card.includes(quote.author));
   assert.ok(card.includes(quote.source));

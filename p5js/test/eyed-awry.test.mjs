@@ -234,8 +234,8 @@ test("the sketch is a clip of paper cubes in one stroke, timed from the clock", 
   assert.doesNotMatch(MODEL, /Penrose|Escher|Reutersvärd drew/u);
 });
 
-test("the catalog keeps the quarto's clause, letter for letter", () => {
-  const quote = CATALOG.quotes.find((entry) => entry.id === "shakespeare-eyed-awry");
+test("the archived original: catalog keeps the quarto's clause, letter for letter", () => {
+  const quote = CATALOG.quotes.find((entry) => entry.id === "shakespeare-eyed-awry").original;
   assert.equal(quote.text, APPROVED_QUOTE);
   assert.equal(quote.text, quote.text.normalize("NFC"));
   assert.equal([...quote.text].length, 99);
@@ -248,7 +248,7 @@ test("the catalog keeps the quarto's clause, letter for letter", () => {
     quote.sourceUrl,
     "https://internetshakespeare.uvic.ca/media/facsimile/shakespeare/BritishLibrary/R2_Q1/Q1_R2_036-550w.jpg"
   );
-  assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "en").length, 7);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "en").length, 7);
   assert.equal(CATALOG.quotes.filter((entry) => entry.author === "William Shakespeare").length, 1);
 });
 

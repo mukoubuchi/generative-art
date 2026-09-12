@@ -139,9 +139,9 @@ test("the patch holds its own earlier rounds, which is the order the clip lays i
     "the placement changes the size of the tiles");
 });
 
-test("the catalog preserves the verified WLC wording of Psalm 118:22", () => {
+test("the archived original: catalog preserves the verified WLC wording of Psalm 118:22", () => {
   const catalog = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
-  const quote = catalog.quotes.find((entry) => entry.id === "psalm-stone-builders");
+  const quote = catalog.quotes.find((entry) => entry.id === "psalm-stone-builders").original;
   assert.equal(
     quote.text,
     "אֶ֭בֶן מָאֲס֣וּ הַבּוֹנִ֑ים הָ֝יְתָ֗ה לְרֹ֣אשׁ פִּנָּֽה׃"

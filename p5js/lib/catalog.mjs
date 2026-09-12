@@ -134,6 +134,9 @@ function validateQuotes(quoteCatalog) {
     ) {
       throw new Error(`Quote ${quote.id} is incomplete or is not verified as public domain.`);
     }
+    if (quote.lang !== "en") {
+      throw new Error(`Quote ${quote.id} must provide its display text in English.`);
+    }
     try {
       Intl.getCanonicalLocales(quote.lang);
     } catch {

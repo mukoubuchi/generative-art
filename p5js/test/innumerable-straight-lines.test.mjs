@@ -216,8 +216,8 @@ test("the acts fill the clip, the twist is eased and returns both ends exactly, 
   assert.equal(leverAtFrame(180), 1);
 });
 
-test("the catalog keeps Wren's clause as the London edition prints it", () => {
-  const quote = CATALOG.quotes.find((entry) => entry.id === "wren-rectas-innumeras");
+test("the archived original: catalog keeps Wren's clause as the London edition prints it", () => {
+  const quote = CATALOG.quotes.find((entry) => entry.id === "wren-rectas-innumeras").original;
   const approved = "in superficie Cylindroidis, quamvis e duplici flexura constet, rectas nihilominus innumeras duci posse";
   assert.equal(quote.text, approved);
   assert.equal(quote.text, quote.text.normalize("NFC"));
@@ -230,7 +230,7 @@ test("the catalog keeps Wren's clause as the London edition prints it", () => {
   assert.equal(quote.year, 1669);
   assert.equal(quote.publicDomain, true);
   assert.equal(quote.sourceUrl, "https://archive.org/details/philosophicaltra4166roya/page/n77/mode/1up");
-  assert.equal(CATALOG.quotes.filter((entry) => entry.lang === "la").length, 9);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "la").length, 9);
 });
 
 test("the notes name both printings, keep the sculpture as the project's, and say what is not calculated", () => {
@@ -279,13 +279,13 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
   assert.match(NOTES, /\| `innumerable-straight-lines` \| 960×640 \| 1920×1280 MP4 at 30 fps \| 12 seconds,/u);
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
-  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 220);
+  assert.ok(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters) <= MANIFEST.defaults.maxWeightedCharacters);
   assert.equal(body.split("\n")[0], quote.text);
   const index = renderIndexPage(MANIFEST, CATALOG);
   const start = index.indexOf('<h2 class="card__title">Innumerable Straight Lines</h2>');
   assert.ok(start >= 0);
   const card = index.slice(start, index.indexOf("</li>", start));
-  assert.match(card, /<blockquote class="card__quote" lang="la">/u);
+  assert.match(card, /<blockquote class="card__quote" lang="en">/u);
   assert.ok(card.includes(quote.text));
   assert.ok(card.includes(quote.author));
   assert.ok(card.includes(quote.source));

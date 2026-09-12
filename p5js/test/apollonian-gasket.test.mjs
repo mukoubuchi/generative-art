@@ -228,9 +228,9 @@ test("the plate draws the packing, at the size the catalog registers", () => {
   assert.ok(2 * outerRadius < artwork.canvas.width);
 });
 
-test("the catalog carries Pappus's sentence as Hultsch's text sets it", () => {
+test("the archived original: catalog carries Pappus's sentence as Hultsch's text sets it", () => {
   const catalog = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
-  const quote = catalog.quotes.find((entry) => entry.id === "pappus-kyklon-agagein");
+  const quote = catalog.quotes.find((entry) => entry.id === "pappus-kyklon-agagein").original;
   assert.equal(
     quote.text,
     "ἑξῆς σημείων καὶ εὐθειῶν καὶ κύκλων τριῶν ὁποιωνοῦν θέσει δοθέντων κύκλον ἀγαγεῖν δι᾽ ἑκάστου"

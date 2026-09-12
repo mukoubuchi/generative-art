@@ -170,63 +170,19 @@ const quoteMark = (className) => `<svg class="${className}" aria-hidden="true" f
   + `<use href="#${QUOTE_SYMBOL_ID}"/></svg>`;
 
 /**
- * The epigraph over the door.
- *
- * Quoted from the middle of its paragraph, and it keeps the "En d’autres termes" the page
- * prints, so a reader meets the sentence the way the book hands it over. The sentence before
- * it reads, in the 1967 and Gallimard printings, "Il s’agit d’en arriver au moment où la
- * conscience cessera d’être conscience de quelque chose."; the 1949 printing shows it from
- * "cessera d’être" onward. The apostrophes are set as U+2019, five of them, to match the
- * French entries in quotes.json; the snippets this was read in normalise their punctuation,
- * so they say nothing about which apostrophe the book was printed with.
- *
- * Where it sits is given as the work and nothing finer. No page is claimed: the printings
- * below are paginated differently, and none of the snippets carries one. Nor is a section.
- * The passage this replaced stood against the heading of a numbered section, which is what
- * placed it; on either side of this one there is nothing but running prose. It is followed
- * in every printing by "Cet achèvement, lié, là où la lucidité a ses chances, … a la valeur
- * d’une mise en place de l’existence sociale. Cette mise en place serait comparable …", so
- * it is not the last sentence of the essay and is not described as one here.
- *
- * Read through the Google Books volumes feed in snippet view, which is where these are
- * legible: archive.org and Gallica hold no copy, and HathiTrust puts its text behind
- * script. Five volumes, all under Bataille's name, their publishers taken from the feed's
- * single-volume records rather than from its search results, which drop the field:
- *
- *   kHNHAAAAIAAJ  1949  Éditions de Minuit  La part maudite / essai d'économie générale
- *   HZCBlYTCZroC  1967  Éditions de Minuit  La Part maudite / précédé de la Notion de dépense
- *   8IIOAQAAIAAJ  1970  Gallimard           OEuvres complètes
- *   ZW1cAAAAMAAJ  1970  Gallimard           L'Économie à la mesure de l'univers. […]
- *   fbMqAQAAIAAJ  1976  Gallimard           Annexes
- *
- * The last four carry the sentence whole in one snippet each. The 1949 printing gives it in
- * two, and how it was reached is worth keeping: a bare phrase query returns "En d'autres
- * termes , prendre conscience du sens décisif d'un instant où la croissance ( l'acquisition
- * de quelque chose ) se résoudra en dépense , est exactement la conscience de" and stops,
- * while the same query with the volume's subtitle appended returns the rest, "est exactement
- * la conscience de soi , c'est - à - dire une conscience qui n'a plus rien pour objet 1 .
- * Cet". A passage missing from one window is not missing from the book, which is why this
- * one was read in four shapes of query before anything was said about it.
- *
- * A footnote follows the sentence, and its marker differs between printings — 1 in 1949 and
- * 1967, an asterisk in the three Gallimard volumes — so the quotation ends at the full stop
- * before it. The feed's OCR puts a space before every comma and full stop and around the
- * hyphens of "c'est - à - dire", including where French would never print one, so that
- * spacing is the OCR's own and not the page's.
- *
- * Not in quotes.json, and deliberately. That catalog throws on any entry not marked public
- * domain, and Bataille died in 1962, so this is not one. It is the door's epigraph rather
- * than an artwork's aphorism: it never goes out on the posting path, and it stands with its
- * source attached, which is the shape a short quotation is allowed to take.
+ * A short English epigraph linking life beyond utility to sovereignty.
+ * Wording located in Timothy Lavenz, "Sovereign Disregard", Epoché, July 2020:
+ * https://epochemagazine.org/33/sovereign-disregard-on-batailles-accursed-share/
+ * It cites The Accursed Share, volume III, p. 198. This is a secondary-source
+ * check, not a fresh collation of the French text or the English edition.
+ * The epigraph stays outside the artwork catalog and the posting path.
  */
 export const EPIGRAPH = {
-  text: "En d\u2019autres termes, prendre conscience du sens décisif d\u2019un instant où la "
-    + "croissance (l\u2019acquisition de quelque chose) se résoudra en dépense, est exactement "
-    + "la conscience de soi, c\u2019est-à-dire une conscience qui n\u2019a plus rien pour objet.",
-  lang: "fr",
+  text: "Life beyond utility is the domain of sovereignty.",
+  lang: "en",
   author: "Georges Bataille",
-  source: "La Part maudite",
-  year: 1949
+  source: "The Accursed Share, vol. III",
+  year: null
 };
 
 function renderCard(manifest, artwork, quote, index) {
@@ -317,7 +273,7 @@ export function renderIndexPage(manifest, quoteCatalog, build) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     ${buildStamp(build)}
     <title>Generative Art</title>
-    <meta name="description" content="Generative works in p5.js, each bearing an aphorism kept in its original tongue and verified against a primary source.">
+    <meta name="description" content="Generative works in p5.js, each paired with an aphorism in English. Art beyond the claims of utility.">
     <link rel="stylesheet" href="assets/gallery.css">
     <!-- three.js resolves its own parts by name, and its glTF loader reaches for the
          library the same way, so the names are given addresses here. Nothing is fetched by
@@ -360,8 +316,8 @@ ${ICON_SPRITE}
              step by hand. -->
         <!-- The epigraph over the door, set in the register the cards use for their own
              quotations so that the head of the page and the grid below it read as one
-             catalog. Where it was read, why it is quoted from mid-sentence, and why it is
-             not in quotes.json: see EPIGRAPH in lib/gallery.mjs. -->
+             catalog. For its source and its place outside the artwork catalog,
+             see EPIGRAPH in lib/gallery.mjs. -->
         <blockquote class="masthead__epigraph" lang="${escapeHtml(EPIGRAPH.lang)}">
           <p class="masthead__epigraph-text">${quoteMark("masthead__quote-mark")}${escapeHtml(EPIGRAPH.text)}</p>
           <cite class="masthead__cite">—&nbsp;<b>${escapeHtml(EPIGRAPH.author)}</b>, ${escapeHtml(EPIGRAPH.source)}${escapeHtml(quoteYearSuffix(EPIGRAPH))}</cite>

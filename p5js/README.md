@@ -1,10 +1,12 @@
 # p5.js artworks and daily post pipeline
 
-This directory contains browser-native artworks and a headless pipeline that can render one artwork, pair it with a verified public-domain quotation, validate the post body, and optionally publish it to X.
+This directory contains browser-native artworks and a headless pipeline that can render one artwork, pair it with an English aphorism drawn from a public-domain source, validate the post body, and optionally publish it to X.
 
 Publishing is disabled by default. A normal run is a dry run, and the X API is called only when both `--publish` and `X_POSTING_ENABLED=true` are supplied.
 
 ## Artworks
+
+Aphorisms on the gallery and in posts appear in English. Source-critical passages in the artwork notes below document the archived `original` records, not the current display wording or requirements for new work.
 
 | ID | Logical canvas | Export | Timing |
 | --- | --- | --- | --- |
@@ -549,7 +551,7 @@ An entry may add `"quote"` to choose among an artwork's candidates. The first ru
 twenty-five artworks, one a day. Their order is not the manifest's: each family of work —
 the spirals, the tilings, the illusions, the fields, the recursions, the moving toys — is
 spread evenly across the run rather than posted in a block, still and moving alternate as
-far as the counts allow, and no two consecutive days quote the same language. The day it
+far as the counts allow. All quotations now appear in English. The day it
 opens on is De Jong Attractor, whose Nietzsche is about chaos giving birth to a dancing star.
 
 Nothing scheduled for today is not an error: the pipeline says so and stops. That is what
@@ -599,7 +601,17 @@ The manifest points at the published gallery, so a post links to a page that is 
 
 ## Quote catalog
 
-Every entry in `quotes.json` records the original text, a BCP 47 language tag, author, source, year, public-domain verification, and a source URL. Each artwork lists candidate quote IDs in `manifest.json`. If none of an artwork's candidates resolve to a verified public-domain entry, the selector warns and excludes that artwork.
+Every entry in `quotes.json` provides English display text (`lang: "en"`), an author, a source, a year when known, a public-domain flag, and a source URL. Each artwork lists candidate quote IDs in `manifest.json`. If none resolves to a public-domain entry, the selector warns and excludes that artwork. The existing rights check remains in place; it does not certify the English wording as a published translation.
+
+English is the shared language of this collection, chosen for accessibility and a wider audience. Making the artwork takes priority. Quote selection and basic checks of meaning and attribution should fit within a reasonable amount of time; exhaustive searches for originals, multiple-edition collation and typographic reconstruction are not prerequisites for new work. If a suitable quotation cannot be found promptly, choose another or use clearly unattributed original prose.
+
+The translated passages are this collection's English renderings, not quotations from a claimed published translation. `rendering` records this distinction. Shakespeare's passage uses modernized spelling. For changed entries, `original` retains the previous text, language, attribution and source record so a future return to stricter source work remains possible. The gallery and posting pipeline read only the English display fields. Source URLs and dates refer to the underlying source, not to a newly claimed English edition.
+
+The masthead uses Bataille's “Life beyond utility is the domain of sovereignty.” It evokes this collection's attempt to recover sovereignty through unproductive expenditure. The English sentence was located in [Timothy Lavenz's discussion of *The Accursed Share*, volume III](https://epochemagazine.org/33/sovereign-disregard-on-batailles-accursed-share/); it has not been newly collated against a printed edition. It remains outside the artwork catalog and posting path.
+
+### Historical source notes
+
+The notes below preserve earlier source checks. Statements about original spelling, language tags and letter-for-letter readings apply to the archived `original` records when present. They are reference material, not the current editorial policy or the English wording displayed on the site.
 
 The sources are:
 

@@ -170,30 +170,9 @@ body {
   line-height: 1.05;
 }
 
-/*
- * The epigraph under the title, which stands where a lede did. It keeps that measure and
- * that weight of ink exactly — it is still the one paragraph a reader meets first, and the
- * head of the page should not have grown louder for having become a quotation.
- *
- * Italic and a quotation mark carry the fact that it is quoted, which is how the cards say
- * the same thing. What is not borrowed from them is the rule down the side: a card needs it
- * to fence the quotation off from the title above and the source link below, and up here
- * there is nothing on either side to be fenced from.
- */
+/* The short opening quotation shares the cards' italic voice. */
 .masthead__epigraph {
   margin: 0;
-  /*
-   * Two rems wider than the lede's measure, and the widening is the whole of what this rule
-   * changed when the sentence did. Forty is the least that holds this one in three lines
-   * rather than four: at 1440 and 1200 the paragraph comes to 640 pixels and wraps three
-   * times, where 39rem wraps four; at 1024 the type is a shade smaller and 39 would have
-   * done. Past 46rem the measure stops meaning anything, because the text column beside the
-   * figure is capped there and the paragraph can grow no further.
-   *
-   * It does not reach every width. At 900 the row leaves the paragraph 558 pixels whatever
-   * this says, and the sentence needs 585 to make three lines, so it takes four there — as
-   * it does at every width below, which is what the sentence it replaced did too.
-   */
   max-width: 40rem;
   color: var(--ink-dim);
   font-size: clamp(0.95rem, 1.6vw, 1.06rem);
