@@ -674,6 +674,13 @@ test("the sketch draws the module's points and prints the legend", () => {
   // Added ink accumulates between strokes and not within one, so each run is stroked on
   // its own — which is what leaves the blaze on the poles.
   assert.match(SKETCH, /for \(const run of runs\) \{[\s\S]*?context\.beginPath\(\);[\s\S]*?context\.stroke\(\);\n {4}\}/u);
+  // The raw context is drawn to under p5's density, not at one device pixel per logical
+  // pixel. Resetting the transform to the identity shipped in v1.23.1 and drew the whole
+  // figure into the top-left quarter of every Retina screen; the density has to be put
+  // back before anything is drawn, and the capture path is unchanged by it because there
+  // the density is pinned to one.
+  assert.match(SKETCH, /const density = p\.pixelDensity\(\);\n\s*context\.setTransform\(density, 0, 0, density, 0, 0\);/u);
+  assert.doesNotMatch(SKETCH, /setTransform\(1, 0, 0, 1, 0, 0\)/u);
   // The grid's ink answers to the opening; the courses' does not.
   assert.match(SKETCH, /const ink = gridInk\(scene\.open\);/u);
   assert.match(SKETCH, /GRATICULE_NEAR \* ink, GRATICULE_FAR \* ink/u);
@@ -695,6 +702,34 @@ test("the sketch draws the module's points and prints the legend", () => {
   assert.doesNotMatch(SKETCH, /p\.sphere\(|p\.arc\(|p\.triangle\(/u);
   assert.doesNotMatch(SKETCH, /drawPointerIndicator|drawKeyIndicator/u);
   assert.match(INDEX_HTML, /<title>Loxodrome<\/title>/u);
+});
+
+test("the sketch that shipped broken on dense displays is frozen for the density check to be aimed at", () => {
+  // The specimen carries the fault, letter for letter, and the live sketch does not: the
+  // check that opens the specimen is only worth running while both of those hold. It sits
+  // outside artworks/ and off the manifest, so the detectors that sweep the live sketches
+  // neither see it nor have to make room for it.
+  const specimen = readFileSync(
+    new URL("./fixtures/raw-context-density-fault/sketch.js", import.meta.url), "utf8"
+  );
+  assert.equal((specimen.match(/context\.setTransform\(1, 0, 0, 1, 0, 0\);/gu) ?? []).length, 1);
+  assert.doesNotMatch(specimen, /p\.pixelDensity\(\)/u);
+  assert.match(specimen, /as it stood at 8324b32/u);
+  // The live modules, reached by the longer path, and nothing copied: the fault is in the
+  // transform, so the geometry is deliberately left shared.
+  assert.equal((specimen.match(/from "\.\.\/\.\.\/\.\.\/artworks\//gu) ?? []).length, 3);
+  assert.doesNotMatch(specimen, /from "\.\/loxodrome\.js"|from "\.\.\/shared\//u);
+  const page = readFileSync(
+    new URL("./fixtures/raw-context-density-fault/index.html", import.meta.url), "utf8"
+  );
+  assert.match(page, /<title>Loxodrome, before the density fix<\/title>/u);
+  assert.doesNotMatch(page, /shared\.css|page-nav/u);
+  assert.equal(MANIFEST.artworks.some((entry) => entry.entry.includes("fixtures")), false);
+  // And the smoke that aims at it names it, so the specimen cannot outlive its use.
+  const smoke = readFileSync(new URL("../scripts/smoke-density.mjs", import.meta.url), "utf8");
+  assert.match(smoke, /raw-context-density-fault\/index\.html/u);
+  assert.match(smoke, /RAW_SPECIMEN_COMMIT = "8324b32"/u);
+  assert.match(smoke, /sourceOf\(artwork\.id\)\.includes\("drawingContext"\)/u);
 });
 
 test("the catalog keeps the 1841 reading, letter for letter", () => {
@@ -752,6 +787,8 @@ test("the notes give the numbers the tests hold and keep the two straightenings 
   assert.match(section, /7\.11 at the limit/u);
   assert.match(section, /1\.97 times as far up the chart/u);
   assert.match(section, /1560/u);
+  assert.match(section, /top-left quarter/u);
+  assert.match(section, /density into the transform/u);
   assert.match(section, /six courses/iu);
   assert.match(section, /1841/u);
   assert.match(README, /\| \[Loxodrome\]\(p5js\/artworks\/loxodrome\/\) \|/u);

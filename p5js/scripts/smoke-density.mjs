@@ -16,7 +16,12 @@
  *
  * What is checked depends on what an artwork is. The ones that write pixels by hand set
  * every pixel of the canvas themselves, so anything short of the whole buffer being written
- * to is the fault itself. The clips that accumulate cannot be checked that way -- a crystal
+ * to is the fault itself. The ones that draw on the raw context are held to the same
+ * measure, for a different reason: p5 folds the density into the transform it hands the
+ * context, and a sketch that resets that transform draws at one device pixel per logical
+ * pixel, which on a dense display is the top-left quarter of the canvas. That is the second
+ * fault this ran into, and it shipped, because the first version of this only looked at the
+ * pixel writers. The clips that accumulate cannot be checked that way -- a crystal
  * on a dark ground writes the whole buffer while covering very little of it -- so they are
  * asked two things instead. That they move: their opening frame, an early frame and their
  * last must all differ. And that a frame is a function of its index and nothing else, which
@@ -61,6 +66,15 @@ const SPECIMEN_COMMIT = "facea56";
 const SPECIMEN_BARE_BANDS = 4;
 
 /**
+ * The second fault, frozen the same way: Loxodrome as it shipped in v1.23.1, drawing on
+ * the raw context with p5's transform reset to the identity. It paints the top-left quarter
+ * and nothing else -- so the top four of eight bands come back half written and the bottom
+ * four bare. Four bare bands is the fault itself, as above.
+ */
+const RAW_SPECIMEN_PATH = "/p5js/test/fixtures/raw-context-density-fault/index.html";
+const RAW_SPECIMEN_COMMIT = "8324b32";
+
+/**
  * The clips whose frames are walked up to rather than drawn from nothing. A frame of one of
  * these depends on the frames before it, which is the shape that can go wrong quietly, and
  * they are all recent. Pinned so that a new one has to be added here on purpose.
@@ -91,13 +105,27 @@ function sourceOf(artworkId) {
  * canvas is precisely the strip the fault does paint.
  */
 const measureBands = (bands) => {
+  // The first canvas is the artwork's; a sketch that sets its legend on a graphics buffer
+  // has a second, hidden one after it.
   const canvas = document.querySelector("canvas");
-  const context = canvas.getContext("2d");
   const { width, height } = canvas;
+  // A WEBGL canvas has no 2D context to read; its rows are read back from the GL buffer,
+  // which every WEBGL sketch here keeps (`preserveDrawingBuffer`) so that it can be. GL
+  // counts rows from the bottom, so the row is flipped to keep the bands in page order.
+  const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+  const context = gl ? null : canvas.getContext("2d");
+  const readRow = (y) => {
+    if (!gl) {
+      return context.getImageData(0, y, width, 1).data;
+    }
+    const row = new Uint8Array(width * 4);
+    gl.readPixels(0, height - 1 - y, width, 1, gl.RGBA, gl.UNSIGNED_BYTE, row);
+    return row;
+  };
   const shares = [];
   for (let band = 0; band < bands; band += 1) {
     const y = Math.floor((height * (band + 0.5)) / bands);
-    const row = context.getImageData(0, y, width, 1).data;
+    const row = readRow(y);
     let written = 0;
     for (let x = 0; x < width; x += 1) {
       if (row[x * 4 + 3] > 8) {
@@ -171,6 +199,55 @@ try {
   }
   if (specimen.errors.length > 0) {
     failures.push(`the specimen page: ${specimen.errors[0]}`);
+  }
+
+  // The second specimen, held to the same reading. It is the sketch that shipped, not a
+  // sketch written to fail, and the measure has to see the quarter it painted as a quarter.
+  const rawSpecimen = await open(browser, `${server.baseUrl}${RAW_SPECIMEN_PATH}`);
+  const rawSpecimenBands = await rawSpecimen.page.evaluate(measureBands, BANDS);
+  await rawSpecimen.page.close();
+  const rawBare = rawSpecimenBands.shares.filter((share) => share < 95).length;
+  note(
+    `${`specimen ${RAW_SPECIMEN_COMMIT}`.padEnd(26)} backing ${rawSpecimenBands.backing.padEnd(11)}`
+    + ` bands ${rawSpecimenBands.shares.join(" ")}`
+    + `   ${rawBare} of ${BANDS} unpainted (the fault as it shipped)`
+  );
+  if (rawBare < SPECIMEN_BARE_BANDS) {
+    failures.push(
+      `the measure reads ${rawBare} of ${BANDS} bands as unpainted on the sketch that reset`
+      + ` the context's transform, which drew into the top-left quarter and nowhere else`
+    );
+  }
+  if (rawSpecimen.errors.length > 0) {
+    failures.push(`the raw-context specimen page: ${rawSpecimen.errors[0]}`);
+  }
+
+  // Artworks that draw on the raw context. Derived from the source, as the pixel writers
+  // are below: any sketch that touches `drawingContext` is one whose transform is its own
+  // responsibility, and every one of them is opened on the dense display and asked whether
+  // the whole canvas was reached. WEBGL sketches are included -- their rows are read back
+  // from the GL buffer -- because the fault is not confined to one renderer.
+  const rawContext = manifest.artworks
+    .filter((artwork) => sourceOf(artwork.id).includes("drawingContext"))
+    .map((artwork) => artwork.id);
+  if (rawContext.length < 5) {
+    failures.push(`only ${rawContext.length} artworks draw on the raw context, so this sweep is looking at too little`);
+  }
+  for (const artworkId of rawContext) {
+    const { page, errors } = await open(
+      browser,
+      `${server.baseUrl}/p5js/artworks/${artworkId}/index.html`
+    );
+    const { backing, shares } = await page.evaluate(measureBands, BANDS);
+    const unpainted = shares.filter((share) => share < 95);
+    note(`${artworkId.padEnd(26)} backing ${backing.padEnd(11)} bands ${shares.join(" ")}   raw context`);
+    if (unpainted.length > 0) {
+      failures.push(`${artworkId} leaves ${unpainted.length} of ${BANDS} bands unpainted at ${DEVICE_PIXEL_RATIO}x`);
+    }
+    if (errors.length > 0) {
+      failures.push(`${artworkId}: ${errors[0]}`);
+    }
+    await page.close();
   }
 
   // Artworks that write every pixel by hand. Derived rather than listed, so one that starts

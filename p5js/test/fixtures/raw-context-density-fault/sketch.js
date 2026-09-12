@@ -1,5 +1,35 @@
-import { hintMode } from "../shared/hint-mode.js";
-import { drawKeyHint } from "../shared/key-hint.js";
+/**
+ * Loxodrome as it stood at 8324b32, the sketch that shipped in v1.23.1 and broke on every
+ * dense display. Frozen on purpose: this is the fault a reader on a Retina screen actually
+ * saw, kept as a specimen for the density check to be aimed at.
+ *
+ * One thing is wrong with it, and it is wanted here. `drawScene` draws to the raw context
+ * and opens with `context.setTransform(1, 0, 0, 1, 0, 0)`, which replaces p5's transform --
+ * and with it the pixel density p5 folds into that transform. On a display of density two
+ * p5 backs a 680-pixel canvas with 1360 device pixels; the reset draws 680 device pixels,
+ * which is the top-left quarter of the canvas, and the other three quarters are never
+ * written to. The courses, drawn past the frame on purpose, run out of the painted quarter
+ * onto the transparent rest, and the legend, drawn through p5's own API, lands at the foot
+ * of the canvas three hundred pixels below the picture.
+ *
+ * It went unseen because every check before publication ran at a density of one, where
+ * the reset is harmless; and the density check that did run at two looked only at the
+ * sketches that write `p.pixels` by hand, which this one does not.
+ *
+ * Nothing here is to be followed or repaired. It is not an artwork: it sits outside
+ * `artworks/`, it is absent from the manifest, and the site build never copies it, so the
+ * detectors that hold the live sketches to the opposite of all this neither see it nor have
+ * to make room for it. The check that opens this page is asking whether it can still see a
+ * fault that was really made, and the answer stops meaning anything the moment this file
+ * is brought up to date.
+ *
+ * Three lines differ from the commit, all imports: the same live modules, named by a
+ * longer path, because this file sits further away from them. They are deliberately left
+ * live. The fault is in the transform rather than in the geometry, so no change to
+ * `loxodrome.js` can make the lower three quarters of this canvas get painted.
+ */
+import { hintMode } from "../../../artworks/shared/hint-mode.js";
+import { drawKeyHint } from "../../../artworks/shared/key-hint.js";
 import {
   COURSES,
   DURATION_SECONDS,
@@ -20,7 +50,7 @@ import {
   sceneAt,
   splitByDepth,
   viewCurve
-} from "./loxodrome.js";
+} from "../../../artworks/loxodrome/loxodrome.js";
 
 /**
  * Six courses held at one bearing, on the globe and on the chart drawn for them.
@@ -163,14 +193,7 @@ new P5((p) => {
 
   function drawScene(scene) {
     context.save();
-    // The context is drawn to directly, so p5's own transform is replaced here -- and
-    // with it the pixel density it carries. On a Retina screen p5 backs a 680-pixel
-    // canvas with 1360 device pixels and scales every drawing call by two; a transform
-    // reset to the identity draws 680 device pixels, which is the top-left quarter of the
-    // canvas, and the rest of it is left transparent. So the density is put back first.
-    // While capturing it is pinned to one, and nothing below changes.
-    const density = p.pixelDensity();
-    context.setTransform(density, 0, 0, density, 0, 0);
+    context.setTransform(1, 0, 0, 1, 0, 0);
     context.globalCompositeOperation = "source-over";
     context.fillStyle = `rgb(${GROUND[0]}, ${GROUND[1]}, ${GROUND[2]})`;
     context.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
