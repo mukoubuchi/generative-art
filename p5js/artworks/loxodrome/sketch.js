@@ -1,23 +1,14 @@
-import { hintMode } from "../shared/hint-mode.js";
-import { drawKeyHint } from "../shared/key-hint.js";
 import {
   COURSES,
   DURATION_SECONDS,
   LOGICAL_SIZE,
-  MAXIMUM_BEARING,
-  MINIMUM_BEARING,
-  OPENING_BEARING,
   PLAYBACK_FPS,
-  RESTING_TILT,
   TOTAL_FRAMES,
-  courseCurves,
-  degrees,
-  depthFloor,
-  figureFrame,
   WIDEST_STROKE,
+  courseCurves,
+  depthFloor,
   graticuleCurves,
   gridInk,
-  morphAt,
   sceneAt,
   splitByDepth,
   viewCurve
@@ -33,9 +24,10 @@ import {
  * where the blaze was, because the chart that straightens them has put the pole an
  * infinite distance up the page.
  *
- * The page hands the three things the clip performs to the reader: the globe turns under
- * the hand, the arrow keys open and close the bearing, and space unrolls the chart. The
- * clip performs them instead, because a clip cannot be dragged or typed at.
+ * The page plays the same twelve-second staging the clip is rendered from, advanced from
+ * elapsed time so that a missed draw skips ahead rather than stretching the performance,
+ * and loops. There is nothing for the reader to do, so there is no legend: the figure was
+ * an instrument once, and the instrument told nothing the staging does not.
  *
  * The figure is three-dimensional and the module holds all of it, projection included:
  * every point reaching this file has already been morphed, turned and scaled into the
@@ -52,12 +44,6 @@ const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE
   ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10))
   : 1;
-const HINT = hintMode(PARAMETERS, CAPTURE_MODE);
-const HINT_LEGEND = [
-  { cap: "drag", text: "turn the globe" },
-  { cap: "← →", text: "change the bearing" },
-  { cap: "space", text: "unroll the chart" }
-];
 const OUTPUT_SIZE = LOGICAL_SIZE * RENDER_SCALE;
 
 /**
@@ -84,26 +70,14 @@ const GRATICULE_WEIGHT = 1;
 const COURSE_WEIGHT = 1.4;
 const HALO_WEIGHT = WIDEST_STROKE;
 
-/** How fast the page answers: forty degrees of bearing a second, and an unrolling in one. */
-const BEARING_RATE = degrees(40) / PLAYBACK_FPS;
-const OPEN_RATE = 1 / (PLAYBACK_FPS * 1.2);
-/** The globe's own drift on the page, so the figure is alive before it is touched. */
-const DRIFT = 2 * Math.PI / (PLAYBACK_FPS * 90);
-
 const GRATICULE_CURVES = graticuleCurves().map((curve) => curve.points);
 
 const P5 = window.p5;
 
 new P5((p) => {
   let context;
+  let playbackStartedAt;
   let courseCache = { bearing: null, curves: null };
-  const live = {
-    spin: 0,
-    tilt: RESTING_TILT,
-    bearing: OPENING_BEARING,
-    open: 0,
-    openTarget: 0
-  };
 
   function courseCurvesFor(bearing) {
     if (courseCache.bearing !== bearing) {
@@ -178,9 +152,7 @@ new P5((p) => {
     // The module returns the picture plane with the origin at the middle of the figure and
     // the second axis pointing up, as the figure's own does; a canvas counts down from the
     // top, so the axis is turned over here and nowhere else.
-    // The figure's middle stands where the module says: on the stage above the legend
-    // for the globe, on the canvas for the chart.
-    context.translate(OUTPUT_SIZE / 2, scene.stageCentreY * RENDER_SCALE);
+    context.translate(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2);
     context.scale(1, -1);
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -197,20 +169,13 @@ new P5((p) => {
     context.restore();
   }
 
-  function drawLegend() {
-    p.push();
-    p.scale(RENDER_SCALE);
-    drawKeyHint(p, HINT_LEGEND, LOGICAL_SIZE, LOGICAL_SIZE, HINT.scale);
-    p.pop();
-  }
-
   function publishState(frameIndex, scene) {
     const state = {
       kind: "video",
       frameIndex,
       totalFrames: TOTAL_FRAMES,
       durationSeconds: DURATION_SECONDS,
-      act: scene.act ?? "live",
+      act: scene.act,
       bearingDegrees: scene.bearing * 180 / Math.PI,
       open: scene.open,
       sphereness: scene.sphereness,
@@ -229,23 +194,6 @@ new P5((p) => {
     return state;
   }
 
-  function liveScene() {
-    const { sphereness, wrap } = morphAt(live.open);
-    const { centre, roundness, scale, stageCentreY } = figureFrame(live.open);
-    return {
-      spin: live.spin,
-      tilt: live.tilt,
-      bearing: live.bearing,
-      open: live.open,
-      sphereness,
-      wrap,
-      centre,
-      roundness,
-      scale,
-      stageCentreY
-    };
-  }
-
   p.setup = () => {
     p.createCanvas(OUTPUT_SIZE, OUTPUT_SIZE).parent("artwork");
     // Pinned only while capturing, and only after the canvas exists: an export is the size
@@ -261,63 +209,23 @@ new P5((p) => {
       window.__renderFrame = (frameIndex) => {
         const scene = sceneAt(frameIndex);
         drawScene(scene);
-        // The clip carries no legend: it cannot be dragged or typed at. The gallery
-        // thumbnail is a picture of a page that can be, so it asks for one.
-        if (HINT.shown) {
-          drawLegend();
-        }
         return Promise.resolve(publishState(frameIndex, scene));
       };
     }
-    const opening = CAPTURE_MODE ? sceneAt(0) : liveScene();
+    const opening = sceneAt(0);
     drawScene(opening);
-    if (!CAPTURE_MODE && HINT.shown) {
-      drawLegend();
-    }
     publishState(0, opening);
+    playbackStartedAt = window.performance.now();
   };
 
   p.draw = () => {
     if (CAPTURE_MODE) {
       return;
     }
-    if (p.keyIsDown(p.LEFT_ARROW)) {
-      live.bearing = Math.max(MINIMUM_BEARING, live.bearing - BEARING_RATE);
-    }
-    if (p.keyIsDown(p.RIGHT_ARROW)) {
-      live.bearing = Math.min(MAXIMUM_BEARING, live.bearing + BEARING_RATE);
-    }
-    live.open = live.openTarget > live.open
-      ? Math.min(live.openTarget, live.open + OPEN_RATE)
-      : Math.max(live.openTarget, live.open - OPEN_RATE);
-    // The globe keeps its own slow turn; the chart, once unrolled, stays put.
-    live.spin += DRIFT * (1 - live.open);
-    const scene = liveScene();
+    const elapsed = window.performance.now() - playbackStartedAt;
+    const frameIndex = Math.floor(elapsed * PLAYBACK_FPS / 1000) % TOTAL_FRAMES;
+    const scene = sceneAt(frameIndex);
     drawScene(scene);
-    if (HINT.shown) {
-      drawLegend();
-    }
-    publishState(p.frameCount, scene);
-  };
-
-  p.keyPressed = () => {
-    if (p.key === " ") {
-      live.openTarget = live.openTarget > 0.5 ? 0 : 1;
-      return false;
-    }
-    // The arrows scroll a page by default, and this one is a canvas being steered.
-    if (p.keyCode === p.LEFT_ARROW || p.keyCode === p.RIGHT_ARROW) {
-      return false;
-    }
-    return true;
-  };
-
-  p.mouseDragged = () => {
-    live.spin += (p.mouseX - p.pmouseX) * 0.01;
-    live.tilt = Math.max(
-      -Math.PI / 2,
-      Math.min(Math.PI / 2, live.tilt + (p.mouseY - p.pmouseY) * 0.008)
-    );
-    return false;
+    publishState(frameIndex, scene);
   };
 });

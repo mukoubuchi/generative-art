@@ -26,7 +26,9 @@
  * Three lines differ from the commit, all imports: the same live modules, named by a
  * longer path, because this file sits further away from them. They are deliberately left
  * live. The fault is in the transform rather than in the geometry, so no change to
- * `loxodrome.js` can make the lower three quarters of this canvas get painted.
+ * `loxodrome.js` can make the lower three quarters of this canvas get painted. Two
+ * constants the page's controls used are carried below since the live module dropped
+ * them; the drawing they steer is the drawing the reader saw.
  */
 import { hintMode } from "../../../artworks/shared/hint-mode.js";
 import { drawKeyHint } from "../../../artworks/shared/key-hint.js";
@@ -34,8 +36,6 @@ import {
   COURSES,
   DURATION_SECONDS,
   LOGICAL_SIZE,
-  MAXIMUM_BEARING,
-  MINIMUM_BEARING,
   OPENING_BEARING,
   PLAYBACK_FPS,
   RESTING_TILT,
@@ -51,6 +51,12 @@ import {
   splitByDepth,
   viewCurve
 } from "../../../artworks/loxodrome/loxodrome.js";
+
+// The page's bearing limits as they stood at 8324b32. The live module dropped them when
+// the page stopped being an instrument, so they are carried here rather than imported;
+// nothing about the fault depends on their values.
+const MINIMUM_BEARING = 0;
+const MAXIMUM_BEARING = degrees(80);
 
 /**
  * Six courses held at one bearing, on the globe and on the chart drawn for them.

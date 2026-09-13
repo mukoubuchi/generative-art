@@ -6,7 +6,6 @@ import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
   ACTS,
   ACT_FRAMES,
-  ANTIALIAS_REACH,
   CHART_EDGE_LATITUDE,
   COURSES,
   COURSE_MAXIMUM_SAMPLES,
@@ -15,19 +14,13 @@ import {
   DURATION_SECONDS,
   FLATNESS_FLOOR,
   FRAME_FILL,
-  GLOBE_RADIUS,
   GRID_ON_THE_CHART,
-  LEGEND_GAP,
-  LEGEND_PLATE_TOP,
   LOGICAL_SIZE,
-  MAXIMUM_BEARING,
   MERIDIAN_STEP,
-  MINIMUM_BEARING,
   OPENING_BEARING,
   PLAYBACK_FPS,
   SPHERE_SCALE,
   SPIN_FRAMES,
-  STAGE,
   TOTAL_FRAMES,
   UNWOUND_BEARING,
   WIDEST_STROKE,
@@ -519,13 +512,9 @@ test("the grid fits the frame at every frame of the clip, and the courses run of
 test("a course stops where its own turns close up, not where the geometry does", () => {
   // One turn carries the course 2 PI / tan(bearing) up the chart while the globe's circle
   // of latitude shrinks; the drawing stops where the two put successive turns one logical
-  // pixel apart -- on a globe of the radius the stop was set for. That radius is kept
-  // rather than followed when the globe was moved onto the stage: the stop also fixes
-  // where every course is sampled, and following the globe redrew the chart. On the globe
-  // as drawn the last turns stand 0.951 pixels apart.
+  // pixel apart.
   assert.equal(SPHERE_SCALE, LOGICAL_SIZE * FRAME_FILL / 2);
-  assert.notEqual(SPHERE_SCALE, GLOBE_RADIUS);
-  assert.equal((GLOBE_RADIUS / SPHERE_SCALE).toFixed(3), "0.951");
+  assert.equal(SPHERE_SCALE, figureFrame(0).scale);
   const latitude = latitudeFromIsometric(COURSE_PSI_END);
   assert.equal(inDegrees(latitude).toFixed(5), "89.91432");
   assert.ok(
@@ -540,32 +529,38 @@ test("a course stops where its own turns close up, not where the geometry does",
   assert.ok(courseSamples(UNWOUND_BEARING) < courseSamples(OPENING_BEARING));
   assert.equal(courseSamples(UNWOUND_BEARING), COURSE_MINIMUM_SAMPLES);
   assert.equal(courseSamples(OPENING_BEARING), 756);
-  // The ceiling is a guard rather than a working limit: no bearing the reader can reach
-  // asks for as many samples as it allows, so no course is ever drawn coarser than the
-  // three degrees of longitude a step is meant to be. It used to be reached at 84 degrees,
-  // which the page could reach, and the courses went to dashes there.
-  assert.equal(courseSamples(MAXIMUM_BEARING), 1560);
-  assert.ok(courseSamples(MAXIMUM_BEARING) < COURSE_MAXIMUM_SAMPLES);
-  for (let degree = 0; degree <= 80; degree += 1) {
-    assert.ok(courseSamples(degrees(degree)) < COURSE_MAXIMUM_SAMPLES, `${degree} degrees hits the ceiling`);
+  // The ceiling is a guard rather than a working limit: no bearing the clip uses asks for
+  // as many samples as it allows, so no course is ever drawn coarser than the three
+  // degrees of longitude a step is meant to be. The page once let a reader wind the
+  // bearing to 84 degrees, where the ceiling was reached and the courses went to dashes.
+  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+    assert.ok(courseSamples(sceneAt(frame).bearing) < COURSE_MAXIMUM_SAMPLES, `frame ${frame} hits the ceiling`);
   }
   // Not vacuous: the ceiling is a real one, and a bearing past the limit does reach it.
   assert.equal(courseSamples(degrees(84)), COURSE_MAXIMUM_SAMPLES);
 });
 
-test("the chart stays a set of lines at every bearing the reader can reach", () => {
-  // What the limit is for. On the chart the courses are parallel straight lines whose
-  // number grows with tan of the bearing, so past some bearing they close up and the sheet
-  // fills in with their light. At 88 degrees, which the page used to allow, they stand
-  // 3.40 pixels apart and the chart came out as an even wash -- 86.7 per cent of the
-  // canvas lit, measured on the page itself.
-  assert.equal(Math.round(MAXIMUM_BEARING * 180 / Math.PI), 80);
-  assert.equal(MINIMUM_BEARING, 0);
+test("the chart stays a set of lines at every bearing the clip uses", () => {
+  // Why the clip's bearing goes no higher than seventy degrees. On the chart the courses
+  // are parallel straight lines whose number grows with tan of the bearing, so past some
+  // bearing they close up and the sheet fills in with their light. The page once let a
+  // reader wind it to 88 degrees, where they stand 3.40 pixels apart and the chart came
+  // out as an even wash -- 86.7 per cent of the canvas lit, measured on the page itself.
+  let lowest = Infinity;
+  let highest = -Infinity;
+  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+    const { bearing } = sceneAt(frame);
+    lowest = Math.min(lowest, bearing);
+    highest = Math.max(highest, bearing);
+  }
+  assert.equal(lowest, UNWOUND_BEARING);
+  assert.equal(highest, OPENING_BEARING);
+  assert.equal(Math.round(highest * 180 / Math.PI), 70);
 
   // The spacing is exact, and it is checked against the drawing rather than trusted: the
   // gaps between where the drawn pieces cross a line laid across the courses.
   const scene = sceneAt(300);
-  for (const degree of [20, 45, 70, 80]) {
+  for (const degree of [20, 45, 70]) {
     const bearing = degrees(degree);
     const slope = Math.tan(bearing);
     const length = Math.hypot(1, slope);
@@ -592,31 +587,23 @@ test("the chart stays a set of lines at every bearing the reader can reach", () 
     assert.ok(Math.abs(widest - chartSpacing(bearing)) < 0.01,
       `${degree} degrees: the drawing spaces them ${widest} and the formula says ${chartSpacing(bearing)}`);
   }
-  assert.equal(chartSpacing(MAXIMUM_BEARING).toFixed(2), "16.92");
   assert.equal(chartSpacing(OPENING_BEARING).toFixed(2), "33.34");
   assert.equal(chartSpacing(degrees(88)).toFixed(2), "3.40");
 
-  // Spacing alone does not settle it, so it is not what the limit is held by. A halo is
-  // five pixels wide, and 84 degrees clears that with 10.19 -- yet 84 degrees is a wash.
-  // What tracks the wash is how much of the canvas the strokes cover, which is measured
-  // from the length that falls inside the frame.
+  // Spacing alone does not settle it. A halo is five pixels wide, and 84 degrees clears
+  // that with 10.19 -- yet 84 degrees is a wash. What tracks the wash is how much of the
+  // canvas the strokes cover, measured from the length that falls inside the frame.
   assert.ok(chartSpacing(degrees(84)) > 2 * 5);
-  const atLimit = chartCoverage(MAXIMUM_BEARING);
   const atOpening = chartCoverage(OPENING_BEARING);
-  assert.equal((100 * atLimit).toFixed(2), "7.11");
   assert.equal((100 * atOpening).toFixed(2), "3.61");
-  // Twice the clip's own density and no more. On the page this reads as 27 per cent of the
-  // canvas lit against 21 at the opening bearing, where the lines are still distinct.
-  assert.ok(atLimit < 0.08, `the limit covers ${(100 * atLimit).toFixed(2)} per cent`);
-  assert.ok(atLimit < 2.2 * atOpening);
-
-  // The negative controls: every bearing the limit now excludes is one this would reject.
+  assert.ok(atOpening < 0.04, `the clip's chart covers ${(100 * atOpening).toFixed(2)} per cent`);
+  // The negative controls: the bearings the page used to reach, and what they would cover.
   for (const degree of [84, 86, 88]) {
     assert.ok(chartCoverage(degrees(degree)) > 0.08,
       `${degree} degrees would have passed at ${(100 * chartCoverage(degrees(degree))).toFixed(2)} per cent`);
-    assert.ok(degrees(degree) > MAXIMUM_BEARING, `${degree} degrees is still reachable`);
+    assert.ok(degrees(degree) > highest, `the clip reaches ${degree} degrees`);
   }
-  // Monotone, so the limit is a limit rather than one lucky bearing.
+  // Monotone, so the clip's ceiling is a ceiling rather than one lucky bearing.
   let previous = 0;
   for (let degree = 0; degree <= 88; degree += 4) {
     const coverage = chartCoverage(degrees(degree));
@@ -659,10 +646,9 @@ test("the figure is a globe of radius one, and a sheet a turn wide", () => {
   assert.ok(Math.abs(sheet.size[0] - 2 * Math.PI) < 1e-12);
   assert.ok(Math.abs(sheet.size[1] - 2 * isometricLatitude(CHART_EDGE_LATITUDE)) < 1e-12);
   assert.equal(sheet.size[2], 0);
-  // The chart's width is 0.86 of the canvas, framed on the canvas; the globe is framed on
-  // the stage above the legend instead, which is what the next test is about.
+  // Both fill the same square: the globe's diameter and the chart's width are one length.
+  assert.equal(figureFrame(0).scale * 2, LOGICAL_SIZE * FRAME_FILL);
   assert.ok(Math.abs(figureFrame(1).scale * 2 * Math.PI - LOGICAL_SIZE * FRAME_FILL) < 1e-12);
-  assert.equal(figureFrame(0).scale, GLOBE_RADIUS);
 
   // The view turns the figure and reads depth off the third component.
   const point = viewPoint([0, 0, 1], 0, 0, [0, 0, 0], 1);
@@ -672,70 +658,7 @@ test("the figure is a globe of radius one, and a sheet a turn wide", () => {
   assert.ok(Math.abs(quarter[2]) < 1e-12);
 });
 
-test("the globe stands on the stage above the legend, and the chart keeps the canvas", () => {
-  // The plate's top is the legend's own, derived from key-hint's geometry at the page's
-  // type size, so this and the legend cannot drift apart. The figure measured 635.3 on the
-  // page before the stage existed.
-  assert.equal(LEGEND_PLATE_TOP.toFixed(2), "635.26");
-  assert.equal(LEGEND_GAP, 36);
-  assert.equal(STAGE.top, LEGEND_GAP);
-  assert.ok(Math.abs(STAGE.bottom - (LEGEND_PLATE_TOP - LEGEND_GAP)) < 1e-12);
-  assert.ok(Math.abs(STAGE.centreY - 317.628) < 1e-3);
-  // Two radii, one halo and its two antialiased edges fill the stage exactly.
-  assert.equal(WIDEST_STROKE, 5);
-  assert.equal(ANTIALIAS_REACH, 1);
-  assert.ok(Math.abs(2 * GLOBE_RADIUS + WIDEST_STROKE + 2 * ANTIALIAS_REACH - STAGE.height) < 1e-12);
-  assert.equal(GLOBE_RADIUS.toFixed(3), "278.128");
-
-  // The chart is not framed this way, and nothing about it moved: same scale, same middle.
-  const chart = figureFrame(1);
-  assert.equal(chart.scale.toFixed(3), "93.074");
-  assert.equal(chart.stageCentreY, LOGICAL_SIZE / 2);
-  const globe = figureFrame(0);
-  assert.equal(globe.stageCentreY, STAGE.centreY);
-  // One straight blend between, so the figure slides rather than jumps.
-  const half = figureFrame(0.5);
-  assert.ok(Math.abs(half.stageCentreY - (STAGE.centreY + LOGICAL_SIZE / 2) / 2) < 1e-12);
-
-  // The claim itself, measured from the drawing's own geometry over the states the page
-  // can be in while the figure is round: every bearing the reader can reach, every tilt
-  // the clip uses, five turns of the globe -- the lowest point any run reaches, plus the
-  // ink beyond it, stays the gap above the plate.
-  const { sphereness, wrap } = morphAt(0);
-  const grid = graticuleCurves().map((curve) => curve.points);
-  const reach = WIDEST_STROKE / 2 + ANTIALIAS_REACH;
-  let lowest = -Infinity;
-  let states = 0;
-  for (let bearing = 0; bearing <= 80; bearing += 5) {
-    const pieces = courseCurves(degrees(bearing)).flatMap((course) => course.pieces);
-    for (let tilt = 22; tilt <= 88; tilt += 6) {
-      for (const spin of [0, 0.7, 1.9, 3.1, 4.4]) {
-        const scene = { sphereness, wrap, spin, tilt: degrees(tilt), centre: globe.centre, scale: globe.scale, open: 0 };
-        let low = Infinity;
-        for (const points of grid) for (const point of viewCurve(points, scene)) low = Math.min(low, point[1]);
-        for (const points of pieces) for (const point of viewCurve(points, scene)) low = Math.min(low, point[1]);
-        lowest = Math.max(lowest, globe.stageCentreY - low + reach);
-        states += 1;
-      }
-    }
-  }
-  assert.equal(states, 17 * 12 * 5);
-  assert.ok(lowest <= LEGEND_PLATE_TOP - LEGEND_GAP + 1e-9,
-    `the globe's ink reaches ${lowest.toFixed(3)}, past ${(LEGEND_PLATE_TOP - LEGEND_GAP).toFixed(3)}`);
-  // And exactly, not by slack: the fit is a fit.
-  assert.ok(LEGEND_PLATE_TOP - LEGEND_GAP - lowest < 1e-6);
-  // Measured on the pictures as well: over all 230 frames of the globe the lowest lit row
-  // is 598, the plate's top is 635.26, and the 26 frames of the open chart are identical
-  // to the byte with the drawing before the stage.
-
-  // The negative control is the framing this replaced: the globe centred on the canvas at
-  // 0.86 of it reached 634.9, three tenths of a pixel short of the plate.
-  const before = LOGICAL_SIZE / 2 + LOGICAL_SIZE * FRAME_FILL / 2 + WIDEST_STROKE / 2;
-  assert.ok(before > LEGEND_PLATE_TOP - LEGEND_GAP);
-  assert.equal(before.toFixed(1), "634.9");
-});
-
-test("the sketch draws the module's points and prints the legend", () => {
+test("the sketch plays the staging from the clock and hands nothing to the reader", () => {
   assert.match(SKETCH, /from "\.\/loxodrome\.js"/u);
   // The projection is the module's, so what is left for the sketch is stroking polylines,
   // and the canvas is the plain one. p5's WEBGL renderer builds a stroke's geometry per
@@ -745,8 +668,7 @@ test("the sketch draws the module's points and prints the legend", () => {
   assert.doesNotMatch(SKETCH, /p\.WEBGL/u);
   assert.doesNotMatch(SKETCH, /createGraphics/u);
   assert.match(SKETCH, /globalCompositeOperation = "lighter"/u);
-  assert.match(SKETCH, /context\.translate\(OUTPUT_SIZE \/ 2, scene\.stageCentreY \* RENDER_SCALE\)/u);
-  assert.doesNotMatch(SKETCH, /context\.translate\(OUTPUT_SIZE \/ 2, OUTPUT_SIZE \/ 2\)/u);
+  assert.match(SKETCH, /context\.translate\(OUTPUT_SIZE \/ 2, OUTPUT_SIZE \/ 2\)/u);
   assert.match(SKETCH, /const HALO_WEIGHT = WIDEST_STROKE;/u);
   assert.match(SKETCH, /context\.scale\(1, -1\)/u);
   // Added ink accumulates between strokes and not within one, so each run is stroked on
@@ -766,15 +688,19 @@ test("the sketch draws the module's points and prints the legend", () => {
   assert.match(SKETCH, /splitByDepth\(viewCurve\(points, scene\), floor\)/u);
   assert.match(SKETCH, /depthFloor\(scene\.scale\)/u);
   assert.match(SKETCH, /return Promise\.resolve\(publishState\(/u);
-  assert.match(SKETCH, /drawKeyHint\(/u);
-  // Three controls, in the order the clip performs them.
-  assert.match(SKETCH, /\{ cap: "drag", text: "turn the globe" \}/u);
-  assert.match(SKETCH, /\{ cap: "← →", text: "change the bearing" \}/u);
-  assert.match(SKETCH, /\{ cap: "space", text: "unroll the chart" \}/u);
-  assert.match(SKETCH, /p\.keyIsDown\(p\.LEFT_ARROW\)/u);
-  assert.match(SKETCH, /p\.keyIsDown\(p\.RIGHT_ARROW\)/u);
-  assert.match(SKETCH, /live\.openTarget = live\.openTarget > 0\.5 \? 0 : 1/u);
-  assert.match(SKETCH, /p\.mouseDragged = \(\) =>/u);
+  // A clip, on the page as in the export: the staging advanced from elapsed time, so a
+  // missed draw skips ahead rather than stretching the performance; and nothing handed to
+  // the reader, so no legend and no handler. The page was an instrument once -- drag,
+  // arrows, space -- and the ruling was the one The Same Tower had: if the mechanism does
+  // not read through the controls, stage it.
+  assert.match(SKETCH, /window\.performance\.now\(\)/u);
+  assert.match(SKETCH, /playbackStartedAt = window\.performance\.now\(\);/u);
+  assert.match(SKETCH, /Math\.floor\(elapsed \* PLAYBACK_FPS \/ 1000\) % TOTAL_FRAMES/u);
+  assert.match(SKETCH, /const scene = sceneAt\(frameIndex\);\n\s*drawScene\(scene\);\n\s*publishState\(frameIndex, scene\);/u);
+  assert.doesNotMatch(SKETCH, /drawKeyHint|hintMode|HINT_LEGEND|__KEY_HINT_BOUNDS__/u);
+  assert.doesNotMatch(SKETCH, /keyPressed|keyIsDown|keyCode|mouseDragged|mousePressed|touch/u);
+  assert.doesNotMatch(SKETCH, /MAXIMUM_BEARING|MINIMUM_BEARING|openTarget|DRIFT/u);
+  assert.doesNotMatch(SKETCH, /p\.frameCount/u);
   // No lettering, no pointing, no furniture of a textbook figure.
   assert.doesNotMatch(SKETCH, /p\.text\(/u);
   assert.doesNotMatch(SKETCH, /p\.sphere\(|p\.arc\(|p\.triangle\(/u);
@@ -797,6 +723,10 @@ test("the sketch that shipped broken on dense displays is frozen for the density
   // transform, so the geometry is deliberately left shared.
   assert.equal((specimen.match(/from "\.\.\/\.\.\/\.\.\/artworks\//gu) ?? []).length, 3);
   assert.doesNotMatch(specimen, /from "\.\/loxodrome\.js"|from "\.\.\/shared\//u);
+  // The specimen has to load against today's module to be aimed at, so the two page
+  // limits the module no longer exports are carried in it rather than imported.
+  assert.match(specimen, /const MAXIMUM_BEARING = degrees\(80\);/u);
+  assert.doesNotMatch(specimen, /^\s+MAXIMUM_BEARING,$/mu);
   const page = readFileSync(
     new URL("./fixtures/raw-context-density-fault/index.html", import.meta.url), "utf8"
   );
@@ -850,26 +780,27 @@ test("the notes give the numbers the tests hold and keep the two straightenings 
   assert.match(section, /2\.302585/u);
   assert.match(section, /89\.91432/u);
   assert.match(section, /The thumbnail is frame 90/u);
+  assert.match(section, /plays the same twelve-second staging/u);
+  // The instrument is history in the notes, not the present: it may be told in the past
+  // tense, and must not be offered.
+  assert.doesNotMatch(section, /hands the reader|arrow keys open and close|space unrolls the chart and rolls/u);
+  assert.match(section, /It was an instrument for a day/u);
   assert.match(section, /137 milliseconds/u);
   assert.match(section, /0\.36 milliseconds/u);
   assert.match(section, /reaches 162 and no pixel is white/u);
   assert.match(section, /1 − 0\.55 × open/u);
   assert.match(section, /0\.4471/u);
   assert.match(section, /261,120 pixels/u);
-  // The limit, and the two numbers that decide it rather than the one that does not.
-  assert.match(section, /the meridian and 80°/u);
-  assert.doesNotMatch(section, /the meridian and 88°/u);
+  // Why the clip's bearing stops at seventy: the two numbers that decide it and the one
+  // that does not.
+  assert.doesNotMatch(section, /the meridian and 8\d°/u);
   assert.match(section, /3\.40 pixels apart/u);
-  assert.match(section, /16\.92 pixels apart/u);
+  assert.match(section, /33\.34/u);
   assert.match(section, /86\.7 per cent of the canvas lit/u);
-  assert.match(section, /7\.11 at the limit/u);
+  assert.match(section, /3\.61 per cent/u);
   assert.match(section, /1\.97 times as far up the chart/u);
-  assert.match(section, /1560/u);
-  assert.match(section, /0\.951 pixels/u);
-  assert.match(section, /36 pixels above/u);
-  assert.match(section, /278\.1/u);
-  assert.match(section, /635\.26/u);
-  assert.doesNotMatch(section, /same square/u);
+  assert.match(section, /fill the same square/u);
+  assert.doesNotMatch(section, /0\.951|36 pixels above|278\.1|635\.26|stands above the legend/u);
   assert.match(section, /top-left quarter/u);
   assert.match(section, /density into the transform/u);
   assert.match(section, /six courses/iu);
