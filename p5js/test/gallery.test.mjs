@@ -174,6 +174,34 @@ test("the shutter cannot outlive the departure it dressed", async () => {
   assert.match(script, /querySelectorAll\("\.shutter"\)/u, "the sweep does not look for shutters");
 });
 
+test("a ring answers a touch anywhere on the page, and the scrolling of it", async () => {
+  // The ring used to live inside each card and answer only a press on one. It now sits on
+  // a layer over the whole page and answers a press wherever it lands, with a finger as
+  // with a pointer, and a scroll from its point of contact. What is pinned is where the
+  // listeners hang — the window, not the cards — that the layer lets every press through,
+  // and that the cards carry no ring of their own any more, so the two cannot quietly come
+  // back as a pair.
+  const script = await readFile(new URL("../gallery/gallery.js", import.meta.url), "utf8");
+  const stylesheet = await readFile(new URL("../gallery/gallery.css", import.meta.url), "utf8");
+  const start = script.indexOf("function rippleOnContact()");
+  assert.ok(start >= 0, "the page has no ring of its own");
+  const body = script.slice(start, script.indexOf("\n}\n", start));
+  assert.match(body, /window\.addEventListener\("pointerdown"/u, "a press on the page is not listened for");
+  assert.match(body, /window\.addEventListener\("scroll"/u, "the scroll is not listened for");
+  assert.match(body, /document\.body\.append\(layer\)/u, "the rings have no layer over the page");
+  assert.doesNotMatch(body, /\.card\b/u, "the ring is tied to the cards again");
+
+  assert.match(stylesheet, /\.ripples \{[^}]*position: fixed;/u, "the layer is not fixed over the page");
+  assert.match(stylesheet, /\.ripples \{[^}]*pointer-events: none;/u, "the layer would take the press it answers");
+  assert.match(stylesheet, /\.ripples,\n\s+\.curtain \{\n\s+display: none;/u,
+    "the layer is not removed under prefers-reduced-motion");
+  assert.doesNotMatch(stylesheet, /card__ripple/u, "the card still styles a ring of its own");
+
+  const { manifest, quoteCatalog } = await loadCatalog();
+  const html = renderIndexPage(manifest, quoteCatalog);
+  assert.doesNotMatch(html, /card__ripple/u, "the cards still carry a ring of their own");
+});
+
 test("the README's count of the artworks that carry the moving mark is the manifest's own", async () => {
   // Another number written out in prose, beside a truth kept somewhere else. The mark goes
   // on the cards of artworks that move, so what it counts is a question about the manifest

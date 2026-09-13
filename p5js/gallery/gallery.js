@@ -1,8 +1,8 @@
 /**
  * The jobs the stylesheet cannot do on its own: noticing that something has been scrolled
- * to, noticing where the pointer is, and holding a navigation open long enough to answer a
- * click. Everything those three discover is handed back to the stylesheet as a class or a
- * custom property; no motion is described here.
+ * to, noticing where the page was touched, and holding a navigation open long enough to
+ * answer a click. Everything those three discover is handed back to the stylesheet as a
+ * class or an element placed where the touch was; no motion is described here.
  *
  * The reveal compares positions rather than using an observer or a scroll-driven timeline,
  * because `animation-timeline` is still uneven across browsers and a gallery that fails to
@@ -29,6 +29,16 @@ const GOLDEN_ANGLE = 2.399963229728653;
 
 /** Blocks in the shutter that closes as an artwork is opened. */
 const SHUTTER_BLOCKS = 9;
+
+/**
+ * The least time between one ring and the next while the page is being scrolled. It is
+ * the time one ring takes to spread, so a scroll that goes on produces rings one after
+ * another rather than a pile of them at every tick of the wheel.
+ */
+const SCROLL_RING_GAP = 780;
+
+/** Rings kept in flight at once; past this the oldest is dropped before a new one starts. */
+const RIPPLES_AT_MOST = 12;
 
 /**
  * How long the shutter is given before the page changes. Short enough that it reads as an
@@ -102,46 +112,75 @@ function revealOnApproach(elements) {
   sweep();
 }
 
-/** The glow grows from where the pointer actually entered, not from the middle. */
-function followPointer(cards) {
-  for (const card of cards) {
-    const frame = card.querySelector(".card__frame");
-    if (!frame) {
-      continue;
-    }
-    card.addEventListener("pointermove", (event) => {
-      const bounds = frame.getBoundingClientRect();
-      if (bounds.width === 0 || bounds.height === 0) {
-        return;
-      }
-      const x = ((event.clientX - bounds.left) / bounds.width) * 100;
-      const y = ((event.clientY - bounds.top) / bounds.height) * 100;
-      frame.style.setProperty("--pointer-x", `${x.toFixed(1)}%`);
-      frame.style.setProperty("--pointer-y", `${y.toFixed(1)}%`);
-    });
-  }
-}
-
 /**
- * A ring from where the card was pressed. The class is all this does; the stylesheet owns
- * the rest. It is taken off again when the second ring finishes, so a second press starts
- * the animation over rather than finding it already spent.
+ * A ring from wherever the page is touched: a press anywhere on it, or the point of
+ * contact while it is being scrolled.
+ *
+ * The rings live on one fixed layer over the whole page rather than inside each card, so
+ * a press is answered wherever it lands — on a card, on the epigraph, on the empty ground
+ * between — and with a finger as with a pointer. A scroll is answered from where the
+ * reader last touched the page: the finger on a touch screen, the pointer on a desk, or,
+ * when the page has only been scrolled from the keyboard, the middle of the view. While
+ * the scrolling goes on the rings follow one another with a beat between, which is the
+ * rhythm the adapted animation had before it was made to fire once.
+ *
+ * Nothing rings until the reader has done something. A browser restoring its scroll
+ * position fires the same event a reader does, and a ring that arrives with the page
+ * would be answering nobody.
+ *
+ * The elements are all this makes; the stylesheet owns the motion. Each is taken off the
+ * layer when its second ring finishes, and the layer is kept short in case one never does.
  */
-function rippleOnPress(cards) {
-  for (const card of cards) {
-    card.addEventListener("pointerdown", () => {
-      card.classList.remove("is-pressed");
-      // Reading a layout property between the two flushes the removal, which is what makes
-      // the animation restart rather than continue.
-      void card.offsetWidth;
-      card.classList.add("is-pressed");
-    });
-    card.addEventListener("animationend", (event) => {
+function rippleOnContact() {
+  const layer = document.createElement("div");
+  layer.className = "ripples";
+  layer.setAttribute("aria-hidden", "true");
+  document.body.append(layer);
+
+  let contact = null;
+  let engaged = false;
+  let lastRingAt = -Infinity;
+
+  function ring(x, y, now) {
+    const mark = document.createElement("span");
+    mark.className = "ripple";
+    mark.style.left = `${x}px`;
+    mark.style.top = `${y}px`;
+    mark.addEventListener("animationend", (event) => {
       if (event.animationName === "ripple" && event.pseudoElement === "::after") {
-        card.classList.remove("is-pressed");
+        mark.remove();
       }
     });
+    while (layer.childElementCount >= RIPPLES_AT_MOST) {
+      layer.firstElementChild.remove();
+    }
+    layer.append(mark);
+    lastRingAt = now;
   }
+
+  const engage = () => {
+    engaged = true;
+  };
+  const remember = (event) => {
+    engaged = true;
+    contact = { x: event.clientX, y: event.clientY };
+  };
+  window.addEventListener("pointermove", remember, { passive: true });
+  window.addEventListener("keydown", engage, { passive: true });
+  window.addEventListener("wheel", engage, { passive: true });
+  window.addEventListener("pointerdown", (event) => {
+    remember(event);
+    ring(event.clientX, event.clientY, performance.now());
+  }, { passive: true });
+  window.addEventListener("scroll", () => {
+    const now = performance.now();
+    if (!engaged || now - lastRingAt < SCROLL_RING_GAP) {
+      return;
+    }
+    const x = contact ? contact.x : window.innerWidth / 2;
+    const y = contact ? contact.y : window.innerHeight / 2;
+    ring(x, y, now);
+  }, { passive: true });
 }
 
 /** The blocks fall in the order the cards arrived in: the page leaves the way it came. */
@@ -218,7 +257,6 @@ revealOnApproach(footRule ? [...cards, footRule] : cards);
 // motion preference changed between leaving and coming back.
 liftShutterOnReturn();
 if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-  followPointer(cards);
-  rippleOnPress(cards);
+  rippleOnContact();
   leaveThroughShutter(cards);
 }

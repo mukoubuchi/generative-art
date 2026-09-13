@@ -202,7 +202,6 @@ function renderCard(manifest, artwork, quote, index) {
                 decoding="async">
               ${moving ? '<span class="card__moving"><span class="card__orbit" aria-hidden="true"></span>moving</span>' : ""}
               <span class="card__trace" aria-hidden="true"></span>
-              <span class="card__ripple" aria-hidden="true"></span>
             </figure>
             <div class="card__label">
               <h2 class="card__title">${escapeHtml(artwork.title)}</h2>

@@ -544,22 +544,30 @@ body {
  * at four fifths of the way out, so there is a beat of empty space between one ring and the
  * next rather than a continuous pulse.
  *
- * Changed here: it fires once, from wherever the card was pressed, instead of repeating
- * from the centre. A press starts a navigation, and until the page changes there is nothing
- * to say the press was received; this is that.
+ * Changed here: it rises from wherever the page is touched — a press anywhere on it, or
+ * the point of contact while it is scrolled — instead of repeating from the centre of one
+ * box. The rings sit on a layer fixed over the whole page, which lets every press through
+ * to whatever is under it; the script places them, one element a ring.
  */
-.card__ripple {
-  position: absolute;
-  left: var(--pointer-x, 50%);
-  top: var(--pointer-y, 50%);
-  width: 62%;
-  aspect-ratio: 1;
+.ripples {
+  position: fixed;
+  z-index: 8;
+  inset: 0;
+  overflow: hidden;
   pointer-events: none;
+}
+
+.ripple {
+  position: absolute;
+  /* About the size the ring had when it was three fifths of a card: wider on a large
+     screen, narrower on a phone, never wider than a third of the shorter side. */
+  width: clamp(11rem, 32vmin, 17rem);
+  aspect-ratio: 1;
   transform: translate(-50%, -50%);
 }
 
-.card__ripple::before,
-.card__ripple::after {
+.ripple::before,
+.ripple::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -573,11 +581,11 @@ body {
   transform: scale(0);
 }
 
-.card.is-pressed .card__ripple::before {
+.ripple::before {
   animation: ripple 780ms ease-out both;
 }
 
-.card.is-pressed .card__ripple::after {
+.ripple::after {
   animation: ripple 780ms ease-out 190ms both;
 }
 
@@ -1018,7 +1026,7 @@ body {
   /* Motion and nothing else, so it goes entirely rather than being shown still: a ring
      that is not spreading is a circle drawn on the picture, and a curtain that has not
      opened is simply a wall. */
-  .card__ripple,
+  .ripples,
   .curtain {
     display: none;
   }
