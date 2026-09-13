@@ -26,6 +26,8 @@
  * turns them and hands them to the rasteriser; it computes no geometry of its own.
  */
 
+import { CAP_RISE, HINT_INSET_RATIO, hintTextSize } from "../shared/key-hint.js";
+
 export const LOGICAL_SIZE = 680;
 export const PLAYBACK_FPS = 30;
 export const DURATION_SECONDS = 12;
@@ -34,8 +36,51 @@ export const TOTAL_FRAMES = PLAYBACK_FPS * DURATION_SECONDS;
 const DEGREE = Math.PI / 180;
 export const degrees = (value) => value * DEGREE;
 
-/** Paper around the figure, as a share of the canvas. */
+/** Paper around the chart, as a share of the canvas. The chart is framed on the canvas. */
 export const FRAME_FILL = 0.86;
+
+/**
+ * The globe is framed on the stage instead: the part of the canvas above the legend.
+ *
+ * The legend is printed at the foot of the canvas, and the globe used to reach the foot as
+ * well -- its south blaze sat three pixels above the legend's plate. So the globe stands
+ * above the plate by a gap, has the same gap above it, and is centred on what is between.
+ * The plate's top is derived from the legend's own geometry at the page's type size, so
+ * that the stage and the legend cannot drift apart. The chart is not framed this way: its
+ * courses run to the canvas's edge on purpose, and it keeps the canvas.
+ */
+export const LEGEND_GAP = 36;
+
+export const LEGEND_PLATE_TOP = (() => {
+  const size = hintTextSize(LOGICAL_SIZE, LOGICAL_SIZE, 1);
+  const inset = LOGICAL_SIZE * HINT_INSET_RATIO;
+  const padding = size * 0.5;
+  return LOGICAL_SIZE - inset - size * CAP_RISE - padding * 0.6;
+})();
+
+/** The widest stroke the sketch lays down, the courses' halo. Half of it is ink reach. */
+export const WIDEST_STROKE = 5;
+/**
+ * A stroke's edge is antialiased over one pixel beyond its geometric width, and that pixel
+ * is ink too. Fitted without it, the globe stood on the gap's line to the thousandth of a
+ * pixel and the halo's fringe lit the row below it.
+ */
+export const ANTIALIAS_REACH = 1;
+
+export const STAGE = {
+  top: LEGEND_GAP,
+  bottom: LEGEND_PLATE_TOP - LEGEND_GAP
+};
+STAGE.height = STAGE.bottom - STAGE.top;
+STAGE.centreY = (STAGE.top + STAGE.bottom) / 2;
+
+/**
+ * The globe's radius in logical pixels. The globe's ink reaches the poles, which lie on
+ * the unit sphere a hair beyond the grid's last meridian, and half the halo beyond that;
+ * so the stage holds a diameter of two radii, one halo and its two antialiased edges,
+ * exactly.
+ */
+export const GLOBE_RADIUS = (STAGE.height - WIDEST_STROKE - 2 * ANTIALIAS_REACH) / 2;
 
 /**
  * The bearing the clip opens and closes on, and the one it sweeps down to.
@@ -354,6 +399,14 @@ export function chartCoverage(bearing, strokeWidth = 1.4) {
  * apart, at the latitude solved for here. Past it the drawing would be adding ink
  * to ink. The line does not end there. It stops being drawable there.
  */
+/**
+ * The radius the stopping place was set for. It was the globe's radius until the globe was
+ * moved onto the stage and shrank a little; it is kept here rather than followed, because
+ * the stopping place also fixes where every course's polyline is sampled, and following
+ * the globe would have redrawn the chart -- which the stage was never to touch. On the
+ * globe as now drawn, of radius `GLOBE_RADIUS`, the last drawn turns stand
+ * `GLOBE_RADIUS / SPHERE_SCALE` of a pixel apart rather than one.
+ */
 export const SPHERE_SCALE = LOGICAL_SIZE * FRAME_FILL / 2;
 export const COURSE_PSI_END = isometricLatitude(
   Math.acos(Math.tan(OPENING_BEARING) / (2 * Math.PI * SPHERE_SCALE))
@@ -504,10 +557,16 @@ export function gridInk(open) {
  */
 export function figureFrame(open) {
   const box = graticuleBox(open);
+  const eased = Math.min(1, Math.max(0, open));
+  // The room the box is fitted into, and where its middle stands: the stage for the
+  // globe, the canvas for the chart, and one straight blend between while the figure is
+  // neither. Nothing about the chart's frame is changed by the stage.
+  const room = (1 - eased) * (2 * GLOBE_RADIUS) + eased * (LOGICAL_SIZE * FRAME_FILL);
   return {
     centre: box.centre,
     roundness: Math.min(1, Math.max(0, box.size[2] / 2)) ** 2,
-    scale: LOGICAL_SIZE * FRAME_FILL / Math.max(...box.size)
+    scale: room / Math.max(...box.size),
+    stageCentreY: (1 - eased) * STAGE.centreY + eased * (LOGICAL_SIZE / 2)
   };
 }
 
@@ -605,7 +664,8 @@ export function sceneAt(frameIndex) {
     ...morphAt(open),
     centre: framing.centre,
     roundness: framing.roundness,
-    scale: framing.scale
+    scale: framing.scale,
+    stageCentreY: framing.stageCentreY
   };
 }
 

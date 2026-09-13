@@ -6,6 +6,7 @@ import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
   ACTS,
   ACT_FRAMES,
+  ANTIALIAS_REACH,
   CHART_EDGE_LATITUDE,
   COURSES,
   COURSE_MAXIMUM_SAMPLES,
@@ -14,7 +15,10 @@ import {
   DURATION_SECONDS,
   FLATNESS_FLOOR,
   FRAME_FILL,
+  GLOBE_RADIUS,
   GRID_ON_THE_CHART,
+  LEGEND_GAP,
+  LEGEND_PLATE_TOP,
   LOGICAL_SIZE,
   MAXIMUM_BEARING,
   MERIDIAN_STEP,
@@ -23,8 +27,10 @@ import {
   PLAYBACK_FPS,
   SPHERE_SCALE,
   SPIN_FRAMES,
+  STAGE,
   TOTAL_FRAMES,
   UNWOUND_BEARING,
+  WIDEST_STROKE,
   actAt,
   chartCoverage,
   chartSpacing,
@@ -513,8 +519,13 @@ test("the grid fits the frame at every frame of the clip, and the courses run of
 test("a course stops where its own turns close up, not where the geometry does", () => {
   // One turn carries the course 2 PI / tan(bearing) up the chart while the globe's circle
   // of latitude shrinks; the drawing stops where the two put successive turns one logical
-  // pixel apart.
+  // pixel apart -- on a globe of the radius the stop was set for. That radius is kept
+  // rather than followed when the globe was moved onto the stage: the stop also fixes
+  // where every course is sampled, and following the globe redrew the chart. On the globe
+  // as drawn the last turns stand 0.951 pixels apart.
   assert.equal(SPHERE_SCALE, LOGICAL_SIZE * FRAME_FILL / 2);
+  assert.notEqual(SPHERE_SCALE, GLOBE_RADIUS);
+  assert.equal((GLOBE_RADIUS / SPHERE_SCALE).toFixed(3), "0.951");
   const latitude = latitudeFromIsometric(COURSE_PSI_END);
   assert.equal(inDegrees(latitude).toFixed(5), "89.91432");
   assert.ok(
@@ -648,9 +659,10 @@ test("the figure is a globe of radius one, and a sheet a turn wide", () => {
   assert.ok(Math.abs(sheet.size[0] - 2 * Math.PI) < 1e-12);
   assert.ok(Math.abs(sheet.size[1] - 2 * isometricLatitude(CHART_EDGE_LATITUDE)) < 1e-12);
   assert.equal(sheet.size[2], 0);
-  // Both fill the same square: the globe's diameter and the chart's width are one length.
-  assert.equal(figureFrame(0).scale * 2, LOGICAL_SIZE * FRAME_FILL);
+  // The chart's width is 0.86 of the canvas, framed on the canvas; the globe is framed on
+  // the stage above the legend instead, which is what the next test is about.
   assert.ok(Math.abs(figureFrame(1).scale * 2 * Math.PI - LOGICAL_SIZE * FRAME_FILL) < 1e-12);
+  assert.equal(figureFrame(0).scale, GLOBE_RADIUS);
 
   // The view turns the figure and reads depth off the third component.
   const point = viewPoint([0, 0, 1], 0, 0, [0, 0, 0], 1);
@@ -658,6 +670,69 @@ test("the figure is a globe of radius one, and a sheet a turn wide", () => {
   const quarter = viewPoint([0, 0, 1], Math.PI / 2, 0, [0, 0, 0], 1);
   assert.ok(Math.abs(quarter[0] - 1) < 1e-12);
   assert.ok(Math.abs(quarter[2]) < 1e-12);
+});
+
+test("the globe stands on the stage above the legend, and the chart keeps the canvas", () => {
+  // The plate's top is the legend's own, derived from key-hint's geometry at the page's
+  // type size, so this and the legend cannot drift apart. The figure measured 635.3 on the
+  // page before the stage existed.
+  assert.equal(LEGEND_PLATE_TOP.toFixed(2), "635.26");
+  assert.equal(LEGEND_GAP, 36);
+  assert.equal(STAGE.top, LEGEND_GAP);
+  assert.ok(Math.abs(STAGE.bottom - (LEGEND_PLATE_TOP - LEGEND_GAP)) < 1e-12);
+  assert.ok(Math.abs(STAGE.centreY - 317.628) < 1e-3);
+  // Two radii, one halo and its two antialiased edges fill the stage exactly.
+  assert.equal(WIDEST_STROKE, 5);
+  assert.equal(ANTIALIAS_REACH, 1);
+  assert.ok(Math.abs(2 * GLOBE_RADIUS + WIDEST_STROKE + 2 * ANTIALIAS_REACH - STAGE.height) < 1e-12);
+  assert.equal(GLOBE_RADIUS.toFixed(3), "278.128");
+
+  // The chart is not framed this way, and nothing about it moved: same scale, same middle.
+  const chart = figureFrame(1);
+  assert.equal(chart.scale.toFixed(3), "93.074");
+  assert.equal(chart.stageCentreY, LOGICAL_SIZE / 2);
+  const globe = figureFrame(0);
+  assert.equal(globe.stageCentreY, STAGE.centreY);
+  // One straight blend between, so the figure slides rather than jumps.
+  const half = figureFrame(0.5);
+  assert.ok(Math.abs(half.stageCentreY - (STAGE.centreY + LOGICAL_SIZE / 2) / 2) < 1e-12);
+
+  // The claim itself, measured from the drawing's own geometry over the states the page
+  // can be in while the figure is round: every bearing the reader can reach, every tilt
+  // the clip uses, five turns of the globe -- the lowest point any run reaches, plus the
+  // ink beyond it, stays the gap above the plate.
+  const { sphereness, wrap } = morphAt(0);
+  const grid = graticuleCurves().map((curve) => curve.points);
+  const reach = WIDEST_STROKE / 2 + ANTIALIAS_REACH;
+  let lowest = -Infinity;
+  let states = 0;
+  for (let bearing = 0; bearing <= 80; bearing += 5) {
+    const pieces = courseCurves(degrees(bearing)).flatMap((course) => course.pieces);
+    for (let tilt = 22; tilt <= 88; tilt += 6) {
+      for (const spin of [0, 0.7, 1.9, 3.1, 4.4]) {
+        const scene = { sphereness, wrap, spin, tilt: degrees(tilt), centre: globe.centre, scale: globe.scale, open: 0 };
+        let low = Infinity;
+        for (const points of grid) for (const point of viewCurve(points, scene)) low = Math.min(low, point[1]);
+        for (const points of pieces) for (const point of viewCurve(points, scene)) low = Math.min(low, point[1]);
+        lowest = Math.max(lowest, globe.stageCentreY - low + reach);
+        states += 1;
+      }
+    }
+  }
+  assert.equal(states, 17 * 12 * 5);
+  assert.ok(lowest <= LEGEND_PLATE_TOP - LEGEND_GAP + 1e-9,
+    `the globe's ink reaches ${lowest.toFixed(3)}, past ${(LEGEND_PLATE_TOP - LEGEND_GAP).toFixed(3)}`);
+  // And exactly, not by slack: the fit is a fit.
+  assert.ok(LEGEND_PLATE_TOP - LEGEND_GAP - lowest < 1e-6);
+  // Measured on the pictures as well: over all 230 frames of the globe the lowest lit row
+  // is 598, the plate's top is 635.26, and the 26 frames of the open chart are identical
+  // to the byte with the drawing before the stage.
+
+  // The negative control is the framing this replaced: the globe centred on the canvas at
+  // 0.86 of it reached 634.9, three tenths of a pixel short of the plate.
+  const before = LOGICAL_SIZE / 2 + LOGICAL_SIZE * FRAME_FILL / 2 + WIDEST_STROKE / 2;
+  assert.ok(before > LEGEND_PLATE_TOP - LEGEND_GAP);
+  assert.equal(before.toFixed(1), "634.9");
 });
 
 test("the sketch draws the module's points and prints the legend", () => {
@@ -670,6 +745,9 @@ test("the sketch draws the module's points and prints the legend", () => {
   assert.doesNotMatch(SKETCH, /p\.WEBGL/u);
   assert.doesNotMatch(SKETCH, /createGraphics/u);
   assert.match(SKETCH, /globalCompositeOperation = "lighter"/u);
+  assert.match(SKETCH, /context\.translate\(OUTPUT_SIZE \/ 2, scene\.stageCentreY \* RENDER_SCALE\)/u);
+  assert.doesNotMatch(SKETCH, /context\.translate\(OUTPUT_SIZE \/ 2, OUTPUT_SIZE \/ 2\)/u);
+  assert.match(SKETCH, /const HALO_WEIGHT = WIDEST_STROKE;/u);
   assert.match(SKETCH, /context\.scale\(1, -1\)/u);
   // Added ink accumulates between strokes and not within one, so each run is stroked on
   // its own — which is what leaves the blaze on the poles.
@@ -787,6 +865,11 @@ test("the notes give the numbers the tests hold and keep the two straightenings 
   assert.match(section, /7\.11 at the limit/u);
   assert.match(section, /1\.97 times as far up the chart/u);
   assert.match(section, /1560/u);
+  assert.match(section, /0\.951 pixels/u);
+  assert.match(section, /36 pixels above/u);
+  assert.match(section, /278\.1/u);
+  assert.match(section, /635\.26/u);
+  assert.doesNotMatch(section, /same square/u);
   assert.match(section, /top-left quarter/u);
   assert.match(section, /density into the transform/u);
   assert.match(section, /six courses/iu);

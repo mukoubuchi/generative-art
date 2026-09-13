@@ -14,6 +14,7 @@ import {
   degrees,
   depthFloor,
   figureFrame,
+  WIDEST_STROKE,
   graticuleCurves,
   gridInk,
   morphAt,
@@ -81,7 +82,7 @@ const HALO_NEAR = 20;
 const HALO_FAR = 7;
 const GRATICULE_WEIGHT = 1;
 const COURSE_WEIGHT = 1.4;
-const HALO_WEIGHT = 5;
+const HALO_WEIGHT = WIDEST_STROKE;
 
 /** How fast the page answers: forty degrees of bearing a second, and an unrolling in one. */
 const BEARING_RATE = degrees(40) / PLAYBACK_FPS;
@@ -177,7 +178,9 @@ new P5((p) => {
     // The module returns the picture plane with the origin at the middle of the figure and
     // the second axis pointing up, as the figure's own does; a canvas counts down from the
     // top, so the axis is turned over here and nowhere else.
-    context.translate(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2);
+    // The figure's middle stands where the module says: on the stage above the legend
+    // for the globe, on the canvas for the chart.
+    context.translate(OUTPUT_SIZE / 2, scene.stageCentreY * RENDER_SCALE);
     context.scale(1, -1);
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -228,7 +231,7 @@ new P5((p) => {
 
   function liveScene() {
     const { sphereness, wrap } = morphAt(live.open);
-    const { centre, roundness, scale } = figureFrame(live.open);
+    const { centre, roundness, scale, stageCentreY } = figureFrame(live.open);
     return {
       spin: live.spin,
       tilt: live.tilt,
@@ -238,7 +241,8 @@ new P5((p) => {
       wrap,
       centre,
       roundness,
-      scale
+      scale,
+      stageCentreY
     };
   }
 
