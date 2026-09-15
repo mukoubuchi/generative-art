@@ -137,8 +137,15 @@ function rippleOnContact() {
   layer.setAttribute("aria-hidden", "true");
   document.body.append(layer);
 
+  // Where the page is being touched or pointed at: the point a scroll's rings rise from.
   let contact = null;
+  // Nothing rings before the reader has done something, so a browser restoring its
+  // scroll position on arrival draws no ring.
   let engaged = false;
+  // A finger has been lifted and nothing has been done since. A scroll that goes on now is
+  // the page coasting, and a ring from where the finger was would answer a touch that is
+  // no longer there — the fault this flag was written for.
+  let lifted = false;
   let lastRingAt = -Infinity;
 
   function ring(x, y, now) {
@@ -160,21 +167,60 @@ function rippleOnContact() {
 
   const engage = () => {
     engaged = true;
+    lifted = false;
   };
-  const remember = (event) => {
-    engaged = true;
-    contact = { x: event.clientX, y: event.clientY };
+  const remember = (x, y) => {
+    engage();
+    contact = { x, y };
   };
-  window.addEventListener("pointermove", remember, { passive: true });
+
+  // A finger is followed through the touch events, not the pointer events: once the
+  // browser takes a touch for a scroll it sends pointercancel and no more pointermove, so
+  // the pointer's idea of the contact would stay where the finger first landed. The touch
+  // events keep coming for as long as the finger is on the glass, and stop when it lifts.
+  // The finger this event is about: with two fingers down, touches[0] is still the first,
+  // and the second would land and move on the first's point.
+  const touched = (event) => event.changedTouches[0];
+  window.addEventListener("touchstart", (event) => {
+    const finger = touched(event);
+    remember(finger.clientX, finger.clientY);
+    ring(finger.clientX, finger.clientY, performance.now());
+  }, { passive: true });
+  window.addEventListener("touchmove", (event) => {
+    const finger = touched(event);
+    remember(finger.clientX, finger.clientY);
+  }, { passive: true });
+  const lift = (event) => {
+    if (event.touches.length === 0) {
+      contact = null;
+      lifted = true;
+    }
+  };
+  window.addEventListener("touchend", lift, { passive: true });
+  window.addEventListener("touchcancel", lift, { passive: true });
+
+  // A mouse or a pen. A touch reaches here too, on browsers that send both, and is
+  // ignored: the touch events above have already answered it, and one press is one pair.
+  const pointed = (event) => event.pointerType !== "touch";
+  window.addEventListener("pointermove", (event) => {
+    if (pointed(event)) {
+      remember(event.clientX, event.clientY);
+    }
+  }, { passive: true });
+  window.addEventListener("pointerdown", (event) => {
+    if (pointed(event)) {
+      remember(event.clientX, event.clientY);
+      ring(event.clientX, event.clientY, performance.now());
+    }
+  }, { passive: true });
+
   window.addEventListener("keydown", engage, { passive: true });
   window.addEventListener("wheel", engage, { passive: true });
-  window.addEventListener("pointerdown", (event) => {
-    remember(event);
-    ring(event.clientX, event.clientY, performance.now());
-  }, { passive: true });
+  // The centre stands in only when nothing has ever been touched or pointed at — a page
+  // scrolled from the keyboard alone — never for a finger that has been lifted.
   window.addEventListener("scroll", () => {
     const now = performance.now();
-    if (!engaged || now - lastRingAt < SCROLL_RING_GAP) {
+    if (!engaged || lifted || now - lastRingAt < SCROLL_RING_GAP) {
       return;
     }
     const x = contact ? contact.x : window.innerWidth / 2;

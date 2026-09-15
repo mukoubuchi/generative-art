@@ -202,6 +202,143 @@ test("a ring answers a touch anywhere on the page, and the scrolling of it", asy
   assert.doesNotMatch(html, /card__ripple/u, "the cards still carry a ring of their own");
 });
 
+/**
+ * Runs the page's ring, as written, against a window and a document small enough to be
+ * written here. Events are handed straight to the listeners the function hung; the rings it
+ * makes are collected rather than drawn. The clock is the test's own.
+ */
+async function ringOnAStage() {
+  const script = await readFile(new URL("../gallery/gallery.js", import.meta.url), "utf8");
+  const start = script.indexOf("function rippleOnContact()");
+  const body = script.slice(start, script.indexOf("\n}\n", start) + 2);
+  const constant = (name) => Number(script.match(new RegExp(`const ${name} = (\\d+);`, "u"))[1]);
+  const listeners = new Map();
+  const rings = [];
+  let now = 0;
+  const element = () => {
+    const node = {
+      style: {}, children: [],
+      addEventListener() {},
+      append(child) { this.children.push(child); if (child.className === "ripple") { rings.push(child); } },
+      remove() {},
+      get childElementCount() { return this.children.length; },
+      get firstElementChild() { return this.children[0]; },
+      setAttribute() {}
+    };
+    return node;
+  };
+  const layer = element();
+  const document = { createElement: (tag) => tag === "div" ? layer : element(), body: { append() {} } };
+  const window = {
+    innerWidth: 1000, innerHeight: 800,
+    addEventListener: (type, listener) => listeners.set(type, listener)
+  };
+  new Function("window", "document", "performance", "RIPPLES_AT_MOST", "SCROLL_RING_GAP",
+    `${body}\nrippleOnContact();`)(
+    window, document, { now: () => now }, constant("RIPPLES_AT_MOST"), constant("SCROLL_RING_GAP")
+  );
+  const gap = constant("SCROLL_RING_GAP");
+  const fire = (type, event = {}) => { listeners.get(type)?.(event); };
+  const touch = (type, points) => fire(type, {
+    touches: points.map(([clientX, clientY]) => ({ clientX, clientY })),
+    changedTouches: points.map(([clientX, clientY]) => ({ clientX, clientY }))
+  });
+  const pointer = (type, clientX, clientY, pointerType) => fire(type, { clientX, clientY, pointerType });
+  // Scrolls for a while: one scroll event every tick, well past the gap between rings.
+  const scrollFor = (ms, tick = 100) => { for (let t = 0; t < ms; t += tick) { now += tick; fire("scroll"); } };
+  const at = () => rings.map((ring) => `${ring.style.left} ${ring.style.top}`);
+  return { listeners, rings, at, gap, fire, touch, pointer, scrollFor, tick: (ms) => { now += ms; } };
+}
+
+test("a scroll rings from the finger while it is on the glass, and not after it lifts", async () => {
+  // A phone flick is one touch and then a page that goes on scrolling by itself. The rings
+  // that go on rising from where the finger used to be, one every gap, were the fault: on
+  // the phone they sat three or four deep on a point nobody was touching any more. The
+  // finger is followed through the touch events, because once the browser takes a touch for
+  // a scroll it stops sending pointermove — the pointer's idea of the contact stays where
+  // the finger first landed, and a slow drag rang from there rather than from the finger.
+  const stage = await ringOnAStage();
+  for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"]) {
+    assert.ok(stage.listeners.has(type), `${type} is not listened for`);
+  }
+
+  // A press: one pair, where the finger landed.
+  stage.touch("touchstart", [[120, 520]]);
+  assert.deepEqual(stage.at(), ["120px 520px"], "a touch does not ring once where it lands");
+
+  // A drag: the finger moves, the page scrolls, and each ring rises from the finger's own
+  // place at that moment — not from where it landed.
+  stage.tick(stage.gap);
+  stage.touch("touchmove", [[147, 466]]);
+  stage.fire("scroll");
+  stage.tick(stage.gap);
+  stage.touch("touchmove", [[177, 406]]);
+  stage.fire("scroll");
+  assert.deepEqual(stage.at(), ["120px 520px", "147px 466px", "177px 406px"],
+    "the rings while dragging do not follow the finger");
+
+  // The finger lifts and the page coasts on: nothing more rings.
+  stage.touch("touchend", []);
+  const beforeCoasting = stage.rings.length;
+  stage.scrollFor(stage.gap * 5);
+  assert.equal(stage.rings.length, beforeCoasting, "the page rings after the finger has lifted");
+
+  // The coasting is stopped by another finger: one pair there, then rings from there while
+  // it is held, and none once it lifts.
+  stage.touch("touchstart", [[300, 200]]);
+  stage.scrollFor(stage.gap * 2);
+  stage.touch("touchend", []);
+  stage.scrollFor(stage.gap * 3);
+  assert.deepEqual(stage.at().slice(beforeCoasting), ["300px 200px", "300px 200px", "300px 200px"],
+    "stopping the coasting is not answered as a touch, or the rings did not stop with it");
+
+  // A second finger lands while the first is still down: the ring is where the second
+  // landed, not where the first still rests.
+  stage.touch("touchstart", [[10, 20]]);
+  stage.fire("touchstart", {
+    touches: [{ clientX: 10, clientY: 20 }, { clientX: 250, clientY: 350 }],
+    changedTouches: [{ clientX: 250, clientY: 350 }]
+  });
+  assert.equal(stage.at().at(-1), "250px 350px", "a second finger rings where the first one rests");
+  stage.fire("touchend", { touches: [{ clientX: 10, clientY: 20 }], changedTouches: [{ clientX: 250, clientY: 350 }] });
+  stage.touch("touchend", []);
+
+  // A cancelled touch is a lifted one.
+  stage.touch("touchstart", [[50, 60]]);
+  stage.touch("touchcancel", []);
+  const beforeCancelled = stage.rings.length;
+  stage.scrollFor(stage.gap * 3);
+  assert.equal(stage.rings.length, beforeCancelled, "the page rings after a cancelled touch");
+});
+
+test("a touch is one pair whether the browser also sends a pointer for it, and a mouse keeps its own", async () => {
+  // Browsers that speak both send a pointerdown for every touchstart. The touch events answer
+  // the finger; the pointer events are kept for a mouse or a pen and must not answer the
+  // finger a second time. The mouse's own habits — a press rings, a wheel rings from where
+  // the pointer rests, the keyboard alone rings from the centre — stay as they were.
+  const stage = await ringOnAStage();
+  stage.touch("touchstart", [[111, 222]]);
+  stage.pointer("pointerdown", 111, 222, "touch");
+  assert.deepEqual(stage.at(), ["111px 222px"], "a touch rang twice, or not at all");
+  stage.touch("touchend", []);
+
+  stage.pointer("pointerdown", 333, 444, "mouse");
+  assert.deepEqual(stage.at(), ["111px 222px", "333px 444px"], "a mouse press does not ring where it pressed");
+
+  stage.pointer("pointermove", 700, 300, "mouse");
+  stage.fire("wheel");
+  stage.tick(stage.gap);
+  stage.fire("scroll");
+  assert.equal(stage.at().at(-1), "700px 300px", "a wheel scroll does not ring from where the pointer rests");
+
+  const alone = await ringOnAStage();
+  alone.fire("scroll");
+  assert.equal(alone.rings.length, 0, "the page rang before the reader did anything");
+  alone.fire("keydown");
+  alone.fire("scroll");
+  assert.deepEqual(alone.at(), ["500px 400px"], "the keyboard alone does not ring from the centre");
+});
+
 test("the README's count of the artworks that carry the moving mark is the manifest's own", async () => {
   // Another number written out in prose, beside a truth kept somewhere else. The mark goes
   // on the cards of artworks that move, so what it counts is a question about the manifest
