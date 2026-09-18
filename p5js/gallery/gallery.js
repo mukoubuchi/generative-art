@@ -48,6 +48,18 @@ const RIPPLES_AT_MOST = 12;
 const SHUTTER_WAIT = 260;
 
 /**
+ * The box the gallery is scrolled in.
+ *
+ * The stylesheet pins the document to the screen and leaves the body as the one thing that
+ * moves, so that an in-app browser is never handed the signal it collapses its toolbars on.
+ * Two consequences for everything below. The offset to read is this box's, not the window's,
+ * which stays at nought for the life of the page. And the scroll event is raised on this box
+ * and does not bubble: a listener on the window hears nothing at all, which is silence that
+ * looks exactly like a reader who has not scrolled.
+ */
+const scroller = document.body;
+
+/**
  * Reveals everything that has reached the line, and loads the arrival again whenever the
  * page is brought back to the top.
  *
@@ -82,9 +94,9 @@ function revealOnApproach(elements) {
 
   const sweep = () => {
     queued = false;
-    if (window.scrollY > window.innerHeight * REARM_AFTER) {
+    if (scroller.scrollTop > window.innerHeight * REARM_AFTER) {
       wentDown = true;
-    } else if (wentDown && window.scrollY <= REARM_AT) {
+    } else if (wentDown && scroller.scrollTop <= REARM_AT) {
       wentDown = false;
       rearm();
     }
@@ -107,7 +119,7 @@ function revealOnApproach(elements) {
     requestAnimationFrame(sweep);
   }
 
-  window.addEventListener("scroll", request, { passive: true });
+  scroller.addEventListener("scroll", request, { passive: true });
   window.addEventListener("resize", request, { passive: true });
   sweep();
 }
@@ -218,7 +230,7 @@ function rippleOnContact() {
   window.addEventListener("wheel", engage, { passive: true });
   // The centre stands in only when nothing has ever been touched or pointed at — a page
   // scrolled from the keyboard alone — never for a finger that has been lifted.
-  window.addEventListener("scroll", () => {
+  scroller.addEventListener("scroll", () => {
     const now = performance.now();
     if (!engaged || lifted || now - lastRingAt < SCROLL_RING_GAP) {
       return;

@@ -187,7 +187,12 @@ test("a ring answers a touch anywhere on the page, and the scrolling of it", asy
   assert.ok(start >= 0, "the page has no ring of its own");
   const body = script.slice(start, script.indexOf("\n}\n", start));
   assert.match(body, /window\.addEventListener\("pointerdown"/u, "a press on the page is not listened for");
-  assert.match(body, /window\.addEventListener\("scroll"/u, "the scroll is not listened for");
+  // The document is pinned to the screen and the body is the box that moves, so the scroll
+  // event is raised on that box and does not reach the window. A listener left on the window
+  // would hear nothing and would be indistinguishable from a reader who never scrolled.
+  assert.match(body, /scroller\.addEventListener\("scroll"/u, "the scroll is not listened for on the box");
+  assert.doesNotMatch(body, /window\.addEventListener\("scroll"/u,
+    "the scroll is listened for on the window, which never hears it");
   assert.match(body, /document\.body\.append\(layer\)/u, "the rings have no layer over the page");
   assert.doesNotMatch(body, /\.card\b/u, "the ring is tied to the cards again");
 
@@ -233,21 +238,28 @@ async function ringOnAStage() {
     innerWidth: 1000, innerHeight: 800,
     addEventListener: (type, listener) => listeners.set(type, listener)
   };
-  new Function("window", "document", "performance", "RIPPLES_AT_MOST", "SCROLL_RING_GAP",
+  const boxListeners = new Map();
+  const scroller = { addEventListener: (type, listener) => boxListeners.set(type, listener) };
+  new Function("window", "document", "scroller", "performance", "RIPPLES_AT_MOST", "SCROLL_RING_GAP",
     `${body}\nrippleOnContact();`)(
-    window, document, { now: () => now }, constant("RIPPLES_AT_MOST"), constant("SCROLL_RING_GAP")
+    window, document, scroller, { now: () => now },
+    constant("RIPPLES_AT_MOST"), constant("SCROLL_RING_GAP")
   );
   const gap = constant("SCROLL_RING_GAP");
   const fire = (type, event = {}) => { listeners.get(type)?.(event); };
+  const scroll = (event = {}) => { boxListeners.get("scroll")?.(event); };
   const touch = (type, points) => fire(type, {
     touches: points.map(([clientX, clientY]) => ({ clientX, clientY })),
     changedTouches: points.map(([clientX, clientY]) => ({ clientX, clientY }))
   });
   const pointer = (type, clientX, clientY, pointerType) => fire(type, { clientX, clientY, pointerType });
   // Scrolls for a while: one scroll event every tick, well past the gap between rings.
-  const scrollFor = (ms, tick = 100) => { for (let t = 0; t < ms; t += tick) { now += tick; fire("scroll"); } };
+  const scrollFor = (ms, tick = 100) => { for (let t = 0; t < ms; t += tick) { now += tick; scroll(); } };
   const at = () => rings.map((ring) => `${ring.style.left} ${ring.style.top}`);
-  return { listeners, rings, at, gap, fire, touch, pointer, scrollFor, tick: (ms) => { now += ms; } };
+  return {
+    listeners, boxListeners, rings, at, gap, fire, scroll, touch, pointer, scrollFor,
+    tick: (ms) => { now += ms; }
+  };
 }
 
 test("a scroll rings from the finger while it is on the glass, and not after it lifts", async () => {
@@ -270,10 +282,10 @@ test("a scroll rings from the finger while it is on the glass, and not after it 
   // place at that moment — not from where it landed.
   stage.tick(stage.gap);
   stage.touch("touchmove", [[147, 466]]);
-  stage.fire("scroll");
+  stage.scroll();
   stage.tick(stage.gap);
   stage.touch("touchmove", [[177, 406]]);
-  stage.fire("scroll");
+  stage.scroll();
   assert.deepEqual(stage.at(), ["120px 520px", "147px 466px", "177px 406px"],
     "the rings while dragging do not follow the finger");
 
@@ -328,14 +340,14 @@ test("a touch is one pair whether the browser also sends a pointer for it, and a
   stage.pointer("pointermove", 700, 300, "mouse");
   stage.fire("wheel");
   stage.tick(stage.gap);
-  stage.fire("scroll");
+  stage.scroll();
   assert.equal(stage.at().at(-1), "700px 300px", "a wheel scroll does not ring from where the pointer rests");
 
   const alone = await ringOnAStage();
-  alone.fire("scroll");
+  alone.scroll();
   assert.equal(alone.rings.length, 0, "the page rang before the reader did anything");
   alone.fire("keydown");
-  alone.fire("scroll");
+  alone.scroll();
   assert.deepEqual(alone.at(), ["500px 400px"], "the keyboard alone does not ring from the centre");
 });
 

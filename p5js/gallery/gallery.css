@@ -45,7 +45,31 @@
   box-sizing: border-box;
 }
 
+/*
+ * The document is pinned to the screen and the body is the box that scrolls.
+ *
+ * An in-app browser collapses its own toolbars when the page itself scrolls, and LinkedIn's
+ * will not draw them whole again until the page is back at the very top: a reader one screen
+ * down is left with half a toolbar and no way to open it. What the web view answers is the
+ * document moving, so the document is given nowhere to go — its scrollHeight is its
+ * clientHeight — and the descent happens inside the body instead. Read off the web view
+ * itself: with the body scrolling, both bars stood whole after 3292 pixels of descent; with
+ * the document scrolling, the top bar was gone and the bottom one was half drawn.
+ *
+ * The older unit is written first so that a browser which has only that one is answered, and
+ * the dynamic unit second for the browsers whose furniture changes height as they are used.
+ */
+html {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 body {
+  height: 100%;
+  overflow-y: auto;
+  /* A descent that reaches either end stops there instead of being handed to the web view. */
+  overscroll-behavior: contain;
   margin: 0;
   padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 5vw, 4rem) 4rem;
   background: var(--ground);
