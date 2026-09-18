@@ -351,6 +351,150 @@ test("a touch is one pair whether the browser also sends a pointer for it, and a
   assert.deepEqual(alone.at(), ["500px 400px"], "the keyboard alone does not ring from the centre");
 });
 
+/**
+ * Runs the page's own keeping of the reader's place against a history, a window and a box
+ * small enough to be written here. The clock is the test's own, so the settling can be waited
+ * out without waiting.
+ */
+async function placeOnAStage({ kept = null, refuse = false } = {}) {
+  const script = await readFile(new URL("../gallery/gallery.js", import.meta.url), "utf8");
+  const start = script.indexOf("function keepThePlace()");
+  assert.ok(start >= 0, "the page no longer keeps the reader's place");
+  const body = script.slice(start, script.indexOf("\n}\n", start) + 2);
+  const constant = (name) => script.match(new RegExp(`const ${name} = (\\d+);`, "u"))[1];
+  const settles = Number(constant("PLACE_SETTLES"));
+  const place = script.match(/const PLACE = "([^"]+)";/u)[1];
+
+  const listeners = new Map();
+  const boxListeners = new Map();
+  const timers = [];
+  const scroller = {
+    scrollTop: 0,
+    addEventListener: (type, listener) => boxListeners.set(type, listener)
+  };
+  const history = {
+    scrollRestoration: "auto",
+    state: kept === null ? null : { [place]: kept },
+    replaceState(state) {
+      if (refuse) {
+        throw new Error("SecurityError: too many calls to replaceState");
+      }
+      this.state = state;
+    }
+  };
+  const window = {
+    addEventListener: (type, listener) => listeners.set(type, listener),
+    clearTimeout: (id) => { timers[id] = null; },
+    setTimeout: (run) => timers.push(run) - 1
+  };
+  const document = {
+    visibilityState: "visible",
+    addEventListener: (type, listener) => listeners.set(type, listener)
+  };
+  new Function("window", "document", "history", "scroller", "PLACE", "PLACE_SETTLES",
+    `${body}\nkeepThePlace();`)(window, document, history, scroller, place, settles);
+  return {
+    history, scroller, place, settles, listeners, boxListeners,
+    fire: (type, event = {}) => { listeners.get(type)?.(event); },
+    scrollTo(top) { scroller.scrollTop = top; boxListeners.get("scroll")?.({}); },
+    settle() { for (const run of timers.splice(0)) { run?.(); } },
+    hide(state) { document.visibilityState = state; listeners.get("visibilitychange")?.({}); }
+  };
+}
+
+test("the reader's place is written into the history entry once the scrolling settles", async () => {
+  // The browser puts back the position of the document, and this document never moves, so
+  // every return and every reload came back to the head of the gallery until this was
+  // written. It is written a little after the scrolling stops rather than as the page
+  // leaves: at the leaving, a reload came back to the place before last, because the entry
+  // carried into the new document had already been taken.
+  const stage = await placeOnAStage();
+  assert.equal(stage.history.scrollRestoration, "manual",
+    "the browser is still being asked to restore a position that cannot exist");
+
+  stage.scrollTo(1800);
+  assert.equal(stage.history.state?.[stage.place], undefined,
+    "the place was written before the scrolling had settled");
+  stage.settle();
+  assert.equal(stage.history.state[stage.place], 1800, "the settled place was not written down");
+
+  // A second descent replaces the first: what is kept is where the reader is, not where
+  // they have been.
+  stage.scrollTo(4200);
+  stage.settle();
+  assert.equal(stage.history.state[stage.place], 4200, "the place kept is the one before last");
+
+  // The leaving and the hiding are the last chances for a movement that has not settled.
+  stage.scroller.scrollTop = 5000;
+  stage.fire("pagehide");
+  assert.equal(stage.history.state[stage.place], 5000, "a page that leaves does not write its place");
+  stage.scroller.scrollTop = 6000;
+  stage.hide("hidden");
+  assert.equal(stage.history.state[stage.place], 6000, "a page that is hidden does not write its place");
+  stage.scroller.scrollTop = 7000;
+  stage.hide("visible");
+  assert.equal(stage.history.state[stage.place], 6000,
+    "a page coming back into view writes a place as though it were leaving");
+});
+
+test("the place the entry carries is where the gallery opens, however it was arrived at", async () => {
+  // Two arrivals lead here: a page built afresh, which has the entry and nothing else, and
+  // one handed back from the browser's own store with its offsets already in place. The
+  // kept place is put back for both, since a browser may give either.
+  const returned = await placeOnAStage({ kept: 2900 });
+  assert.equal(returned.scroller.scrollTop, 2900, "a gallery opened again does not open where it was left");
+
+  returned.scroller.scrollTop = 0;
+  returned.fire("pageshow", { persisted: true });
+  assert.equal(returned.scroller.scrollTop, 2900, "a restored page is not put back where it was left");
+
+  // A first visit carries no place, and must not be moved off the top by one.
+  const first = await placeOnAStage();
+  assert.equal(first.scroller.scrollTop, 0, "a gallery opened for the first time does not open at the top");
+  first.fire("pageshow", { persisted: false });
+  assert.equal(first.scroller.scrollTop, 0, "a first arrival was moved by a place that was never kept");
+});
+
+test("a refused write leaves the last kept place standing rather than throwing", async () => {
+  // Safari counts calls to replaceState and refuses past a hundred in half a minute. The
+  // write happens inside a timer, where a throw reaches nobody, so it is caught: the reader's
+  // place then stays at the last one that was written, which is the honest answer.
+  const stage = await placeOnAStage({ kept: 1200, refuse: true });
+  stage.scrollTo(3300);
+  assert.doesNotThrow(() => stage.settle(), "a refused write escapes the timer it happens in");
+  assert.equal(stage.history.state[stage.place], 1200, "a refused write changed the kept place");
+});
+
+test("the gallery is pinned to the screen and scrolled in its body", async () => {
+  // The two declarations the whole repair rests on, and the third that keeps a descent from
+  // being handed on to the web view at either end. The page they are read on is the one the
+  // generator writes, so the box is a box the reader actually gets.
+  const stylesheet = await readFile(new URL("../gallery/gallery.css", import.meta.url), "utf8");
+  const pinned = stylesheet.match(/\nhtml \{([^}]*)\}/u);
+  assert.ok(pinned, "the gallery no longer says anything about the document itself");
+  assert.match(pinned[1], /overflow: hidden;/u, "the document is not pinned, so the page can scroll itself");
+  assert.match(pinned[1], /height: 100dvh;/u, "the document is not held to the height of the screen");
+
+  const box = stylesheet.match(/\nbody \{([^}]*)\}/u);
+  assert.ok(box, "the gallery no longer says anything about the body");
+  assert.match(box[1], /overflow-y: auto;/u, "the body is not the box that scrolls");
+  assert.match(box[1], /height: 100%;/u, "the box is not held to the height of the document");
+  assert.match(box[1], /overscroll-behavior: contain;/u, "a descent at either end is handed to the web view");
+
+  // The box takes the focus so that a key has something to move, and the ring that focus
+  // would otherwise draw around the whole page is turned off.
+  assert.match(stylesheet, /body:focus,\n\s*body:focus-visible \{\n\s*outline: none;/u,
+    "the focus the box is given would be drawn around the page");
+
+  const script = await readFile(new URL("../gallery/gallery.js", import.meta.url), "utf8");
+  assert.match(script, /scroller\.focus\(\{ preventScroll: true \}\)/u,
+    "the box is not given the focus, so a key would move nothing");
+
+  const { manifest, quoteCatalog } = await loadCatalog();
+  const html = renderIndexPage(manifest, quoteCatalog);
+  assert.match(html, /<body tabindex="-1">/u, "the box cannot take the focus a key needs");
+});
+
 test("the README's count of the artworks that carry the moving mark is the manifest's own", async () => {
   // Another number written out in prose, beside a truth kept somewhere else. The mark goes
   // on the cards of artworks that move, so what it counts is a question about the manifest

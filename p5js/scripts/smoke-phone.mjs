@@ -36,6 +36,7 @@ import {
   MODEL_CANVAS,
   MODEL_FILE,
   checkArtworksFit,
+  checkGalleryHoldsStill,
   checkMasthead,
   checkPageHoldsStill,
   isWhollyOnScreen,
@@ -170,6 +171,8 @@ async function checkPublished() {
   note("");
   failures.push(...await checkPageHoldsStill({ context: phone, page: onPhone, origin, manifest, note }));
   note("");
+  failures.push(...await checkGalleryHoldsStill({ context: phone, page: onPhone, origin, note }));
+  note("");
   failures.push(...await checkMasthead({ phone, origin, note }));
 }
 
@@ -208,6 +211,9 @@ async function checkLocalBuild() {
     failures.push(...await checkPageHoldsStill({ context: phone, page: onPhone, origin, manifest, note }));
 
     note("");
+    failures.push(...await checkGalleryHoldsStill({ context: phone, page: onPhone, origin, note }));
+
+    note("");
     failures.push(...await checkMasthead({ phone, origin, note }));
     await checkMeteredAndLaptop(phone, laptop, origin);
 
@@ -233,6 +239,14 @@ async function checkLocalBuild() {
         note
       }));
       note("");
+      failures.push(...await checkGalleryHoldsStill({
+        context: webkitPhone,
+        page: onWebkitPhone,
+        origin,
+        withAFinger: false,
+        note
+      }));
+      note("");
       failures.push(...await checkMasthead({ phone: webkitPhone, origin, note }));
     } finally {
       await onWebkit.close();
@@ -245,6 +259,8 @@ async function checkLocalBuild() {
   note("\n— the published assertions, aimed at the faults they were written for —\n");
   await controlPublishedFit();
   await controlPublishedStillness();
+  await controlGalleryThatScrolls();
+  await controlGalleryOffTheSide();
   await controlPublishedMasthead();
   await controlBuildMarker();
 }
@@ -579,6 +595,56 @@ async function controlPublishedStillness() {
     }
   );
   reportControl("an artwork page a finger can pan", found.length > 0, found[0]);
+}
+
+/**
+ * The gallery as it was published, when the document itself was the thing that scrolled.
+ *
+ * This is the fault the whole change is for, kept as the stylesheet that carried it: an
+ * in-app browser folds its toolbars away on a document that moves, and will not draw them
+ * whole again until the reader is back at the top. A check that cannot see this stylesheet
+ * is a check that would pass the day the pinning is dropped.
+ */
+async function controlGalleryThatScrolls() {
+  const stamp = "0".repeat(40);
+  const found = await withFaultySite(
+    [["gallery-the-page-scrolls/gallery.css", "assets/gallery.css"]],
+    stamp,
+    async (origin) => {
+      const phone = await browser.newContext(PHONE);
+      const onPhone = await phone.newPage();
+      const caught = await checkGalleryHoldsStill({ context: phone, page: onPhone, origin });
+      await phone.close();
+      return caught;
+    }
+  );
+  // Named rather than counted: this stylesheet also leaves the box with nothing to scroll,
+  // so a control that asked only whether something failed would be satisfied by the guard.
+  const named = found.find((failure) => failure.includes("document is"));
+  reportControl("a gallery whose page scrolls", Boolean(named), named ?? found[0]);
+}
+
+/**
+ * A gallery held wider than the screen it is read on.
+ *
+ * Built rather than remembered: the gallery never shipped this way, and the reading it
+ * answers used to be taken from the document, which can no longer overflow in any direction
+ * at all. Without a control the moved reading would be a line of output that cannot fail.
+ */
+async function controlGalleryOffTheSide() {
+  const stamp = "0".repeat(40);
+  const found = await withFaultySite(
+    [["gallery-off-the-side/gallery.css", "assets/gallery.css"]],
+    stamp,
+    async (origin) => {
+      const phone = await browser.newContext(PHONE);
+      const onPhone = await phone.newPage();
+      const caught = await checkGalleryHoldsStill({ context: phone, page: onPhone, origin });
+      await phone.close();
+      return caught;
+    }
+  );
+  reportControl("a gallery wider than the screen", found.some((f) => f.includes("off the side")), found[0]);
 }
 
 /** The masthead as it was when a fine pointer stood in front of everything the figure does. */

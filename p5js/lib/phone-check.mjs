@@ -248,20 +248,6 @@ export async function checkMasthead({
     );
   }
 
-  const indexWidth = await touched.page.evaluate(() => ({
-    scroll: document.documentElement.scrollWidth,
-    client: document.documentElement.clientWidth
-  }));
-  note(
-    `${"the gallery index".padEnd(26)} ${indexWidth.scroll} wide in ${indexWidth.client}:`
-    + ` ${indexWidth.scroll <= indexWidth.client ? "no sideways overflow" : "OVERFLOWS SIDEWAYS"}`
-  );
-  if (indexWidth.scroll > indexWidth.client) {
-    failures.push(
-      `the gallery index runs ${indexWidth.scroll - indexWidth.client} pixels off the side of a`
-      + ` ${indexWidth.client}-pixel screen, so a reader has to drag it about to read the cards`
-    );
-  }
   await touched.page.close();
 
   const stilled = await openGallery((page) => page.emulateMedia({ reducedMotion: "reduce" }));
@@ -280,6 +266,134 @@ export async function checkMasthead({
     );
   }
   await stilled.page.close();
+
+  return failures;
+}
+
+/**
+ * How far down the gallery's box the reading is taken, and how far the window is asked to go.
+ * Both well past a screen on the phone this runs at, so that a box which moved and a window
+ * which did not are two different numbers rather than two roundings of nought.
+ */
+const DOWN_THE_GALLERY = 2000;
+
+/**
+ * Whether the gallery's document still has nowhere to go, and its box still carries the reader.
+ *
+ * The pair is the point. A document that cannot move is what keeps an in-app browser from
+ * folding its toolbars away, and it is trivially achieved by a page with nothing in it, so on
+ * its own it says nothing: it has to be read beside a box that does move, over a gallery long
+ * enough to move through. Each of the two is measured in the way a reader produces it — a
+ * finger drawn up the glass — and then again in the way a script produces it, because a
+ * browser may answer the two differently.
+ *
+ * The sideways reading is here rather than with the masthead because it is a reading about
+ * the same box: the document can no longer overflow in any direction, so a check that asked
+ * the document whether the cards run off the side would answer no on a page that runs off
+ * the side, which is the shape of a check that has quietly stopped measuring anything.
+ */
+export async function checkGalleryHoldsStill({
+  context,
+  page,
+  origin,
+  withAFinger = true,
+  note = () => {}
+}) {
+  const failures = [];
+  await page.goto(`${origin}/index.html`, { waitUntil: "load", timeout: 60_000 });
+  await page.waitForSelector(".card", { timeout: 60_000 });
+
+  const room = await page.evaluate(() => ({
+    documentLength: document.documentElement.scrollHeight,
+    documentScreen: document.documentElement.clientHeight,
+    boxLength: document.body.scrollHeight,
+    boxScreen: document.body.clientHeight,
+    boxWide: document.body.scrollWidth,
+    boxWideScreen: document.body.clientWidth,
+    cards: document.querySelectorAll(".card").length
+  }));
+  note(
+    `${"the gallery's document".padEnd(26)} ${room.documentLength} of page in ${room.documentScreen}:`
+    + ` ${room.documentLength === room.documentScreen ? "nowhere to go" : "HAS SOMEWHERE TO GO"}`
+  );
+  note(
+    `${"the gallery's box".padEnd(26)} ${room.boxLength} of page in ${room.boxScreen},`
+    + ` ${room.cards} cards`
+  );
+
+  // The claim first, and the instrument after it. A page that has gone back to scrolling
+  // itself also leaves its body with nothing to scroll, so a guard placed first would stop
+  // the reading and report the instrument — true, and not the thing that went wrong.
+  if (room.documentLength !== room.documentScreen) {
+    failures.push(
+      `the gallery's document is ${room.documentLength} long in a ${room.documentScreen} screen, so it`
+      + " can be scrolled, and an in-app browser will fold its toolbars away as the reader descends"
+    );
+  }
+  // A box with nothing to scroll would hold still for the same reason a pinned document
+  // does, and the finger below would then prove nothing at all.
+  if (room.boxLength <= room.boxScreen + DOWN_THE_GALLERY) {
+    failures.push(
+      `the gallery's box is only ${room.boxLength} long in a ${room.boxScreen} screen, so there is`
+      + " nothing to descend through and the readings below say nothing"
+    );
+    return failures;
+  }
+  note(
+    `${"the gallery's width".padEnd(26)} ${room.boxWide} wide in ${room.boxWideScreen}:`
+    + ` ${room.boxWide <= room.boxWideScreen ? "no sideways overflow" : "OVERFLOWS SIDEWAYS"}`
+  );
+  if (room.boxWide > room.boxWideScreen) {
+    failures.push(
+      `the gallery runs ${room.boxWide - room.boxWideScreen} pixels off the side of a`
+      + ` ${room.boxWideScreen}-pixel screen, so a reader has to drag it about to read the cards`
+    );
+  }
+
+  // A reader's own descent: the finger moves the box and must leave the document where it is.
+  // The finger is drawn through the browser's own input, which only Chromium exposes to us,
+  // so the engine a phone runs is asked the other question and told so in as many words —
+  // rather than being handed a reading that was never taken.
+  if (withAFinger) {
+    await drawAFinger(context, page, { from: FINGER.from, to: FINGER.to });
+    const fromAFinger = await page.evaluate(() => ({
+      window: window.scrollY,
+      box: document.body.scrollTop
+    }));
+    note(
+      `${"a finger up the gallery".padEnd(26)} window ${fromAFinger.window}, box ${fromAFinger.box}:`
+      + ` ${fromAFinger.window === 0 && fromAFinger.box > 0 ? "the box moved and the page did not" : "WRONG ONE MOVED"}`
+    );
+    if (fromAFinger.window !== 0) {
+      failures.push(`a finger drawn up the gallery moved the document ${fromAFinger.window} pixels`);
+    }
+    if (fromAFinger.box === 0) {
+      failures.push("a finger drawn up the gallery moved the box not at all, so the reader cannot descend");
+    }
+  } else {
+    note(`${"a finger up the gallery".padEnd(26)} not drawn in this engine`);
+  }
+
+  // And a script's: the window is told to go, and must not; the box is told to go, and must.
+  const fromAScript = await page.evaluate((down) => {
+    document.body.scrollTop = 0;
+    window.scrollTo(0, down);
+    const window_ = window.scrollY;
+    document.body.scrollTop = down;
+    return { window: window_, box: document.body.scrollTop };
+  }, DOWN_THE_GALLERY);
+  note(
+    `${"asked to go to " + DOWN_THE_GALLERY}`.padEnd(26)
+    + ` window ${fromAScript.window}, box ${fromAScript.box}`
+  );
+  if (fromAScript.window !== 0) {
+    failures.push(`the gallery's document went to ${fromAScript.window} when it was asked to`);
+  }
+  if (fromAScript.box !== DOWN_THE_GALLERY) {
+    failures.push(
+      `the gallery's box was asked for ${DOWN_THE_GALLERY} and gave ${fromAScript.box}`
+    );
+  }
 
   return failures;
 }

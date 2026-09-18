@@ -345,7 +345,13 @@ function keepThePlace() {
     history.scrollRestoration = "manual";
   }
   const remember = () => {
-    history.replaceState({ ...history.state, [PLACE]: scroller.scrollTop }, "");
+    // Safari counts these and refuses past a hundred in half a minute. One is written per
+    // settling, which does not approach that, but a reader who keeps a page moving in small
+    // starts might; the right answer then is that this place goes unwritten, not that a
+    // timer throws where nothing can catch it.
+    try {
+      history.replaceState({ ...history.state, [PLACE]: scroller.scrollTop }, "");
+    } catch { /* the place stays as it was, which is the last place that settled */ }
   };
   let settling = 0;
   scroller.addEventListener("scroll", () => {
