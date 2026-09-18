@@ -37,6 +37,7 @@ import {
   MODEL_FILE,
   checkArtworksFit,
   checkMasthead,
+  checkPageHoldsStill,
   isWhollyOnScreen,
   pageOf,
   visibleShare
@@ -167,6 +168,8 @@ async function checkPublished() {
     note
   }));
   note("");
+  failures.push(...await checkPageHoldsStill({ context: phone, page: onPhone, origin, manifest, note }));
+  note("");
   failures.push(...await checkMasthead({ phone, origin, note }));
 }
 
@@ -200,6 +203,9 @@ async function checkLocalBuild() {
 
     await checkPointerOnShrunkCanvas(onLaptop, origin);
     await checkTheFitIsWhatFits(onPhone, onLaptop, built, origin);
+
+    note("");
+    failures.push(...await checkPageHoldsStill({ context: phone, page: onPhone, origin, manifest, note }));
 
     note("");
     failures.push(...await checkMasthead({ phone, origin, note }));
@@ -238,6 +244,7 @@ async function checkLocalBuild() {
 
   note("\n— the published assertions, aimed at the faults they were written for —\n");
   await controlPublishedFit();
+  await controlPublishedStillness();
   await controlPublishedMasthead();
   await controlBuildMarker();
 }
@@ -555,6 +562,23 @@ async function controlPublishedFit() {
     }
   );
   reportControl("an artwork page from before the fit", found.length > 0, found[0]);
+}
+
+/** The artwork pages as they were when a finger could still pan one that has nowhere to go. */
+async function controlPublishedStillness() {
+  const stamp = "0".repeat(40);
+  const found = await withFaultySite(
+    [["page-that-pans/shared.css", "p5js/artworks/shared.css"]],
+    stamp,
+    async (origin) => {
+      const phone = await browser.newContext(PHONE);
+      const onPhone = await phone.newPage();
+      const caught = await checkPageHoldsStill({ context: phone, page: onPhone, origin, manifest });
+      await phone.close();
+      return caught;
+    }
+  );
+  reportControl("an artwork page a finger can pan", found.length > 0, found[0]);
 }
 
 /** The masthead as it was when a fine pointer stood in front of everything the figure does. */

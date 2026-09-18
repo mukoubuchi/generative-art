@@ -1,36 +1,13 @@
 /*
- * An artwork page is one picture with nothing below it, and it does not scroll: `overflow`
- * says so, and there is nothing to scroll to in any case. On a phone that is not merely
- * tidiness. In an app's own browser the toolbar a reader goes back with — the host's ‹ ›,
- * not the page's — hides itself when the page is scrolled, and on 2026-09-18 a reader
- * reported it hiding on an artwork page, which has nowhere to be scrolled to.
+ * A specimen, not a stylesheet: `artworks/shared.css` as it shipped in v1.26.1, which is the
+ * version a reader's phone hid its browser's own toolbar under — a swipe on an artwork page
+ * that has nowhere to scroll to. It is this file with the two declarations that refuse a
+ * swipe absent, and it is kept verbatim rather than written for the occasion.
  *
- * `overflow: hidden` takes the travel away, not the gesture: the browser still reads a
- * finger drawn across the page as a request to pan it. Give the page some length on purpose
- * and the difference is a measurement rather than an argument — under one finger drawn four
- * hundred pixels up it, the stylesheet without the two declarations below carries the page
- * some six hundred pixels, the finger's own travel and then its momentum, and this one moves
- * it none at all. So the gesture is refused as well, by the two properties that are about
- * the gesture rather than the layout:
- *
- *   - `touch-action: pinch-zoom` says a finger drawn across this page is not asking for the
- *     page to be panned. It is the widest value that still refuses a pan: a pinch zooms as
- *     it always did, which is how a reader gets close to a hairline, and only the double tap
- *     that also zooms goes with the pan. This is the one the finger feels — taken out on its
- *     own, the page pans again.
- *   - `overscroll-behavior: none` takes away the bounce at the end of a scroller, which is
- *     the only travel a page of exactly one screen has. Taken out on its own it changes
- *     nothing a finger can be made to show in Chromium, so it is held to its declared value
- *     rather than to a reading, and it is kept for the engine that does bounce.
- *
- * Nothing is taken from the artworks. `touch-action` governs what the browser does with a
- * gesture, not whether the page is told about it: Pulse Button still rings when it is
- * tapped, and a tap still becomes a click in a fraction of a millisecond, as it did before.
- * Nothing calls `preventDefault` on a touch, which is the other way to refuse a pan and the
- * way that would fight the sketches for their own events.
- *
- * The gallery index is not this file and is not touched: it is a page that really scrolls,
- * and a toolbar that hides while a reader scrolls it is the browser behaving as it should.
+ * A check that a finger cannot pan an artwork page passes just as well on a page with no
+ * length to pan, which is every artwork page. So the check gives a page some length on
+ * purpose, and then asks the same of this, where the same finger does pan it. Without that
+ * second reading the first is measuring nothing.
  */
 html,
 body {
@@ -38,8 +15,6 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: pinch-zoom;
   background: #fff;
 }
 

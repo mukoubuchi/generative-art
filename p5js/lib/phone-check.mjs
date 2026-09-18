@@ -283,3 +283,188 @@ export async function checkMasthead({
 
   return failures;
 }
+
+/**
+ * The work the pan is measured on, and the work the touch is measured on. Pinned by name,
+ * since a check that quietly measures nothing is a check that quietly passes. The second one
+ * answers a tap by striking its bell, and says how many rings are in the air, so a touch that
+ * arrives can be told from one that was swallowed.
+ */
+export const PANNED_WORK = "koch-curves";
+export const TOUCHED_WORK = "pulse-button";
+
+/**
+ * Whether a value of `touch-action` still leaves a reader the pinch that gets them close to
+ * a hairline. Two values allow it without naming it — the initial `auto` and `manipulation` —
+ * so a check that only looked for the word would call the page that allows everything a page
+ * that allows nothing.
+ */
+const letsAPinch = (touchAction) =>
+  touchAction === "auto" || touchAction === "manipulation" || touchAction.includes("pinch-zoom");
+
+/** Far enough to be a scroll rather than a tap, and inside a 390 by 664 phone. */
+const FINGER = { x: 195, from: 560, to: 160, step: 40 };
+/** Where the page is put before it is asked to be dragged back down. */
+const PART_WAY_DOWN = 400;
+/** One animation frame and a little: long enough for a scroll to have been begun and settled. */
+const SETTLE = 700;
+/** Rings are counted for this long after a tap, because the artwork lets them go again. */
+const LISTEN_FOR_RINGS = 1200;
+
+/**
+ * A finger drawn across the glass, through the browser's own input path.
+ *
+ * Through the debugging protocol rather than through events made in the page: a touch a page
+ * makes for itself is untrusted, and an untrusted touch scrolls nothing at all. It would
+ * therefore report a page that refuses a pan and a page that allows one as the same page.
+ */
+async function drawAFinger(context, page, { from, to }) {
+  const cdp = await context.newCDPSession(page);
+  const at = (y) => [{ x: FINGER.x, y, radiusX: 4, radiusY: 4, force: 1, id: 1 }];
+  const step = from > to ? -FINGER.step : FINGER.step;
+  try {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(from) });
+    for (let y = from + step; step < 0 ? y >= to : y <= to; y += step) {
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: at(y) });
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  } finally {
+    await cdp.detach();
+  }
+  await page.waitForTimeout(SETTLE);
+}
+
+async function tap(context, page, { x, y }) {
+  const cdp = await context.newCDPSession(page);
+  const at = [{ x, y, radiusX: 4, radiusY: 4, force: 1, id: 1 }];
+  try {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  } finally {
+    await cdp.detach();
+  }
+}
+
+/**
+ * Whether a finger can move an artwork page, and whether the artworks still feel one.
+ *
+ * The page is given some length before the finger is drawn up it. Every artwork page is
+ * exactly one screen and cannot scroll, so a finger that fails to move one has proved
+ * nothing: the reading has to be taken where there is something to move, which is also the
+ * position the page is in inside an app's own browser, where the host's scroller has the
+ * length the document does not. The length is given by opening this page's own overflow and
+ * adding a column to it, and nothing touches the two declarations under test.
+ *
+ * Then the same finger is asked of a work that answers one, because a page that cannot be
+ * panned would be no use if the artworks had stopped feeling the hand that was refused.
+ */
+export async function checkPageHoldsStill({ context, page, origin, manifest, note = () => {} }) {
+  const failures = [];
+  const works = new Map(manifest.artworks.map((artwork) => [artwork.id, artwork]));
+  const panned = works.get(PANNED_WORK);
+  const touched = works.get(TOUCHED_WORK);
+  if (!panned || !touched) {
+    failures.push(
+      `the catalogue no longer carries ${PANNED_WORK} and ${TOUCHED_WORK}, so nothing was asked of a finger`
+    );
+    return failures;
+  }
+
+  await page.goto(pageOf(origin, panned), { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForSelector("#artwork canvas", { timeout: 60_000 });
+
+  const declared = await page.evaluate(() => {
+    const read = (element) => ({
+      touchAction: getComputedStyle(element).touchAction,
+      overscroll: getComputedStyle(element).overscrollBehaviorY
+    });
+    return { html: read(document.documentElement), body: read(document.body) };
+  });
+  note(
+    `${"the page's answer to a finger".padEnd(26)} touch-action ${declared.html.touchAction},`
+    + ` overscroll ${declared.html.overscroll}`
+  );
+  for (const [where, rules] of Object.entries(declared)) {
+    if (rules.touchAction === "auto" || rules.touchAction.includes("pan-")) {
+      failures.push(`${where} still offers itself to be panned: touch-action is ${rules.touchAction}`);
+    }
+    // A pan is refused; a pinch is not. `none` would take the zoom with it, which is how a
+    // reader gets close to a hairline on a phone.
+    if (!letsAPinch(rules.touchAction)) {
+      failures.push(`${where} no longer lets a reader pinch: touch-action is ${rules.touchAction}`);
+    }
+    if (rules.overscroll !== "none") {
+      failures.push(`${where} still bounces at its own end: overscroll-behavior-y is ${rules.overscroll}`);
+    }
+  }
+
+  const lengthened = await page.evaluate(() => {
+    for (const element of [document.documentElement, document.body]) {
+      element.style.setProperty("overflow", "visible", "important");
+      element.style.setProperty("height", "auto", "important");
+    }
+    const column = document.createElement("div");
+    column.style.cssText = "height: 3000px; width: 1px;";
+    document.body.append(column);
+    window.scrollTo(0, 120);
+    const moved = window.scrollY;
+    window.scrollTo(0, 0);
+    return {
+      length: document.documentElement.scrollHeight,
+      screen: document.documentElement.clientHeight,
+      moved
+    };
+  });
+  // The instrument before the reading: if the page cannot be moved at all, a finger that
+  // fails to move it says nothing about the finger.
+  if (lengthened.length <= lengthened.screen || lengthened.moved === 0) {
+    failures.push(
+      `the page was not given anything to scroll (${lengthened.length} in ${lengthened.screen},`
+      + ` and it stayed at ${lengthened.moved} when it was told to go to 120), so the finger below proves nothing`
+    );
+    return failures;
+  }
+
+  await drawAFinger(context, page, { from: FINGER.from, to: FINGER.to });
+  const afterUp = await page.evaluate(() => window.scrollY);
+  await page.evaluate((to) => window.scrollTo(0, to), PART_WAY_DOWN);
+  const fromPartWay = await page.evaluate(() => window.scrollY);
+  await drawAFinger(context, page, { from: FINGER.to, to: FINGER.from });
+  const afterDown = await page.evaluate(() => window.scrollY);
+  note(
+    `${"a finger up and down".padEnd(26)} ${lengthened.length} of page in ${lengthened.screen}:`
+    + ` 0 -> ${afterUp} up, ${fromPartWay} -> ${afterDown} down`
+  );
+  if (afterUp !== 0) {
+    failures.push(`a finger drawn up the page moved it ${afterUp} pixels, so the page pans under a swipe`);
+  }
+  if (afterDown !== fromPartWay) {
+    failures.push(
+      `a finger drawn down the page moved it from ${fromPartWay} to ${afterDown}, so the page pans under a swipe`
+    );
+  }
+
+  await page.goto(pageOf(origin, touched), { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForSelector("#artwork canvas", { timeout: 60_000 });
+  await page.waitForFunction(() => window.__ARTWORK_READY__ === true, null, { timeout: 60_000 });
+  const canvas = await page.locator("#artwork canvas").boundingBox();
+  const quiet = await page.evaluate(() => window.__ARTWORK_STATE__.ringCount);
+  await tap(context, page, { x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
+  const rang = await page.evaluate(async (listenFor) => {
+    let most = 0;
+    const until = performance.now() + listenFor;
+    while (performance.now() < until) {
+      most = Math.max(most, window.__ARTWORK_STATE__.ringCount);
+      await new Promise((frame) => requestAnimationFrame(frame));
+    }
+    return most;
+  }, LISTEN_FOR_RINGS);
+  note(`${`a tap on ${TOUCHED_WORK}`.padEnd(26)} rings ${quiet} before, ${rang} after`);
+  if (rang <= quiet) {
+    failures.push(
+      `${TOUCHED_WORK} was struck and did not ring (${quiet} rings before, ${rang} after), so the`
+      + " page that refuses a pan is keeping the touch from the artwork as well"
+    );
+  }
+  return failures;
+}
