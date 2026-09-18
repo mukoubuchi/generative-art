@@ -37,6 +37,12 @@ const SHUTTER_BLOCKS = 9;
  */
 const SCROLL_RING_GAP = 780;
 
+/** Where in the history entry the reader's place in the gallery is written. */
+const PLACE = "galleryTop";
+
+/** How long after the scrolling stops the place is written down. */
+const PLACE_SETTLES = 250;
+
 /** Rings kept in flight at once; past this the oldest is dropped before a new one starts. */
 const RIPPLES_AT_MOST = 12;
 
@@ -305,11 +311,75 @@ function liftShutterOnReturn() {
   });
 }
 
+/**
+ * Gives the box the focus, so that a key still moves the page.
+ *
+ * The document cannot scroll any more, and a browser scrolls what the focus is inside: with
+ * the focus nowhere, Space, Page Down, the arrows and End all move nothing at all. Measured
+ * before this was written, every one of them left the box where it stood. Taking the focus
+ * without scrolling to it is the whole point, so the scroll the focus would otherwise cause
+ * is refused.
+ */
+function holdTheFocus() {
+  scroller.focus({ preventScroll: true });
+}
+
+/**
+ * Keeps the place the reader left, since the browser no longer can.
+ *
+ * A browser restores the position of the document, and this document never moves: left to
+ * itself it would put every return and every reload back at the head of the gallery, which
+ * is the one thing a reader coming back from an artwork does not want. So the browser is
+ * told to stop trying, and the offset is written into the history entry the reader is on —
+ * the entry, not the tab, so a second gallery in a second tab keeps its own place.
+ *
+ * It is written while the page is still alive — a moment after the scrolling settles —
+ * rather than as the page leaves. Writing it at the leaving looked right and was not: a
+ * reload kept coming back to the place before last, because the entry the browser carries
+ * into the new document had already been taken by then. The leaving is still listened for,
+ * as the last chance for a movement that has not settled, and so is the page being hidden,
+ * which is all a phone switched to another app may give.
+ */
+function keepThePlace() {
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+  const remember = () => {
+    history.replaceState({ ...history.state, [PLACE]: scroller.scrollTop }, "");
+  };
+  let settling = 0;
+  scroller.addEventListener("scroll", () => {
+    window.clearTimeout(settling);
+    settling = window.setTimeout(remember, PLACE_SETTLES);
+  }, { passive: true });
+  const returnTo = () => {
+    const kept = history.state ? history.state[PLACE] : null;
+    if (typeof kept === "number" && kept > 0) {
+      scroller.scrollTop = kept;
+    }
+  };
+  window.addEventListener("pagehide", remember);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      remember();
+    }
+  });
+  // A restored page is handed back its own scroll offsets by some browsers and not by
+  // others, so the kept place is put back either way; where it was already right, this
+  // writes the number that is already there.
+  window.addEventListener("pageshow", returnTo);
+  returnTo();
+}
+
 const cards = [...document.querySelectorAll(".card")];
 const footRule = document.querySelector(".colophon__rule");
 // Tells the page's own timer that the reveal is in hand, so it leaves the hidden state
 // alone. If this file never runs, that timer unhides everything instead.
 document.documentElement.dataset.gallery = "ready";
+holdTheFocus();
+// Before the first sweep, so that what the reader comes back to is revealed rather than
+// arriving a second time under them.
+keepThePlace();
 revealOnApproach(footRule ? [...cards, footRule] : cards);
 // Registered whether or not motion is allowed: the sweep must run even if the reader's
 // motion preference changed between leaving and coming back.

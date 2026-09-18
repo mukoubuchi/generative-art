@@ -78,6 +78,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * The box takes the focus on arrival so that a key has something to move, and that is all
+ * it is for: the reader did not ask for it and must not be shown a ring around the page.
+ * The controls inside keep their own, which is what the ring is for.
+ */
+body:focus,
+body:focus-visible {
+  outline: none;
+}
+
 .masthead {
   display: flex;
   flex-wrap: wrap;

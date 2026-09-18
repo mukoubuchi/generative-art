@@ -304,7 +304,10 @@ export function renderIndexPage(manifest, quoteCatalog, build) {
       }, 1500);
     </script>
   </head>
-  <body>
+  <!-- The document is pinned to the screen and this is the box that scrolls, so a key
+       press has nothing to move unless the focus is inside it. Focusable, and the script
+       gives it the focus on arrival; out of the tab order, since it is not a control. -->
+  <body tabindex="-1">
 ${ICON_SPRITE}
 
     <header class="masthead">
