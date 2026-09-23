@@ -74,6 +74,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Loxodrome](p5js/artworks/loxodrome/) | Six courses held at one bearing, winding into a blaze at each pole, and the chart that straightens them into parallel lines by putting the poles out of its reach, rendered as an MP4 |
 | [Little Moons](p5js/artworks/little-moons/) | Sunlight through hundreds of gaps in a canopy during a partial eclipse, each small gap throwing the eclipsed sun onto the ground turned over, rendered as an MP4 |
 | [Homo Bulla](p5js/artworks/homo-bulla/) | A foam coarsening on a torus, each bubble shaded or lit by whether it has fewer or more than six sides, the camera standing back as the bubbles grow, rendered as an MP4 |
+| [Stains the White](p5js/artworks/stains-the-white/) | Soap bubbles lit from every side and seen against black, their films thinning through the interference colours until a black film opens at the top and they burst, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, the English aphorism policy, source notes, and the nightly publishing workflow.
 
