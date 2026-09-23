@@ -1,11 +1,11 @@
 /**
  * The wind of the first Little Moons, kept as a specimen of the motion it was taken out for.
  *
- * Each of the canopy's three layers slid as one rigid sheet, along a sine of its own: a pixel
- * and a half across, two, three and one times a clip, and up and down at twice that. Every
- * hole of a layer moved in step with every other, and each layer's path came round again at
- * its own fixed period. Nothing in a tree moves like that, and the wind that replaced it is a
- * field the leaves move in.
+ * Each of the canopy's three layers slid as one rigid sheet on a figure of eight of its own: a
+ * pixel and a half either way across, two, three and one times a clip, and nine tenths of a
+ * pixel either way up and down, twice as often. Every hole of a layer moved in step with every
+ * other, and each layer's path came round again at its own fixed period. A tree does not move
+ * like that; the wind that replaced it is a field the leaves move in.
  *
  * The function is the one v1.28.0 published, with its constants.
  */
