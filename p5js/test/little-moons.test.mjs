@@ -4,26 +4,43 @@ import test from "node:test";
 import { renderIndexPage } from "../lib/gallery.mjs";
 import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
+  CANOPY_LAYOUT,
   CANOPY_MARGIN,
   CANOPY_SIZE,
   CLEAR_SKY,
+  CROWN_LAYER,
+  DURATION_SECONDS,
   ECLIPSE,
+  GUST,
   LAYER_HEIGHTS,
   LOGICAL_SIZE,
   MOON_REACH,
+  PLACEMENT_STRIDE,
   PLAYBACK_FPS,
+  SHADE_LIGHT,
+  SKY_LIGHT,
   SUB_ROWS,
+  SUN_ANGULAR_RADIUS,
   TOTAL_FRAMES,
   brightChords,
   buildCanopy,
+  buildLeaves,
+  canopyAt,
+  crownDepth,
+  gustAt,
   holePieces,
   layerLight,
+  leafPlacement,
   lightAt,
   moonAt,
   rowSums,
+  shadeLightAt,
   skyIsBright,
-  swayAt
+  skyPastCrown,
+  sunShowing,
+  windAt
 } from "../artworks/little-moons/little-moons.js";
+import { swayAt as rigidSwayAt } from "./fixtures/little-moons-rigid-sway/sway.js";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 const CATALOG = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
@@ -31,8 +48,8 @@ const NOTES = readFileSync(new URL("../README.md", import.meta.url), "utf8");
 const SKETCH_URL = new URL("../artworks/little-moons/sketch.js", import.meta.url);
 const QUOTE_ID = "pseudo-aristoteles-meniskoi";
 
-const STILL = { x: 0, y: 0 };
 const CLEAR = CLEAR_SKY;
+const LEAVES = buildLeaves();
 
 /** A canopy layer with nothing open but what `open(x, y)` says, in canvas coordinates, sampled 8×8 per cell. */
 function layerWith(open) {
@@ -67,7 +84,7 @@ function lightAround(layer, height, cx, cy, reach, moon) {
   const cells = [];
   for (let y = Math.floor(cy - reach); y <= Math.ceil(cy + reach); y += 1) {
     for (let x = Math.floor(cx - reach); x <= Math.ceil(cx + reach); x += 1) {
-      cells.push({ x: x + 0.5, y: y + 0.5, light: layerLight(layer, CANOPY_SIZE, x + 0.5, y + 0.5, height, moon, STILL) });
+      cells.push({ x: x + 0.5, y: y + 0.5, light: layerLight(layer, CANOPY_SIZE, x + 0.5, y + 0.5, height, moon) });
     }
   }
   return cells;
@@ -99,11 +116,6 @@ test("the clip is twelve seconds at thirty frames, and the moon starts and ends 
   // The frame after the last is the first again: the clip closes on the same sky.
   assert.deepEqual(moonAt(TOTAL_FRAMES), first);
   assert.equal(first.x, -MOON_REACH);
-  for (let layer = 0; layer < LAYER_HEIGHTS.length; layer += 1) {
-    const start = swayAt(0, layer);
-    const again = swayAt(TOTAL_FRAMES, layer);
-    assert.ok(Math.abs(start.x - again.x) < 1e-12 && Math.abs(start.y - again.y) < 1e-12);
-  }
 });
 
 test("the moon's offset is exact at the quarter frames, and the eclipse is where it should be", () => {
@@ -234,10 +246,10 @@ test("a small hole's image is the sun's, whatever the hole's shape; a large hole
 test("the square's image keeps its corners only when the hole is large", () => {
   // Along the diagonal and along the axis, how far the image reaches before it falls to half.
   function reachAtHalf(layer, height, direction, limit) {
-    const peak = layerLight(layer, CANOPY_SIZE, 340, 340, height, CLEAR, STILL);
+    const peak = layerLight(layer, CANOPY_SIZE, 340, 340, height, CLEAR);
     for (let step = 0; step < limit * 8; step += 1) {
       const distance = step / 8;
-      if (layerLight(layer, CANOPY_SIZE, 340 + direction.x * distance, 340 + direction.y * distance, height, CLEAR, STILL) < peak / 2) {
+      if (layerLight(layer, CANOPY_SIZE, 340 + direction.x * distance, 340 + direction.y * distance, height, CLEAR) < peak / 2) {
         return distance;
       }
     }
@@ -258,8 +270,8 @@ test("the canopy is laid the same every time and its holes are counted", () => {
   const canopy = buildCanopy();
   assert.equal(canopy.size, CANOPY_SIZE);
   assert.equal(CANOPY_SIZE, LOGICAL_SIZE + 2 * CANOPY_MARGIN);
-  assert.equal(canopy.leaves, 16869);
-  assert.deepEqual(canopy.layers.map((layer) => holePieces(layer.mask, canopy.size).length), [526, 136, 138]);
+  assert.equal(canopy.leaves, 12289);
+  assert.deepEqual(canopy.layers.map((layer) => holePieces(layer.mask, canopy.size).length), [1098, 643, 543]);
   const again = buildCanopy();
   canopy.layers.forEach((layer, index) => assert.deepEqual(again.layers[index].mask, layer.mask));
 });
@@ -276,7 +288,7 @@ function imageOf(layer, height, piece, moon, reach) {
   const cells = [];
   for (let j = -reach; j <= reach; j += 1) {
     for (let i = -reach; i <= reach; i += 1) {
-      cells.push({ x: i, y: j, light: layerLight(layer, CANOPY_SIZE, piece.x + i, piece.y + j, height, moon, STILL) });
+      cells.push({ x: i, y: j, light: layerLight(layer, CANOPY_SIZE, piece.x + i, piece.y + j, height, moon) });
     }
   }
   const total = cells.reduce((sum, cell) => sum + cell.light, 0);
@@ -284,46 +296,55 @@ function imageOf(layer, height, piece, moon, reach) {
 }
 
 test("every small hole of one height throws the same image the same way round, and each height its own", () => {
-  const canopy = buildCanopy();
+  // The leaves move, so the holes are taken from the canopy as it is laid at five frames of
+  // the clip, each under the sky of frame 144.
   const moon = moonAt(144);
   const reach = Math.max(...LAYER_HEIGHTS) + 3;
-  const chosen = LAYER_HEIGHTS.map((height, index) => {
-    const small = holePieces(canopy.layers[index].mask, canopy.size).filter((piece) => piece.area >= 1 && piece.cells <= 6
-      && piece.x > reach && piece.x < LOGICAL_SIZE - reach && piece.y > reach && piece.y < LOGICAL_SIZE - reach);
-    assert.ok(small.length >= 10, `${height}: only ${small.length} small holes`);
-    return Array.from({ length: 10 }, (unused, k) => small[Math.floor(k * small.length / 10)]);
-  });
-  const images = chosen.map((pieces, index) => pieces.map((piece) => {
-    const layer = layerOfPiece(canopy.layers[index], piece);
-    const height = LAYER_HEIGHTS[index];
-    // Each hole alone, so no neighbour's light is counted as its own.
-    const loss = lossAround(layer, height, piece.x, piece.y, height + 3, moon);
-    assert.ok(bearingOff(loss, moon) < 0.5, `${height}: a hole's loss is ${bearingOff(loss, moon)} degrees off`);
-    return imageOf(layer, height, piece, moon, reach);
-  }));
+  const within = LAYER_HEIGHTS.map(() => []);
+  let across = Infinity;
+  for (const frame of [0, 72, 144, 216, 288]) {
+    const canopy = buildCanopy(frame);
+    const chosen = LAYER_HEIGHTS.map((height, index) => {
+      const small = holePieces(canopy.layers[index].mask, canopy.size).filter((piece) => piece.area >= 1 && piece.cells <= 6
+        && piece.x > reach && piece.x < LOGICAL_SIZE - reach && piece.y > reach && piece.y < LOGICAL_SIZE - reach);
+      assert.ok(small.length >= 10, `${frame} ${height}: only ${small.length} small holes`);
+      return Array.from({ length: 10 }, (unused, k) => small[Math.floor(k * small.length / 10)]);
+    });
+    const images = chosen.map((pieces, index) => pieces.map((piece) => {
+      const layer = layerOfPiece(canopy.layers[index], piece);
+      const height = LAYER_HEIGHTS[index];
+      // Each hole alone, so no neighbour's light is counted as its own.
+      const loss = lossAround(layer, height, piece.x, piece.y, height + 3, moon);
+      assert.ok(bearingOff(loss, moon) < 0.5, `${height}: a hole's loss is ${bearingOff(loss, moon)} degrees off`);
+      return imageOf(layer, height, piece, moon, reach);
+    }));
+    images.forEach((sameHeight, index) => within[index].push(Math.max(...sameHeight.map((image) => difference(image, sameHeight[0])))));
+    across = Math.min(across, ...[[0, 1], [0, 2], [1, 2]].flatMap(([a, b]) =>
+      images[a].flatMap((first) => images[b].map((second) => difference(first, second)))));
+  }
   // Within a height the images agree, and the more nearly so the smaller the hole is beside
   // its sun: the lowest layer's small holes are a third of its sun across, the highest's a
-  // seventh. Across heights they are different suns and disagree on most of their light.
-  const within = images.map((sameHeight) => Math.max(...sameHeight.map((image) => difference(image, sameHeight[0]))));
-  const across = Math.min(...[[0, 1], [0, 2], [1, 2]].flatMap(([a, b]) =>
-    images[a].flatMap((first) => images[b].map((second) => difference(first, second)))));
-  assert.ok(within[2] < within[1] && within[1] < within[0], `${within}`);
-  assert.ok(Math.max(...within) < across / 4, `within ${within}, across ${across}`);
+  // seventh. Ten holes are few, so the order is asked of the median over the five frames.
+  // Across heights they are different suns and disagree on most of their light.
+  const median = within.map((values) => [...values].sort((a, b) => a - b)[2]);
+  assert.ok(median[2] < median[1] && median[1] < median[0], `${median}`);
+  assert.ok(Math.max(...within.flat()) < across / 4, `within ${within}, across ${across}`);
 });
 
-test("the light at a point is each layer's light under its own sun and its own wind, added", () => {
+test("the light at a point is each layer's light under its own sun, added, through the canopy laid for the frame", () => {
   // This is the reference the graphics card is checked against, so it is pinned by what it
   // is made of rather than by a picture.
-  const canopy = buildCanopy();
   for (const frame of [0, 150, 180, 290]) {
+    const canopy = canopyAt(LEAVES, frame);
     const moon = moonAt(frame);
     for (const [x, y] of [[100.5, 200.5], [340.25, 339.75], [611.5, 77.5], [5.5, 674.5]]) {
       const added = canopy.layers.reduce((sum, layer, index) =>
-        sum + layerLight(layer, canopy.size, x, y, LAYER_HEIGHTS[index], moon, swayAt(frame, index)), 0);
+        sum + layerLight(layer, canopy.size, x, y, LAYER_HEIGHTS[index], moon), 0);
       assert.equal(lightAt(canopy, x, y, frame), added);
     }
   }
   // And there is light to add: the check is not passing on darkness.
+  const canopy = canopyAt(LEAVES, 0);
   let lit = 0;
   for (let x = 0.5; x < LOGICAL_SIZE; x += 5) lit += lightAt(canopy, x, 340.5, 0) > 0.01;
   assert.ok(lit >= 10, `only ${lit} lit samples`);
@@ -334,7 +355,7 @@ test("reading each row of cells at several heights leaves no stripes: the light 
   // and the images come out striped across. The fix is only as good as its agreement with
   // a reading eight times finer, around real holes of every layer, on a half-pixel grid.
   assert.equal(SUB_ROWS, 4);
-  const canopy = buildCanopy();
+  const canopy = buildCanopy(180);
   const moon = moonAt(180);
   LAYER_HEIGHTS.forEach((height, index) => {
     const small = holePieces(canopy.layers[index].mask, canopy.size).filter((piece) => piece.area >= 1 && piece.cells <= 6
@@ -345,7 +366,7 @@ test("reading each row of cells at several heights leaves no stripes: the light 
         const values = [];
         for (let j = -2 * (height + 2); j <= 2 * (height + 2); j += 1) {
           for (let i = -2 * (height + 2); i <= 2 * (height + 2); i += 1) {
-            values.push(layerLight(canopy.layers[index], canopy.size, piece.x + i / 2, piece.y + j / 2, height, moon, STILL, subRows));
+            values.push(layerLight(canopy.layers[index], canopy.size, piece.x + i / 2, piece.y + j / 2, height, moon, subRows));
           }
         }
         return values;
@@ -357,9 +378,270 @@ test("reading each row of cells at several heights leaves no stripes: the light 
       worst.used = Math.max(worst.used, off(read(SUB_ROWS)));
     }
     assert.ok(worst.used < 0.05, `${height}: off by ${worst.used} of the peak`);
-    // The control: read once, the same images are off by a tenth of their peak or more.
-    assert.ok(worst.once > 0.1, `${height}: a single reading is only ${worst.once} off`);
+    // The control: read once, the same images are off by three times as much or more.
+    assert.ok(worst.once > 3 * worst.used, `${height}: a single reading is only ${worst.once} off, against ${worst.used}`);
   });
+});
+
+/** A point's motion over the clip, one value a frame. */
+function motionAt(x, y, key) {
+  return Array.from({ length: TOTAL_FRAMES }, (unused, frame) => windAt(x, y, frame / PLAYBACK_FPS)[key]);
+}
+
+function correlation(first, second) {
+  const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const a = mean(first);
+  const b = mean(second);
+  let across = 0;
+  let spreadA = 0;
+  let spreadB = 0;
+  first.forEach((value, at) => {
+    across += (value - a) * (second[at] - b);
+    spreadA += (value - a) ** 2;
+    spreadB += (second[at] - b) ** 2;
+  });
+  return across / Math.sqrt(spreadA * spreadB);
+}
+
+/**
+ * How nearly a motion comes back to where it was once it has gone away: its correlation with
+ * itself, round the loop, at the largest lag past the first lag where that falls to nought
+ * and short of the clip itself. A sine comes back to one at its period.
+ */
+function comesBack(series) {
+  const at = (lag) => correlation(series, series.map((unused, index) => series[(index + lag) % series.length]));
+  let first = 1;
+  while (first < series.length && at(first) > 0) first += 1;
+  let most = -1;
+  for (let lag = first; lag <= series.length - first; lag += 1) most = Math.max(most, at(lag));
+  return most;
+}
+
+/** Points spread over the canvas, the same every run. */
+const SPREAD = Array.from({ length: 36 }, (unused, index) => ({ x: 45 + (index % 6) * 118 + (index % 5) * 7, y: 45 + Math.floor(index / 6) * 118 + (index % 4) * 9 }));
+
+test("a leaf moves with the air where it grows and with nothing of its own: two leaves at one place are moved alike, near ones together", () => {
+  // Two leaves at one place, as unlike as the canopy's leaves come: they are shifted, turned
+  // and narrowed alike, because the wind is asked only where they are.
+  const pair = { ...LEAVES, leaves: [
+    { x: 400.3, y: 300.7, length: 7, width: 2.66, angle: 0.2, layer: 0 },
+    { x: 400.3, y: 300.7, length: 12, width: 7.2, angle: 2.9, layer: 2 }
+  ] };
+  const wrap = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
+  for (const frame of [0, 97, 180, 311]) {
+    const placement = leafPlacement(pair, frame / PLAYBACK_FPS);
+    const second = PLACEMENT_STRIDE;
+    assert.equal(placement[0], placement[second]);
+    assert.equal(placement[1], placement[second + 1]);
+    const turn = (offset, angle) => Math.atan2(placement[offset + 5], placement[offset + 4]) - angle;
+    assert.ok(Math.abs(wrap(turn(0, 0.2) - turn(second, 2.9))) < 1e-6);
+    const narrowing = (offset, width) => 1 / placement[offset + 7] / width;
+    assert.ok(Math.abs(narrowing(0, 2.66) - narrowing(second, 7.2)) < 1e-6);
+  }
+  // Leaves a few pixels apart are carried together and nearly turned together; leaves a few
+  // hundred pixels apart are not carried as one sheet.
+  let near = 1;
+  let nearTurn = 1;
+  let far = -1;
+  for (const { x, y } of SPREAD) {
+    const here = motionAt(x, y, "dx");
+    near = Math.min(near, correlation(here, motionAt(x + 4, y + 4, "dx")));
+    nearTurn = Math.min(nearTurn, correlation(motionAt(x, y, "turn"), motionAt(x + 4, y + 4, "turn")));
+    far = Math.max(far, correlation(here, motionAt(x + 300, y - 200, "dx")));
+  }
+  assert.ok(near > 0.98, `near leaves carried together only to ${near}`);
+  assert.ok(nearTurn > 0.6, `near leaves turned together only to ${nearTurn}`);
+  assert.ok(far < 0.8, `far leaves carried as one sheet, to ${far}`);
+});
+
+test("no leaf comes round again at a fixed period: the rigid sway it replaced did, the wind does not", () => {
+  let most = { dx: -1, dy: -1, turn: -1 };
+  for (const { x, y } of SPREAD) {
+    for (const key of Object.keys(most)) most[key] = Math.max(most[key], comesBack(motionAt(x, y, key)));
+  }
+  for (const [key, value] of Object.entries(most)) assert.ok(value < 0.9, `${key} comes back to ${value}`);
+  // The control: the sway v1.28.0 published, frozen outside the artwork, comes back exactly,
+  // across in two of its three layers and up and down in all three.
+  const rigid = (layer, key) => comesBack(Array.from({ length: TOTAL_FRAMES }, (unused, frame) => rigidSwayAt(frame, layer)[key]));
+  assert.ok(rigid(0, "x") > 0.999 && rigid(1, "x") > 0.999);
+  for (const layer of [0, 1, 2]) assert.ok(rigid(layer, "y") > 0.999);
+});
+
+test("the wind closes on itself in twelve seconds, with no seam", () => {
+  let apart = 0;
+  let step = 0;
+  let seam = 0;
+  for (const { x, y } of SPREAD) {
+    const start = windAt(x, y, 0);
+    const again = windAt(x, y, DURATION_SECONDS);
+    for (const key of ["dx", "dy", "turn", "width"]) apart = Math.max(apart, Math.abs(start[key] - again[key]));
+    apart = Math.max(apart, Math.abs(gustAt(x, y, 0) - gustAt(x, y, DURATION_SECONDS)));
+    let previous = start;
+    for (let frame = 1; frame < TOTAL_FRAMES; frame += 1) {
+      const now = windAt(x, y, frame / PLAYBACK_FPS);
+      step = Math.max(step, Math.hypot(now.dx - previous.dx, now.dy - previous.dy));
+      previous = now;
+    }
+    seam = Math.max(seam, Math.hypot(start.dx - previous.dx, start.dy - previous.dy));
+  }
+  assert.ok(apart < 1e-9, `the wind at twelve seconds is ${apart} from the wind at nought`);
+  // From the last frame to the first, the leaves move no further than between any two frames.
+  assert.ok(seam <= step, `the seam moves ${seam}, against ${step}`);
+});
+
+test("gusts cross the crown one way, at the wind's speed, and lean and stir the leaves they reach", () => {
+  const peakFrame = (x, y) => {
+    let best = -1;
+    let at = 0;
+    for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+      const strength = gustAt(x, y, frame / PLAYBACK_FPS);
+      if (strength > best) {
+        best = strength;
+        at = frame;
+      }
+    }
+    return at;
+  };
+  // Along the wind, every 150 pixels, the strongest gust arrives half a second later.
+  const along = [-300, -150, 0, 150, 300].map((distance) => peakFrame(365 + distance * Math.cos(GUST.heading), 365 + distance * Math.sin(GUST.heading)));
+  const steps = along.slice(1).map((frame, index) => (frame - along[index] + TOTAL_FRAMES) % TOTAL_FRAMES);
+  const expected = 150 / GUST.speed * PLAYBACK_FPS;
+  for (const stepped of steps) assert.ok(Math.abs(stepped - expected) <= 1, `a gust stepped ${stepped} frames in 150 pixels`);
+  // Where a gust is, the branches lean downwind and the leaves turn harder than in the calm.
+  let lean = 0;
+  let leanCalm = 0;
+  const turned = [];
+  const turnedCalm = [];
+  for (const { x, y } of SPREAD) {
+    for (let frame = 0; frame < TOTAL_FRAMES; frame += 3) {
+      const t = frame / PLAYBACK_FPS;
+      const strength = gustAt(x, y, t);
+      const wind = windAt(x, y, t);
+      const downwind = wind.dx * Math.cos(GUST.heading) + wind.dy * Math.sin(GUST.heading);
+      if (strength > 0.5) {
+        lean += downwind;
+        turned.push(Math.abs(wind.turn));
+      }
+      if (strength < 0.1) {
+        leanCalm += downwind;
+        turnedCalm.push(Math.abs(wind.turn));
+      }
+    }
+  }
+  assert.ok(turned.length > 200 && turnedCalm.length > 200, `${turned.length} in gusts, ${turnedCalm.length} calm`);
+  const median = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+  assert.ok(lean / turned.length - leanCalm / turnedCalm.length > 3, `leaning ${lean / turned.length} in gusts and ${leanCalm / turnedCalm.length} in the calm`);
+  assert.ok(median(turned) > 2 * median(turnedCalm), `turning ${median(turned)} in gusts and ${median(turnedCalm)} in the calm`);
+});
+
+test("the light in the shade is the sky's and the canopy's glow, and the eclipse dims it with the sun", () => {
+  // The share of the sun left showing, against a count on a fine grid of the sun's disk.
+  for (const frame of [0, 100, 150, 180]) {
+    const moon = moonAt(frame);
+    const steps = 1200;
+    let inside = 0;
+    let bright = 0;
+    for (let i = 0; i < steps; i += 1) {
+      for (let j = 0; j < steps; j += 1) {
+        const x = -1 + (i + 0.5) * 2 / steps;
+        const y = -1 + (j + 0.5) * 2 / steps;
+        if (x * x + y * y >= 1) continue;
+        inside += 1;
+        if ((x - moon.x) ** 2 + (y - moon.y) ** 2 >= moon.ratio ** 2) bright += 1;
+      }
+    }
+    assert.ok(Math.abs(sunShowing(moon) - bright / inside) < 1e-3, `${frame}: ${sunShowing(moon)} against ${bright / inside}`);
+  }
+  assert.equal(sunShowing(moonAt(0)), 1);
+  for (const [x, y] of [[100, 300], [480, 420], [600, 120]]) {
+    const sky = skyPastCrown(crownDepth(CANOPY_LAYOUT.crown, x, y));
+    const whole = shadeLightAt(x, y, 1);
+    assert.ok(Math.abs(whole - (SHADE_LIGHT * (1 - sky) + SKY_LIGHT * sky)) < 1e-15);
+    // At the deepest point of the eclipse the shade has a quarter of its light, as the sun has.
+    const deepest = sunShowing(moonAt(TOTAL_FRAMES / 2));
+    assert.ok(Math.abs(shadeLightAt(x, y, deepest) / whole - deepest) < 1e-12);
+    assert.ok(Math.abs(deepest - 0.25) < 0.001);
+  }
+  // Deeper under the crown, less of the sky past its edge reaches the ground.
+  const at = (depth) => SHADE_LIGHT * (1 - skyPastCrown(depth)) + SKY_LIGHT * skyPastCrown(depth);
+  assert.ok(at(500) < at(0) && at(0) < at(-500) && at(500) > SHADE_LIGHT);
+});
+
+test("the sky past the crown's edge is the share a straight edge leaves, weighed as it lights the ground", () => {
+  // A crown at height H, its edge a straight line at distance s from the ground point (s > 0
+  // under the crown). A direction at zenith angle θ and azimuth φ from the edge's outward
+  // normal passes the edge when H tan θ cos φ > s; its weight on level ground is cos θ.
+  const H = LAYER_HEIGHTS[CROWN_LAYER] / SUN_ANGULAR_RADIUS;
+  for (const s of [-2000, -300, 0, 300, 2000]) {
+    const steps = 100000;
+    let share = 0;
+    for (let i = 0; i < steps; i += 1) {
+      const zenith = (i + 0.5) * (Math.PI / 2) / steps;
+      const bound = s / (H * Math.tan(zenith));
+      const around = bound >= 1 ? 0 : bound <= -1 ? 1 : Math.acos(bound) / Math.PI;
+      share += around * 2 * Math.cos(zenith) * Math.sin(zenith) * (Math.PI / 2) / steps;
+    }
+    assert.ok(Math.abs(skyPastCrown(s) - share) < 1e-5, `${s}: ${skyPastCrown(s)} against ${share}`);
+  }
+  assert.equal(skyPastCrown(0), 0.5);
+});
+
+test("past the crown's edge the ground is open and lit by one sun", () => {
+  for (const frame of [0, 180, 359]) {
+    const canopy = canopyAt(LEAVES, frame);
+    const moon = moonAt(frame);
+    let points = 0;
+    let off = 0;
+    for (let y = 5; y < LOGICAL_SIZE; y += 10) {
+      for (let x = 5; x < LOGICAL_SIZE; x += 10) {
+        // Further out than a leaf, carried by the strongest wind, and the widest sun can reach.
+        if (crownDepth(CANOPY_LAYOUT.crown, x, y) >= -60) continue;
+        points += 1;
+        canopy.layers.forEach((layer, index) => {
+          const light = layerLight(layer, canopy.size, x, y, LAYER_HEIGHTS[index], moon);
+          if (index !== CROWN_LAYER) assert.equal(light, 0);
+        });
+        off = Math.max(off, Math.abs(lightAt(canopy, x, y, frame) - sunShowing(moon)));
+      }
+    }
+    assert.ok(points >= 500, `only ${points} points past the edge`);
+    // With the sun whole the light is one; eclipsed, the share of the sun that shows, to the
+    // reading of the rows at four heights.
+    assert.ok(frame === 180 ? off < 1e-3 : off < 1e-12, `${frame}: off by ${off}`);
+  }
+});
+
+test("the wind carries no leaf further than the grid's leaves reach, nor bares ground of another height at the crown's edge", () => {
+  // The largest shift of any leaf, at every third frame; between those frames a leaf moves
+  // by less than the largest move between two frames, which the seam test bounds.
+  let shift = 0;
+  let move = 0;
+  LEAVES.leaves.forEach((leaf, index) => {
+    let previous = null;
+    for (let frame = 0; frame < TOTAL_FRAMES; frame += index % 10 === 0 ? 1 : 3) {
+      const wind = windAt(leaf.x, leaf.y, frame / PLAYBACK_FPS);
+      shift = Math.max(shift, Math.hypot(wind.dx, wind.dy));
+      if (index % 10 === 0 && previous) move = Math.max(move, Math.hypot(wind.dx - previous.dx, wind.dy - previous.dy));
+      previous = wind;
+    }
+  });
+  const reach = shift + 1.5 * move;
+  assert.ok(reach < 25, `a leaf can be carried ${reach}`);
+  // A leaf that can reach a cell the canvas reads was laid: the canvas reads cells down to
+  // the margin less the widest sun, and a leaf reaches half its longest length past its centre.
+  const longest = Math.max(...CANOPY_LAYOUT.leafLength);
+  assert.ok(reach + longest - (CANOPY_MARGIN - Math.max(...LAYER_HEIGHTS)) <= CANOPY_LAYOUT.pad);
+  // Where the wind can bare the ground at the crown's edge, the sheet is at the crown's one height.
+  assert.ok(reach <= CANOPY_LAYOUT.rim);
+  let rim = 0;
+  for (let row = 0; row < CANOPY_SIZE; row += 1) {
+    for (let column = 0; column < CANOPY_SIZE; column += 1) {
+      if (crownDepth(CANOPY_LAYOUT.crown, column + 0.5 - CANOPY_MARGIN, row + 0.5 - CANOPY_MARGIN) >= CANOPY_LAYOUT.rim) continue;
+      rim += 1;
+      assert.equal(LEAVES.layerOf[row * CANOPY_SIZE + column], CROWN_LAYER);
+    }
+  }
+  assert.ok(rim > 100000, `only ${rim} cells at the edge or past it`);
 });
 
 test("the archived original: the question as Bekker prints it, with the omission marked", () => {
@@ -410,12 +692,16 @@ test("the notes keep the book's claim and the project's reading apart", () => {
   // Numbers the notes give are the numbers the code and the canopy give.
   assert.match(section, /which is 9, 14 and 21 logical pixels/u);
   assert.deepEqual(LAYER_HEIGHTS, [9, 14, 21]);
-  assert.match(section, /The leaves are 16,869 ellipses/u);
-  assert.match(section, /652 of them inside the canvas/u);
+  assert.match(section, /The leaves are 12,289 ellipses fourteen to twenty-four pixels long/u);
+  assert.equal(LEAVES.leaves.length, 12289);
+  assert.deepEqual(CANOPY_LAYOUT.leafLength, [7, 12]);
+  assert.match(section, /1,556 of them beyond the grid/u);
+  assert.equal(LEAVES.leaves.filter((leaf) => leaf.x < 0 || leaf.x >= CANOPY_SIZE || leaf.y < 0 || leaf.y >= CANOPY_SIZE).length, 1556);
+  assert.match(section, /2,003 of them inside the canvas at the first frame/u);
   const canopy = buildCanopy();
   const inside = canopy.layers.map((layer) => holePieces(layer.mask, canopy.size)
     .filter((piece) => piece.x >= 0 && piece.x < LOGICAL_SIZE && piece.y >= 0 && piece.y < LOGICAL_SIZE).length);
-  assert.equal(inside.reduce((sum, count) => sum + count, 0), 652);
+  assert.equal(inside.reduce((sum, count) => sum + count, 0), 2003);
   assert.match(section, /each of seventeen patches/u);
   const shown = MANIFEST.artworks.find((entry) => entry.id === "little-moons").thumbnail.frame;
   assert.match(section, new RegExp(`The thumbnail is frame ${shown}, a second before the deepest point`, "u"));
