@@ -230,7 +230,7 @@ test("the archived original: catalog keeps Wren's clause as the London edition p
   assert.equal(quote.year, 1669);
   assert.equal(quote.publicDomain, true);
   assert.equal(quote.sourceUrl, "https://archive.org/details/philosophicaltra4166roya/page/n77/mode/1up");
-  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "la").length, 9);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "la").length, 10);
 });
 
 test("the notes name both printings, keep the sculpture as the project's, and say what is not calculated", () => {

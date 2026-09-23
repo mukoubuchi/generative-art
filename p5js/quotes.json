@@ -990,6 +990,26 @@
         "publicDomain": true,
         "sourceUrl": "https://archive.org/details/b33521311_0002/page/n130/mode/1up"
       }
+    },
+    {
+      "id": "varro-homo-bulla",
+      "text": "If, as the saying goes, man is a bubble, all the more so is an old man.",
+      "lang": "en",
+      "author": "Varro",
+      "source": "On Agriculture I.1.1",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/rerumrusticaruml00varruoft/page/n29/mode/1up",
+      "rendering": "English rendering",
+      "original": {
+        "text": "ut dicitur, si est homo bulla, eo magis senex.",
+        "lang": "la",
+        "author": "M. Terentius Varro",
+        "source": "Rerum rusticarum I.1.1",
+        "year": null,
+        "publicDomain": true,
+        "sourceUrl": "https://archive.org/details/rerumrusticaruml00varruoft/page/n29/mode/1up"
+      }
     }
   ]
 }

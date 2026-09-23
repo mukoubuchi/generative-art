@@ -1143,6 +1143,25 @@
         "durationSeconds": 12,
         "scale": 2
       }
+    },
+    {
+      "id": "homo-bulla",
+      "title": "Homo Bulla",
+      "entry": "p5js/artworks/homo-bulla/index.html",
+      "interactivePath": "homo-bulla/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "varro-homo-bulla"
+      ],
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/HomoBulla.mp4",
+        "durationSeconds": 12,
+        "scale": 2
+      }
     }
   ]
 }
