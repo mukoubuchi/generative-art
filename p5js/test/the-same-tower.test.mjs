@@ -589,7 +589,7 @@ test("the archived original: catalog keeps the clause as both editions print it"
   assert.equal(quote.year, null);
   assert.equal(quote.publicDomain, true);
   assert.equal(quote.sourceUrl, "https://archive.org/details/sextiempiriciope01sext/page/n62/mode/1up");
-  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "grc").length, 10);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "grc").length, 11);
 });
 
 test("the notes name both editions, keep the extension as the project's, and say what the floors are", () => {

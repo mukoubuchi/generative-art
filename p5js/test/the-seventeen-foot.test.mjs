@@ -270,7 +270,7 @@ test("the archived original: catalog keeps the clause both editions print, at th
   assert.equal(quote.year, null);
   assert.equal(quote.publicDomain, true);
   assert.equal(quote.sourceUrl, "https://archive.org/details/theaetetuswithtr00platuoft/page/n31/mode/1up");
-  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "grc").length, 10);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "grc").length, 11);
   assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).author === "Πλάτων").length, 3);
 });
 

@@ -72,6 +72,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [The Seventeen-Foot](p5js/artworks/the-seventeen-foot/) | Theodorus's roots laid one after another as sixteen right triangles on one origin, and a seventeenth that comes as far as crossing the opening side and goes back, rendered as an MP4 |
 | [Eyed Awry](p5js/artworks/eyed-awry/) | Three beams of cubes that close into a triangle along one axis and fall apart off it, in black single lines on warm white, rendered as an MP4 |
 | [Loxodrome](p5js/artworks/loxodrome/) | Six courses held at one bearing, winding into a blaze at each pole, and the chart that straightens them into parallel lines by putting the poles out of its reach, rendered as an MP4 |
+| [Little Moons](p5js/artworks/little-moons/) | Sunlight through hundreds of gaps in a canopy during a partial eclipse, each small gap throwing the eclipsed sun onto the ground turned over, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, the English aphorism policy, source notes, and the nightly publishing workflow.
 

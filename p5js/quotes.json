@@ -970,6 +970,26 @@
       "year": 1841,
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/emersonralessays00emerrich/page/n60/mode/1up"
+    },
+    {
+      "id": "pseudo-aristoteles-meniskoi",
+      "text": "Why is it that in eclipses of the sun, if one looks through a sieve or through leaves, such as a plane tree’s … the beams on the ground become crescents?",
+      "lang": "en",
+      "author": "Pseudo-Aristotle",
+      "source": "Problems XV.11",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/b33521311_0002/page/n130/mode/1up",
+      "rendering": "English rendering",
+      "original": {
+        "text": "Διὰ τί ἐν ταῖς τοῦ ἡλίου ἐκλείψεσιν, ἐάν τις θεωρῇ διὰ κοσκίνου ἢ φύλλων, οἷον πλατάνου … μηνίσκοι αἱ αὐγαὶ ἐπὶ τῆς γῆς γίνονται;",
+        "lang": "grc",
+        "author": "[Ἀριστοτέλης]",
+        "source": "Problemata XV.11, 912b11–20",
+        "year": null,
+        "publicDomain": true,
+        "sourceUrl": "https://archive.org/details/b33521311_0002/page/n130/mode/1up"
+      }
     }
   ]
 }
