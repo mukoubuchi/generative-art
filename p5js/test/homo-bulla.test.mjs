@@ -335,7 +335,7 @@ test("the archived original: the clause as Goetz and Keil print it", () => {
   // The viewer's page index counts from nought: n29 is Goetz's page 7.
   assert.equal(original.sourceUrl, "https://archive.org/details/rerumrusticaruml00varruoft/page/n29/mode/1up");
   assert.equal(quote.sourceUrl, original.sourceUrl);
-  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "la").length, 10);
+  assert.equal(CATALOG.quotes.filter((entry) => (entry.original ?? entry).lang === "la").length, 11);
 });
 
 test("the notes keep the proverb's claim and the project's reading apart, and give the numbers the foam gives", () => {

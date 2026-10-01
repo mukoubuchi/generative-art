@@ -1206,6 +1206,28 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "no-such-passage",
+      "title": "No Such Passage",
+      "entry": "p5js/artworks/no-such-passage/index.html",
+      "interactivePath": "no-such-passage/",
+      "canvas": {
+        "width": 720,
+        "height": 720
+      },
+      "quoteIds": [
+        "euler-no-such-passage"
+      ],
+      "thumbnail": {
+        "frame": 795
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/NoSuchPassage.mp4",
+        "durationSeconds": 28,
+        "scale": 2
+      }
     }
   ]
 }
