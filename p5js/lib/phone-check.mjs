@@ -98,7 +98,7 @@ export async function checkArtworksFit({
 
   const show = async (page, url) => {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
-    await page.waitForSelector("#artwork canvas", { timeout: 60_000 });
+    await page.locator("#artwork canvas").first().waitFor({ state: "visible", timeout: 60_000 });
     return await page.evaluate(measureCanvas);
   };
 
