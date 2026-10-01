@@ -265,7 +265,7 @@ const { bin: packed, views } = packBinary([
 
 const box = bounds(head.positions);
 const reduced = {
-  asset: { version: "2.0", generator: "generative-art reduce-model" },
+  asset: { version: "2.0" },
   scene: 0,
   scenes: [{ nodes: [0] }],
   nodes: [{ mesh: 0 }],
