@@ -131,7 +131,7 @@ test("every descent from a pair of whole numbers runs out", () => {
 });
 
 test("the size of the shortfall never changes along a descent", () => {
-  // Perlin's invariant seen along the orbits rather than as an identity: a near miss stays
+  // The invariant seen along the orbits rather than as an identity: a near miss stays
   // a near miss of exactly the same size, all the way to the bottom. This is why the
   // descent can never wear a shortfall away and arrive at a common measure.
   for (const [p, q] of [[239n, 169n], [99n, 70n], [41n, 29n], [17n, 12n], [11n, 7n], [50n, 33n]]) {
