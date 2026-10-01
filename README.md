@@ -18,8 +18,8 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 
 ## Artworks
 
-| Artwork | Description |
-| --- | --- |
+| <div align="center">Artwork</div> | <div align="center">Description</div> |
+| :--- | :--- |
 | [Koch Curves](p5js/artworks/koch-curves/) | One angled substitution erupting along every side of a square, faster each generation, rendered as an MP4 |
 | [Recursive Pentagram](p5js/artworks/recursive-pentagram/) | An endless dive through nested pentagrams, each found inside the last, rendered as an MP4 |
 | [Sierpinski Gasket](p5js/artworks/sierpinski-gasket/) | A built triangle pyramid and a random rain that wets nowhere else, rendered as an MP4 |
@@ -75,6 +75,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Little Moons](p5js/artworks/little-moons/) | Sunlight through the gaps of a crown's edge during a partial eclipse, each small gap throwing the eclipsed sun onto the ground turned over, while gusts cross the crown, rendered as an MP4 |
 | [Homo Bulla](p5js/artworks/homo-bulla/) | A foam coarsening on a torus, each bubble shaded or lit by whether it has fewer or more than six sides, the camera standing back as the bubbles grow, rendered as an MP4 |
 | [Stains the White](p5js/artworks/stains-the-white/) | Soap bubbles lit from every side and seen against black, their films thinning through the interference colours until a black film opens at the top and they burst, rendered as an MP4 |
+| [Those Unheard](p5js/artworks/those-unheard/) | Grains gathering into four sound figures with one shared eigenvalue, the central cross surviving each change, then the last figure left in quiet, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, the English aphorism policy, source notes, and the nightly publishing workflow.
 

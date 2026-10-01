@@ -83,6 +83,7 @@ const ACCUMULATING = [
   "clinamen",
   "dla-frost",
   "kissing-circles",
+  "those-unheard",
   "ulam-spiral"
 ];
 

@@ -1184,6 +1184,28 @@
         "durationSeconds": 12,
         "scale": 2
       }
+    },
+    {
+      "id": "those-unheard",
+      "title": "Those Unheard",
+      "entry": "p5js/artworks/those-unheard/index.html",
+      "interactivePath": "those-unheard/",
+      "canvas": {
+        "width": 680,
+        "height": 680
+      },
+      "quoteIds": [
+        "keats-those-unheard"
+      ],
+      "thumbnail": {
+        "frame": 480
+      },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/ThoseUnheard.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }
