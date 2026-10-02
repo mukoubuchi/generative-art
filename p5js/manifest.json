@@ -1228,6 +1228,21 @@
         "durationSeconds": 28,
         "scale": 2
       }
+    },
+    {
+      "id": "still-there",
+      "title": "Still There",
+      "entry": "p5js/artworks/still-there/index.html",
+      "interactivePath": "still-there/",
+      "canvas": { "width": 680, "height": 680 },
+      "quoteIds": ["khayyam-moving-finger"],
+      "thumbnail": { "frame": 0 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/StillThere.mp4",
+        "durationSeconds": 20,
+        "scale": 2
+      }
     }
   ]
 }

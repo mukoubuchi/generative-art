@@ -57,7 +57,8 @@ const AWAITING_SCHEDULE = [
   "homo-bulla",
   "stains-the-white",
   "those-unheard",
-  "no-such-passage"
+  "no-such-passage",
+  "still-there"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
