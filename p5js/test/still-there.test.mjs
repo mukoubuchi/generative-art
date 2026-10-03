@@ -108,6 +108,21 @@ test("reset cancels a partial shear, repetition, and queued commands", () => {
   assert.deepEqual(loom.queue, []);
 });
 
+test("R or r after whole steps restores the original lattice and its count", () => {
+  for (const reset of ["R", "r"]) {
+    const loom = new Loom();
+    loom.key("ArrowRight"); loom.key("ArrowRight"); loom.key("ArrowLeft");
+    loom.advance(STEP_SECONDS * 2.5);
+    assert.equal(loom.steps, 2);
+    assert.notDeepEqual(loom.positions, INITIAL);
+    assert.equal(loom.key(reset), true);
+    assert.deepEqual(loom.positions, INITIAL);
+    assert.equal(loom.steps, 0);
+    assert.equal(loom.active, false);
+    assert.deepEqual(loom.queue, []);
+  }
+});
+
 test("all film frames retain a permutation and the inverse returns before reset", () => {
   let scattered = false;
   let restored = null;
