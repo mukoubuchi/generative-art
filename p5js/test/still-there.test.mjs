@@ -214,6 +214,23 @@ test("a tile keeps its own colour wherever the shears carry it", () => {
   assert.match(sketch, /ctx\.fillStyle = tile\.colour;/u);
 });
 
+test("the legend says what each key does, and the notes print the same line", () => {
+  const sketch = readFileSync(new URL("../artworks/still-there/sketch.js", import.meta.url), "utf8");
+  const legend = sketch.slice(sketch.indexOf("const HINT_LEGEND"), sketch.indexOf("];", sketch.indexOf("const HINT_LEGEND")));
+  const entries = [...legend.matchAll(/\{ cap: "([^"]+)", text: "([^"]+)" \}/gu)].map(([, cap, text]) => [cap, text]);
+  assert.deepEqual(entries, [["←", "back"], ["→", "forward"], ["space", "run / pause"], ["R", "reset"]]);
+  // Each word is what its key does to the loom.
+  const step = (key) => { const loom = new Loom(); loom.key(key); loom.advance(STEP_SECONDS); return loom; };
+  assert.equal(step("ArrowLeft").steps, -1);
+  assert.equal(step("ArrowRight").steps, 1);
+  const running = new Loom(); running.key(" "); assert.equal(running.running, true);
+  running.key(" "); assert.equal(running.running, false);
+  // The README's row prints the legend's own line.
+  const notes = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  const line = entries.map(([cap, text]) => `\`${cap}\` ${text}`).join(" · ");
+  assert.ok(notes.includes(`| \`still-there\` | arrow keys, Space, R | ${line} |`), line);
+});
+
 test("Still There uses FitzGerald's sourced first-edition quatrain, with public-domain eligibility", async () => {
   const { manifest, quoteCatalog } = await loadCatalog();
   const artwork = manifest.artworks.find((entry) => entry.id === "still-there");
