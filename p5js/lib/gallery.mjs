@@ -1,4 +1,5 @@
 import { GOLDEN_ANGLE } from "../artworks/voronoi-bloom/bloom.js";
+import { publicSource } from "./citation.mjs";
 
 /**
  * The reveal order is phyllotaxis in time. Each card's delay is the golden angle's
@@ -206,7 +207,7 @@ function renderCard(manifest, artwork, quote, index) {
               <h2 class="card__title">${escapeHtml(artwork.title)}</h2>
               ${quote ? `<blockquote class="card__quote" lang="${escapeHtml(quote.lang)}">
                 <p class="card__quote-text">${quoteMark("card__quote-mark")}${escapeHtml(quote.text)}</p>
-                <cite class="card__cite">—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(quote.siteSource ?? quote.source)}</cite>
+                <cite class="card__cite">—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(publicSource(quote))}</cite>
               </blockquote>` : ""}
             </div>
           </a>
@@ -321,7 +322,7 @@ ${ICON_SPRITE}
              see EPIGRAPH in lib/gallery.mjs. -->
         <blockquote class="masthead__epigraph" lang="${escapeHtml(EPIGRAPH.lang)}">
           <p class="masthead__epigraph-text">${quoteMark("masthead__quote-mark")}${escapeHtml(EPIGRAPH.text)}</p>
-          <cite class="masthead__cite">—&nbsp;<b>${escapeHtml(EPIGRAPH.author)}</b>, ${escapeHtml(EPIGRAPH.siteSource ?? EPIGRAPH.source)}</cite>
+          <cite class="masthead__cite">—&nbsp;<b>${escapeHtml(EPIGRAPH.author)}</b>, ${escapeHtml(publicSource(EPIGRAPH))}</cite>
         </blockquote>
       </div>
       <!-- The face, and it looks towards the pointer. The script writes the direction here

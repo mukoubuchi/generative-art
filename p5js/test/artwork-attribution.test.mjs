@@ -28,15 +28,15 @@ try {
   await rm(built, { recursive: true, force: true });
 }
 
-test("the post dating rule has both of its branches to exercise", () => {
-  // If every entry gained a year, the omission branch below would pass vacuously —
-  // and the catalog's records of "unknown" are themselves worth noticing the loss of.
+test("the catalog keeps both dated and undated quotes for the no-year rule to be seen on", () => {
+  // Posts print no year whether the catalog records one or not. If every entry lost its
+  // year, the check below would no longer show a known year being left out.
   const years = quoteCatalog.quotes.map((quote) => quote.year);
   assert.ok(years.some((year) => year !== null), "no dated quotes are left");
   assert.ok(years.some((year) => year === null), "no undated quotes are left");
 });
 
-test("cards omit dates while posts retain bibliographic attributions", () => {
+test("each post prints its card's attribution word for word, with no date", () => {
   const siteSources = new Map([
     ["descartes-theoreme-plus-beau", "Letter to Elisabeth"],
     ["wren-rectas-innumeras", "Philosophical Transactions, no. 48, p. 962"]
@@ -44,9 +44,10 @@ test("cards omit dates while posts retain bibliographic attributions", () => {
   assert.deepEqual(quoteCatalog.quotes.filter((quote) => quote.siteSource !== undefined)
     .map((quote) => [quote.id, quote.siteSource]), [...siteSources]);
 
+  let dated = 0;
   for (const artwork of manifest.artworks) {
     const quote = quotesById.get(artwork.quoteIds[0]);
-    const suffix = quote.year === null ? "" : ` (${quote.year})`;
+    if (quote.year !== null) dated += 1;
 
     const card = index.slice(index.indexOf(`<h2 class="card__title">${escapeHtml(artwork.title)}</h2>`));
     const cite = card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1];
@@ -58,9 +59,12 @@ test("cards omit dates while posts retain bibliographic attributions", () => {
     // The quotation itself may span lines — an epitaph does — so the attribution line
     // is found after however many the quotation takes.
     const attributionLine = body.split("\n")[quote.text.split("\n").length];
-    assert.equal(attributionLine, `— ${quote.author}, ${quote.source}${suffix}`,
-      `${artwork.id}'s post dates its source differently`);
+    // The same author and the same source line the card was just held to.
+    assert.equal(attributionLine, `— ${quote.author}, ${source}`,
+      `${artwork.id}'s post credits its quotation differently from its card`);
+    assert.ok(!attributionLine.includes(`(${quote.year})`), `${artwork.id}'s post prints a year`);
   }
+  assert.ok(dated > 0, "no artwork's quotation has a recorded year to leave out");
   assert.equal(quotesById.get("descartes-theoreme-plus-beau").source,
     "Letter to Elisabeth, November 1643");
   assert.equal(quotesById.get("wren-rectas-innumeras").source,

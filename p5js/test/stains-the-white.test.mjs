@@ -634,7 +634,7 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
   assert.match(NOTES, /\| `stains-the-white` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 12 seconds,/u);
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
-  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 210);
+  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 203);
   assert.equal(body.split("\n").slice(0, 3).join("\n"), quote.text);
   const index = renderIndexPage(MANIFEST, CATALOG);
   const start = index.indexOf('<h2 class="card__title">Stains the White</h2>');

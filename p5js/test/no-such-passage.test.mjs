@@ -166,6 +166,7 @@ test("the quotation names Euler's paper by its English title, with no date on th
   assert.doesNotMatch(card, /1741/u);
 
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
-  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 232);
-  assert.ok(body.includes("— Leonhard Euler, Solution of a Problem Relating to the Geometry of Position, §20 (1741)"));
+  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 225);
+  assert.ok(body.includes("— Leonhard Euler, Solution of a Problem Relating to the Geometry of Position, §20\n"));
+  assert.doesNotMatch(body, /1741/u);
 });

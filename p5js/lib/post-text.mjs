@@ -1,3 +1,5 @@
+import { publicSource } from "./citation.mjs";
+
 const URL_PATTERN = /https?:\/\/[^\s]+/giu;
 const EMOJI_PATTERN = /[\p{Extended_Pictographic}\p{Regional_Indicator}\u20e3]/u;
 const GRAPHEME_SEGMENTER = new Intl.Segmenter("en", { granularity: "grapheme" });
@@ -36,14 +38,6 @@ export function weightedCharacterCount(text) {
 }
 
 /**
- * Posts retain the bibliographic year; the public site omits dates. A catalog entry
- * whose date is recorded as unknown has no year to print in its post attribution.
- */
-export function quoteYearSuffix(quote) {
-  return quote.year == null ? "" : ` (${quote.year})`;
-}
-
-/**
  * What stands between the attribution and the link. It was a sentence about the artwork
  * once; a post is not the place for one, and the picture is a click away. Exported so that
  * the tests and the README's layout can read the one string rather than keep copies of it.
@@ -57,7 +51,8 @@ export function buildPostBody(artwork, quote, interactiveBaseUrl) {
   const interactiveUrl = new URL(artwork.interactivePath, normalizedBaseUrl).href;
   return [
     quote.text,
-    `— ${quote.author}, ${quote.source}${quoteYearSuffix(quote)}`,
+    // The attribution is the gallery card's, word for word: no year (see citation.mjs).
+    `— ${quote.author}, ${publicSource(quote)}`,
     "",
     POST_HASHTAGS,
     "",

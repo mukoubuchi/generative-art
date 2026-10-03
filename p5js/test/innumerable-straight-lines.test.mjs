@@ -281,7 +281,7 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
   assert.ok(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters) <= MANIFEST.defaults.maxWeightedCharacters);
   assert.equal(body.split("\n")[0], quote.text);
-  assert.equal(body.split("\n")[1], `— ${quote.author}, ${quote.source} (1669)`);
+  assert.equal(body.split("\n")[1], "— Christopher Wren, Philosophical Transactions, no. 48, p. 962");
   const index = renderIndexPage(MANIFEST, CATALOG);
   const start = index.indexOf('<h2 class="card__title">Innumerable Straight Lines</h2>');
   assert.ok(start >= 0);
