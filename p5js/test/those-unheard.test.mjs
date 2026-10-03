@@ -5,10 +5,10 @@ import { publicSource } from "../lib/citation.mjs";
 import { escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
 import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
-  DT, DURATION_SECONDS, FRICTION_SECONDS, LIFT_THRESHOLD, LOGICAL_SIZE, MODES, MODE_SUM, ONSET,
+  CATCH_UP_FRAMES, DT, DURATION_SECONDS, FRICTION_SECONDS, LIFT_THRESHOLD, LOGICAL_SIZE, MODES, MODE_SUM, ONSET,
   PLATE_SIZE, PLAYBACK_FPS, RELEASE, SHAPES, STROKE_SECONDS, SUBSTEPS, TOTAL_FRAMES,
   advanceGrains, agitation, createFields, createGrains, excitationAt,
-  fieldAt, gradientAt, nearNodeFraction, reachFrame, sampleField, stepsTo
+  fieldAt, gradientAt, nearNodeFraction, nextPageFrame, reachFrame, sampleField, stepsTo
 } from "../artworks/those-unheard/field.js";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
@@ -295,4 +295,24 @@ test("a captured frame is drawn from its index alone", () => {
   const sketch = readFileSync(new URL("../artworks/those-unheard/sketch.js", import.meta.url), "utf8");
   assert.match(sketch, /window\.__renderFrame = \(frameIndex\) => Promise\.resolve\(publishState\(drawUpTo\(frameIndex\)\)\);/u);
   assert.match(sketch, /function drawUpTo\(frameIndex\) \{\n {4}const reached = reachFrame\(grains, frameIndex\);/u);
+});
+
+test("the page follows the clock but never computes more than half a second in one draw", () => {
+  assert.equal(CATCH_UP_FRAMES, 15);
+  // On time, it shows the frame the clock is at.
+  for (let frame = 0; frame < 30; frame += 1) assert.equal(nextPageFrame(frame, (frame + 1) / PLAYBACK_FPS), frame + 1);
+  // Behind, after a hidden tab: half a second on, not the whole gap.
+  assert.equal(nextPageFrame(100, 24), 115);
+  // Never back, never past the last frame, and the last frame holds.
+  assert.equal(nextPageFrame(300, 1), 300);
+  assert.equal(nextPageFrame(TOTAL_FRAMES - 1, 1000), TOTAL_FRAMES - 1);
+  let shown = 0;
+  let draws = 0;
+  for (let elapsed = 0; shown < TOTAL_FRAMES - 1; elapsed += 1) {
+    const next = nextPageFrame(shown, elapsed);
+    assert.ok(next - shown <= CATCH_UP_FRAMES && next >= shown);
+    shown = next;
+    draws += 1;
+  }
+  assert.equal(draws, Math.ceil((TOTAL_FRAMES - 1) / CATCH_UP_FRAMES) + 1);
 });

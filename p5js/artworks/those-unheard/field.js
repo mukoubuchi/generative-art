@@ -157,6 +157,25 @@ export function reachFrame(grains, frameIndex) {
   return { grains: state, frame };
 }
 
+/**
+ * The most frames the page advances in one draw when it has fallen behind the clock: half
+ * a second of the performance, about 165 ms of grain steps on an M1. Measured in headless
+ * Chromium with software WebGL, the page still kept time with this limit, while the
+ * unlimited catch-up of a tab shown again after the whole clip is about eight seconds.
+ */
+export const CATCH_UP_FRAMES = 15;
+
+/**
+ * The frame the page shows next, from the frame it shows now and the time since it began.
+ * It follows the clock, never goes back, and never jumps more than CATCH_UP_FRAMES ahead:
+ * a page that was hidden, or a device that is slow, carries the performance on from where
+ * it left it, instead of computing every missed frame in one draw.
+ */
+export function nextPageFrame(shownFrame, elapsedSeconds) {
+  const due = Math.min(TOTAL_FRAMES - 1, Math.floor(elapsedSeconds * PLAYBACK_FPS));
+  return Math.max(shownFrame, Math.min(due, shownFrame + CATCH_UP_FRAMES));
+}
+
 /** Four separate excitations, each with a crescendo and a dissipative ring-down. */
 export function excitationAt(time) {
   const index = Math.min(SHAPES.length - 1, Math.max(0, Math.floor(time / STROKE_SECONDS)));

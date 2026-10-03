@@ -1,7 +1,7 @@
 import {
   ART_SEED, DURATION_SECONDS, FIELD_GRID_SIZE, LOGICAL_SIZE,
   MODES, MODE_SUM, PLAYBACK_FPS, TOTAL_FRAMES,
-  createGrains, excitationAt, nearNodeFraction, reachFrame
+  createGrains, excitationAt, nearNodeFraction, nextPageFrame, reachFrame
 } from "./field.js";
 import { createGrainView } from "./grains.js";
 
@@ -14,6 +14,7 @@ new window.p5((p) => {
   let grains;
   let view;
   let startedAt;
+  let shownFrame = 0;
 
   function drawUpTo(frameIndex) {
     const reached = reachFrame(grains, frameIndex);
@@ -67,8 +68,9 @@ new window.p5((p) => {
   p.draw = () => {
     if (CAPTURE_MODE) return;
     const elapsed = (window.performance.now() - startedAt) / 1000;
-    publishState(drawUpTo(Math.floor(elapsed * PLAYBACK_FPS)));
+    shownFrame = nextPageFrame(shownFrame, elapsed);
+    publishState(drawUpTo(shownFrame));
     // A finite performance: ring down into the final figure and leave it there.
-    if (elapsed >= DURATION_SECONDS) p.noLoop();
+    if (shownFrame === TOTAL_FRAMES - 1) p.noLoop();
   };
 });
