@@ -29,7 +29,6 @@ export function createGrainView(scale) {
   const gl = canvas.getContext("webgl2", { antialias: false, preserveDrawingBuffer: true });
   if (!gl) throw new Error("WebGL2 is not available.");
   if (!gl.getExtension("EXT_color_buffer_float")) throw new Error("Floating-point colour buffers are not available.");
-  gl.getExtension("EXT_float_blend");
 
   const points = program(gl, `#version 300 es
     in vec2 position;
