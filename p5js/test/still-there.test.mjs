@@ -61,6 +61,27 @@ test("the inverse restores every labelled cell in either order without saved sta
   }
 });
 
+test("a step shows the row shear first and the column shear second; the inverse, the other way", () => {
+  // Forward: rows slide horizontally in the first half, columns vertically in the second.
+  // The inverse undoes them in the opposite order: columns first, then rows.
+  const sample = [[-63, 5], [0, 0], [12, -40], [63, 63], [-7, 31]];
+  for (const [x, y] of sample) {
+    const [forwardX] = [...permute(Int16Array.of(x, y), 1)];
+    const [, inverseY] = [...permute(Int16Array.of(x, y), -1)];
+    for (const progress of [0.05, 0.2, 0.35, 0.5]) {
+      assert.equal(movingPoint(x, y, 1, progress)[1], y, `forward ${x},${y} moved vertically at ${progress}`);
+      assert.equal(movingPoint(x, y, -1, progress)[0], x, `inverse ${x},${y} moved horizontally at ${progress}`);
+    }
+    for (const progress of [0.5, 0.65, 0.8, 0.95, 1]) {
+      assert.equal(movingPoint(x, y, 1, progress)[0], forwardX, `forward ${x},${y} still moving horizontally at ${progress}`);
+      assert.equal(movingPoint(x, y, -1, progress)[1], inverseY, `inverse ${x},${y} still moving vertically at ${progress}`);
+    }
+  }
+  // And in each half something does move, for a point off the axes.
+  assert.notEqual(movingPoint(12, -40, 1, 0.25)[0], 12);
+  assert.notEqual(movingPoint(12, -40, 1, 0.75)[1], -40);
+});
+
 test("the displayed shears reach the exact integer endpoints", () => {
   const positions = permute(INITIAL, 1);
   for (const direction of [-1, 1]) {
