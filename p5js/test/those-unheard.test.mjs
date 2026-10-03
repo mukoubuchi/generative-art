@@ -63,15 +63,27 @@ test("the central cross is exactly nodal in every shape and its sampled envelope
 });
 
 test("the Neumann edges and the extra point constraint belong to the actual shapes", () => {
-  for (const shape of SHAPES) {
+  // The normal derivative on each edge, differenced from the field across the edge, so the
+  // module's analytic gradient (which is zero on an edge by construction) is not consulted.
+  const h = 1e-6;
+  function worstNormalDerivative(coefficients, modes = MODES) {
+    let worst = 0;
     for (let k = 0; k <= 40; k += 1) {
+      const t = k / 40;
       for (const edge of [0, 1]) {
-        assert.equal(gradientAt(shape.coefficients, edge, k / 40)[0], 0);
-        assert.equal(gradientAt(shape.coefficients, k / 40, edge)[1], 0);
+        worst = Math.max(worst,
+          Math.abs(fieldAt(coefficients, edge + h, t, modes) - fieldAt(coefficients, edge - h, t, modes)) / (2 * h),
+          Math.abs(fieldAt(coefficients, t, edge + h, modes) - fieldAt(coefficients, t, edge - h, modes)) / (2 * h));
       }
     }
+    return worst;
+  }
+  for (const shape of SHAPES) {
+    assert.ok(worstNormalDerivative(shape.coefficients) < 1e-6);
     if (shape.hold) assert.ok(Math.abs(fieldAt(shape.coefficients, ...shape.hold)) < 1e-14);
   }
+  // A half-integer mode is not Neumann at x = 1, and the same measurement must say so.
+  assert.ok(worstNormalDerivative(SHAPES[0].coefficients, [[3.5, 11], ...MODES.slice(1)]) > 1);
   // The eigenvalue alone does not force the drawings to be the same.
   const readings = SHAPES.map(({ coefficients }) => fieldAt(coefficients, 0.17, 0.29));
   for (let i = 0; i < readings.length; i += 1) {
