@@ -91,6 +91,26 @@ test("the Neumann edges and the extra point constraint belong to the actual shap
   }
 });
 
+test("the analytic gradient agrees with the field's own central differences", () => {
+  // nearNodeFraction divides |psi| by |grad psi|, so a wrong gradient would misreport how
+  // many grains have gathered. The gradient is checked against the field it belongs to.
+  const h = 1e-6;
+  let worst = 0;
+  for (const shape of SHAPES) {
+    for (let i = 0; i < 37; i += 1) {
+      for (let j = 0; j < 41; j += 1) {
+        const x = (i + 0.37) / 37;
+        const y = (j + 0.61) / 41;
+        const [dx, dy] = gradientAt(shape.coefficients, x, y);
+        worst = Math.max(worst,
+          Math.abs(dx - (fieldAt(shape.coefficients, x + h, y) - fieldAt(shape.coefficients, x - h, y)) / (2 * h)),
+          Math.abs(dy - (fieldAt(shape.coefficients, x, y + h) - fieldAt(shape.coefficients, x, y - h)) / (2 * h)));
+      }
+    }
+  }
+  assert.ok(worst < 1e-6, `gradient disagrees with the field by ${worst}`);
+});
+
 test("the interpolated driving field stays close to the analytic eigenfunction", () => {
   let worst = 0;
   for (const field of fields) {
