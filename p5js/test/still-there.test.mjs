@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   SIZE, HALF, COUNT, STEP_SECONDS, FPS, TOTAL_FRAMES, DEMO_KEYS, KEY_CAPS,
-  initialPositions, permute, movingPoint, Loom, demoAt, keydownAction
+  initialPositions, permute, movingPoint, Loom, demoAt, keydownAction, tessera
 } from "../artworks/still-there/lattice.js";
 import { loadCatalog } from "../lib/catalog.mjs";
 import { eligibleArtworks } from "../lib/selection.mjs";
@@ -200,6 +201,17 @@ test("the page leaves shortcuts to the browser, swallows held-key repeats, and s
   // And the page's handler is this decision and nothing else.
   const sketch = readFileSync(new URL("../artworks/still-there/sketch.js", import.meta.url), "utf8");
   assert.match(sketch, /const action = keydownAction\(event\);\n {4}if \(action === "ignore"\) return;\n {4}event\.preventDefault\(\);\n {4}if \(action === "swallow"\) return;\n {4}loom\.key\(event\.key\);/u);
+});
+
+test("a tile keeps its own colour wherever the shears carry it", () => {
+  // The colours belong to the tiles' original places: all 16,129 of them, pinned.
+  const colours = Array.from({ length: COUNT }, (_, index) => tessera(index).colour);
+  assert.equal(createHash("sha256").update(colours.join(";")).digest("hex"), "2b62beadadc2d1e4f7d89b298987e7c0267875b50c0870f976a1e1d40978cebc");
+  // And the sketch draws tile i in tile i's colour at tile i's position, whatever the step.
+  const sketch = readFileSync(new URL("../artworks/still-there/sketch.js", import.meta.url), "utf8");
+  assert.match(sketch, /const TESSERAE = Array\.from\(\{ length: COUNT \}, \(_, index\) => tessera\(index\)\);/u);
+  assert.match(sketch, /const tile = TESSERAE\[i\];\n {6}let x = state\.positions\[i \* 2\];\n {6}let y = state\.positions\[i \* 2 \+ 1\];/u);
+  assert.match(sketch, /ctx\.fillStyle = tile\.colour;/u);
 });
 
 test("Still There uses FitzGerald's sourced first-edition quatrain, with public-domain eligibility", async () => {

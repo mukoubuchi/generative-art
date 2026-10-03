@@ -49,6 +49,27 @@ export function movingPoint(x, y, direction, progress) {
   return [wrap(x - nextY * second), wrap(y - x * first)];
 }
 
+export const PALETTE = [[224, 119, 66], [241, 184, 108], [208, 218, 196], [79, 164, 171], [48, 102, 137]];
+
+/** Colour belongs to the original tessera. A permutation never recolours a cell. */
+export function tessera(index) {
+  const x = (index % SIZE - HALF) / HALF;
+  const y = (Math.floor(index / SIZE) - HALF) / HALF;
+  const r = Math.hypot(x, y);
+  const a = Math.atan2(y, x);
+  const petal = r + 0.054 * Math.cos(12 * a) * Math.min(1, r * 5);
+  const ring = Math.abs(Math.sin(petal * Math.PI * 13));
+  const spoke = Math.abs(Math.sin(12 * a + r * 5));
+  const lace = Math.abs(Math.sin(24 * a - r * 13));
+  const envelope = r < 0.94 ? Math.min(1, (0.94 - r) * 30) : 0;
+  const line = Math.pow(1 - ring, 1.4) * 0.8 + Math.pow(1 - spoke, 5) * 0.5;
+  const brightness = envelope * Math.min(1, 0.065 + line + 0.13 * (1 - lace));
+  const stripe = Math.floor(petal * 13 + 0.25 * Math.cos(6 * a));
+  const colour = PALETTE[((stripe % PALETTE.length) + PALETTE.length) % PALETTE.length];
+  const rgb = colour.map((c, i) => Math.round([9, 18, 28][i] + c * brightness * 0.87));
+  return { rgb, bright: brightness, colour: `rgb(${rgb})` };
+}
+
 export function positionDigest(positions) {
   let hash = 2166136261;
   for (const value of positions) hash = Math.imul(hash ^ (value + HALF), 16777619) >>> 0;

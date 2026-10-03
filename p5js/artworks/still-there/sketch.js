@@ -3,7 +3,7 @@ import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawKeyIndicator } from "../shared/input-indicator.js";
 import {
   SIZE, HALF, COUNT, FPS, CLIP_SECONDS, TOTAL_FRAMES,
-  KEY_CAPS, Loom, keydownAction, movingPoint, positionDigest, demoAt
+  KEY_CAPS, Loom, keydownAction, movingPoint, positionDigest, demoAt, tessera
 } from "./lattice.js";
 
 const LOGICAL_SIZE = 680;
@@ -23,27 +23,6 @@ const HINT_LEGEND = [
   { cap: "space", text: "run / pause" }, { cap: "R", text: "reset" }
 ];
 const TONE = { plate: [8, 15, 25, 230], ink: [218, 223, 221, 230], cap: [153, 179, 188, 180] };
-const PALETTE = [[224, 119, 66], [241, 184, 108], [208, 218, 196], [79, 164, 171], [48, 102, 137]];
-
-/** Colour belongs to the original tessera. A permutation never recolours a cell. */
-function tessera(index) {
-  const x = (index % SIZE - HALF) / HALF;
-  const y = (Math.floor(index / SIZE) - HALF) / HALF;
-  const r = Math.hypot(x, y);
-  const a = Math.atan2(y, x);
-  const petal = r + 0.054 * Math.cos(12 * a) * Math.min(1, r * 5);
-  const ring = Math.abs(Math.sin(petal * Math.PI * 13));
-  const spoke = Math.abs(Math.sin(12 * a + r * 5));
-  const lace = Math.abs(Math.sin(24 * a - r * 13));
-  const envelope = r < 0.94 ? Math.min(1, (0.94 - r) * 30) : 0;
-  const line = Math.pow(1 - ring, 1.4) * 0.8 + Math.pow(1 - spoke, 5) * 0.5;
-  const brightness = envelope * Math.min(1, 0.065 + line + 0.13 * (1 - lace));
-  const stripe = Math.floor(petal * 13 + 0.25 * Math.cos(6 * a));
-  const colour = PALETTE[((stripe % PALETTE.length) + PALETTE.length) % PALETTE.length];
-  const rgb = colour.map((c, i) => Math.round([9, 18, 28][i] + c * brightness * 0.87));
-  return { rgb, bright: brightness, colour: `rgb(${rgb})` };
-}
-
 const TESSERAE = Array.from({ length: COUNT }, (_, index) => tessera(index));
 
 new window.p5((p) => {
