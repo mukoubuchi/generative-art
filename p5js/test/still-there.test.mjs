@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   SIZE, HALF, COUNT, STEP_SECONDS, FPS, TOTAL_FRAMES, DEMO_KEYS, KEY_CAPS,
-  initialPositions, permute, movingPoint, Loom, demoAt
+  initialPositions, permute, movingPoint, Loom, demoAt, keydownAction
 } from "../artworks/still-there/lattice.js";
 import { loadCatalog } from "../lib/catalog.mjs";
 import { eligibleArtworks } from "../lib/selection.mjs";
@@ -179,6 +179,27 @@ test("the film marks each pressed key with the cap the page's legend sets it in"
   assert.equal(KEY_CAPS[" "], "space");
   // And the sketch labels the mark from this table rather than from a guess of its own.
   assert.match(sketch, /drawKeyIndicator\(p, \[\{ label: KEY_CAPS\[pressedKey\], active: true \}\]/u);
+});
+
+test("the page leaves shortcuts to the browser, swallows held-key repeats, and steps both ways", () => {
+  for (const key of ["ArrowLeft", "ArrowRight", " ", "r", "R"]) {
+    assert.equal(keydownAction({ key }), "press", key);
+    assert.equal(keydownAction({ key, repeat: true }), "swallow", key);
+    for (const modifier of ["ctrlKey", "metaKey", "altKey"]) {
+      assert.equal(keydownAction({ key, [modifier]: true }), "ignore", `${modifier}+${key}`);
+    }
+  }
+  for (const key of ["ArrowUp", "ArrowDown", "Enter", "Tab", "x", "PageDown"]) assert.equal(keydownAction({ key }), "ignore", key);
+  // Left steps back and Right forward, from wherever the loom is.
+  const loom = new Loom();
+  loom.key("ArrowLeft"); loom.advance(STEP_SECONDS);
+  assert.equal(loom.steps, -1);
+  loom.key("ArrowRight"); loom.advance(STEP_SECONDS);
+  loom.key("ArrowRight"); loom.advance(STEP_SECONDS);
+  assert.equal(loom.steps, 1);
+  // And the page's handler is this decision and nothing else.
+  const sketch = readFileSync(new URL("../artworks/still-there/sketch.js", import.meta.url), "utf8");
+  assert.match(sketch, /const action = keydownAction\(event\);\n {4}if \(action === "ignore"\) return;\n {4}event\.preventDefault\(\);\n {4}if \(action === "swallow"\) return;\n {4}loom\.key\(event\.key\);/u);
 });
 
 test("Still There uses FitzGerald's sourced first-edition quatrain, with public-domain eligibility", async () => {

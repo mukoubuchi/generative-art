@@ -112,6 +112,17 @@ export class Loom {
 /** The cap each key the loom answers to is set in, the same as in the page's legend. */
 export const KEY_CAPS = Object.freeze({ ArrowLeft: "←", ArrowRight: "→", " ": "space", r: "R", R: "R" });
 
+/**
+ * What the page does with a keydown. A shortcut with Control, Command or Alt, or a key the
+ * loom does not answer to, is left to the browser ("ignore"). A held key's repeats are
+ * cancelled so the page does not scroll, but move nothing ("swallow"). Anything else is a
+ * press for the loom ("press").
+ */
+export function keydownAction({ key, repeat = false, ctrlKey = false, metaKey = false, altKey = false }) {
+  if (ctrlKey || metaKey || altKey || !Object.hasOwn(KEY_CAPS, key)) return "ignore";
+  return repeat ? "swallow" : "press";
+}
+
 // The film presses the same keys as the page: four steps out, four back, then reset.
 export const DEMO_KEYS = [
   [1, "ArrowRight"], [3, "ArrowRight"], [5, "ArrowRight"], [7, "ArrowRight"],

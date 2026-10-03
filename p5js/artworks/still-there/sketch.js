@@ -3,7 +3,7 @@ import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawKeyIndicator } from "../shared/input-indicator.js";
 import {
   SIZE, HALF, COUNT, FPS, CLIP_SECONDS, TOTAL_FRAMES,
-  KEY_CAPS, Loom, movingPoint, positionDigest, demoAt
+  KEY_CAPS, Loom, keydownAction, movingPoint, positionDigest, demoAt
 } from "./lattice.js";
 
 const LOGICAL_SIZE = 680;
@@ -162,11 +162,12 @@ new window.p5((p) => {
   // Listen to native keydown so held-key repeats are also cancelled. p5 can discard
   // repeat events before calling keyPressed, leaving the browser's scroll action live.
   function handleKey(event) {
-    if (CAPTURE_MODE || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (!["ArrowLeft", "ArrowRight", " ", "r", "R"].includes(event.key)) return;
-    if (event.repeat) { event.preventDefault(); return; }
-    loom.key(event.key);
+    if (CAPTURE_MODE) return;
+    const action = keydownAction(event);
+    if (action === "ignore") return;
     event.preventDefault();
+    if (action === "swallow") return;
+    loom.key(event.key);
     lastTime = performance.now();
     drawAll(loom);
     publishState(loom, p.frameCount);
