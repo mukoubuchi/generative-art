@@ -67,7 +67,6 @@ export class Loom {
     this.running = false;
     this.elapsed = 0;
     this.queue = [];
-    this.lastKey = null;
   }
 
   key(key) {
@@ -75,12 +74,10 @@ export class Loom {
     if (key === " ") {
       this.running = !this.running;
       if (this.running && !this.active) this.begin(this.direction);
-      this.lastKey = "space";
       return true;
     }
     if (key !== "ArrowLeft" && key !== "ArrowRight") return false;
     this.direction = key === "ArrowRight" ? 1 : -1;
-    this.lastKey = this.direction === 1 ? "→" : "←";
     if (this.active) {
       this.queue.push(this.direction);
     } else this.begin(this.direction);
