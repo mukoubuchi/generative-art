@@ -241,6 +241,8 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
   assert.match(NOTES, /\| `those-unheard` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 24 seconds,/u);
   assert.match(NOTES, /Those Unheard begins with Keats[\s\S]*?The thumbnail is frame 480\./u);
+  // The edition the wording was checked in is named, not only linked.
+  assert.match(NOTES, /edited by Horace Elisha Scudder \(1899\), page 135, as \[transcribed on Wikisource\]/u);
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
   assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 143);
   assert.equal(body.split("\n").slice(0, 2).join("\n"), quote.text);
