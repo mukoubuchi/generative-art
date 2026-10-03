@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+import { publicSource } from "../lib/citation.mjs";
+import { escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
+import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
-  DT, FRICTION_SECONDS, LIFT_THRESHOLD, MODES, MODE_SUM, ONSET,
-  PLATE_SIZE, RELEASE, SHAPES, STROKE_SECONDS, SUBSTEPS, TOTAL_FRAMES,
+  DT, DURATION_SECONDS, FRICTION_SECONDS, LIFT_THRESHOLD, LOGICAL_SIZE, MODES, MODE_SUM, ONSET,
+  PLATE_SIZE, PLAYBACK_FPS, RELEASE, SHAPES, STROKE_SECONDS, SUBSTEPS, TOTAL_FRAMES,
   advanceGrains, agitation, createFields, createGrains, excitationAt,
   fieldAt, gradientAt, nearNodeFraction, sampleField
 } from "../artworks/those-unheard/field.js";
+
+const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+const CATALOG = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
+const NOTES = readFileSync(new URL("../README.md", import.meta.url), "utf8");
 
 const fields = createFields();
 
@@ -217,4 +225,29 @@ test("quiet grains dissipate velocity by friction, and the seeded process replay
   advanceGrains(quiet, 60);
   assert.ok(Math.abs(quiet.vx[0] - 0.001 * Math.exp(-60 * DT / FRICTION_SECONDS)) < 1e-18);
   assert.ok((quiet.x[0] - 0.5) * PLATE_SIZE < 0.04);
+});
+
+test("the manifest, notes, card and post agree on the clip and the quotation", () => {
+  const artwork = MANIFEST.artworks.find((entry) => entry.id === "those-unheard");
+  const quote = CATALOG.quotes.find((entry) => entry.id === "keats-those-unheard");
+  assert.equal(artwork.title, "Those Unheard");
+  assert.equal(artwork.entry, "p5js/artworks/those-unheard/index.html");
+  assert.equal(artwork.interactivePath, "those-unheard/");
+  assert.deepEqual(artwork.canvas, { width: LOGICAL_SIZE, height: LOGICAL_SIZE });
+  assert.deepEqual(artwork.quoteIds, ["keats-those-unheard"]);
+  assert.deepEqual(artwork.thumbnail, { frame: 480 });
+  assert.deepEqual(artwork.render, { kind: "video", artifact: "exports/p5js/ThoseUnheard.mp4", durationSeconds: 24, scale: 2 });
+  assert.equal(artwork.render.durationSeconds, DURATION_SECONDS);
+  assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
+  assert.match(NOTES, /\| `those-unheard` \| 680×680 \| 1360×1360 MP4 at 30 fps \| 24 seconds,/u);
+  assert.match(NOTES, /Those Unheard begins with Keats[\s\S]*?The thumbnail is frame 480\./u);
+  const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
+  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 143);
+  assert.equal(body.split("\n").slice(0, 2).join("\n"), quote.text);
+  const index = renderIndexPage(MANIFEST, CATALOG);
+  const start = index.indexOf('<h2 class="card__title">Those Unheard</h2>');
+  assert.ok(start >= 0);
+  const card = index.slice(start, index.indexOf("</li>", start));
+  assert.equal(card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1],
+    `—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(publicSource(quote))}`);
 });
