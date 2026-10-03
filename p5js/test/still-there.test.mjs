@@ -9,7 +9,7 @@ import { eligibleArtworks } from "../lib/selection.mjs";
 
 const INITIAL = initialPositions();
 
-// This witness multiplies the combined matrices in residues 0..126. It neither
+// This witness multiplies the combined matrices in centred residues -63..63. It neither
 // calls the artwork's wrap helper nor performs its sequential shear updates.
 function matrixWitness(positions, [a, b, c, d]) {
   const out = new Int16Array(positions.length);
