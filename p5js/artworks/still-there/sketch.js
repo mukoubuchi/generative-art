@@ -165,7 +165,7 @@ new window.p5((p) => {
     if (CAPTURE_MODE || event.ctrlKey || event.metaKey || event.altKey) return;
     if (!["ArrowLeft", "ArrowRight", " ", "r", "R"].includes(event.key)) return;
     if (event.repeat) { event.preventDefault(); return; }
-    if (!loom.key(event.key)) return;
+    loom.key(event.key);
     event.preventDefault();
     lastTime = performance.now();
     drawAll(loom);
