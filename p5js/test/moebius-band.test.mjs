@@ -370,3 +370,17 @@ test("the clip's last frame hands back to its first", () => {
   // back, whatever was asked for in between.
   assert.deepEqual(sceneState(97, frames), sceneState(97, frames));
 });
+
+test("the quotation is dated by its first printing, 1886, not by the discovery in 1858", async () => {
+  // Reinhardt dates the discovery to late 1858; the words were first printed in the
+  // Gesammelte Werke, volume 2, Leipzig 1886, page 520. The catalog's year is a
+  // publication year (see the Quote catalog notes), in both records of the entry.
+  const catalog = JSON.parse(await readFile(new URL("../quotes.json", import.meta.url), "utf8"));
+  const quote = catalog.quotes.find((entry) => entry.id === "moebius-einseitige-flaeche");
+  assert.equal(quote.year, 1886);
+  assert.equal(quote.original.year, 1886);
+  assert.equal(quote.sourceUrl, "https://archive.org/details/gesammeltewerkeh02mbuoft/page/520");
+  const notes = await readFile(new URL("../README.md", import.meta.url), "utf8");
+  assert.match(notes, /\*Gesammelte Werke\*, volume 2 \(1886\)/u);
+  assert.match(notes, /The catalog records 1886, the year these words were first printed/u);
+});
