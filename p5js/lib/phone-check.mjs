@@ -71,6 +71,26 @@ export function keepsItsShape(measured, canvas) {
 
 export const pageOf = (origin, artwork) => `${origin}/${artwork.entry}`;
 
+/** How long a page may take to answer the measurement once its canvas is visible. */
+export const MEASURE_TIMEOUT_MS = 120_000;
+
+/**
+ * The value `promise` settles with, or an error naming `what` once `milliseconds` pass.
+ * Playwright's evaluate has no timeout of its own: a page whose main thread stays busy would
+ * hold the check until the job's own limit, twenty minutes, with nothing said.
+ */
+export async function withinTime(promise, milliseconds, what) {
+  let timer;
+  const late = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what} did not answer within ${milliseconds / 1000} s`)), milliseconds);
+  });
+  try {
+    return await Promise.race([promise, late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Every artwork, on a phone, at the origin given.
  *
@@ -99,7 +119,7 @@ export async function checkArtworksFit({
   const show = async (page, url) => {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.locator("#artwork canvas").first().waitFor({ state: "visible", timeout: 60_000 });
-    return await page.evaluate(measureCanvas);
+    return await withinTime(page.evaluate(measureCanvas), MEASURE_TIMEOUT_MS, `${url}: the canvas measurement`);
   };
 
   for (const artwork of manifest.artworks) {

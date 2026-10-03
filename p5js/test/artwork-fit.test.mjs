@@ -6,6 +6,7 @@ import test from "node:test";
 import { P5JS_DIRECTORY, loadCatalog, repositoryPath } from "../lib/catalog.mjs";
 import { artworkHref, canvasSizeProperties } from "../lib/gallery.mjs";
 import { buildSite } from "../lib/site.mjs";
+import { MEASURE_TIMEOUT_MS, withinTime } from "../lib/phone-check.mjs";
 
 /**
  * An artwork is drawn at the size its manifest entry gives it, and every one of those is
@@ -122,4 +123,19 @@ test("the two properties are written as a pair, whatever the artwork", () => {
       `--art-w: ${artwork.canvas.width}; --art-h: ${artwork.canvas.height}`
     );
   }
+});
+
+// A limit that never fires would hang this test rather than fail it, so the test has its own.
+test("a page that never answers the measurement is named and given up on, not waited for", { timeout: 5_000 }, async () => {
+  assert.equal(MEASURE_TIMEOUT_MS, 120_000);
+  // The phone check measures through withinTime, not a bare evaluate.
+  const source = await readFile(resolve(P5JS_DIRECTORY, "lib/phone-check.mjs"), "utf8");
+  assert.match(source, /return await withinTime\(page\.evaluate\(measureCanvas\), MEASURE_TIMEOUT_MS, /u);
+  // An answer in time is passed through; a silence becomes a named error.
+  assert.equal(await withinTime(Promise.resolve(42), 50, "quick"), 42);
+  const started = Date.now();
+  await assert.rejects(withinTime(new Promise(() => {}), 50, "a busy page"), /a busy page did not answer within 0\.05 s/u);
+  assert.ok(Date.now() - started < 1000);
+  // A failure inside is passed through as itself.
+  await assert.rejects(withinTime(Promise.reject(new Error("closed")), 50, "x"), /closed/u);
 });
