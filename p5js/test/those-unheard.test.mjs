@@ -67,6 +67,17 @@ test("the central cross is exactly nodal in every shape and its sampled envelope
   }
   const wrongParity = [[4, 11], ...MODES.slice(1)];
   assert.ok(Math.abs(fieldAt(SHAPES[0].coefficients, 0.5, 0.13, wrongParity)) > 0.05);
+  // The exact zeros above come from the x === 1/2 branch. A billionth to either side, the
+  // basis itself must already be at the node.
+  for (const shape of SHAPES) {
+    for (let k = 0; k <= 512; k += 1) {
+      const t = k / 512;
+      for (const offset of [-1e-9, 1e-9]) {
+        assert.ok(Math.abs(fieldAt(shape.coefficients, 0.5 + offset, t)) < 1e-7);
+        assert.ok(Math.abs(fieldAt(shape.coefficients, t, 0.5 + offset)) < 1e-7);
+      }
+    }
+  }
 });
 
 test("the Neumann edges and the extra point constraint belong to the actual shapes", () => {
