@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+import { renderIndexPage } from "../lib/gallery.mjs";
+import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
   BRIDGES, EXTENDED_BRIDGES, FAILED_TRAILS, COMPLETE_TRAIL,
   THREADS, SOLO_INDICES, EYELETS, TOTAL_FRAMES, LOGICAL_SIZE,
@@ -132,4 +135,31 @@ test("all embedded silver trails stay continuous and inside the canvas", () => {
     assert.equal(first.y, path.points[0].y);
     assert.ok(Math.hypot(last.x - path.points.at(-1).x, last.y - path.points.at(-1).y) < 1e-10);
   }
+});
+
+const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+const CATALOG = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
+
+test("the quotation names Euler's paper by its English title, with no date on the card", () => {
+  // The paper is E53, Solutio problematis ad geometriam situs pertinentis. "Geometry of
+  // Position" alone named its subject as though it were a title, and a book of that name
+  // exists by someone else (Carnot, 1803).
+  const artwork = MANIFEST.artworks.find((entry) => entry.id === "no-such-passage");
+  const quote = CATALOG.quotes.find((entry) => entry.id === "euler-no-such-passage");
+  assert.deepEqual(artwork.quoteIds, ["euler-no-such-passage"]);
+  assert.equal(quote.author, "Leonhard Euler");
+  assert.equal(quote.source, "Solution of a Problem Relating to the Geometry of Position, §20");
+  assert.equal(quote.original.source, "Solutio problematis ad geometriam situs pertinentis, §20");
+  assert.equal(quote.year, 1741);
+
+  const index = renderIndexPage(MANIFEST, CATALOG);
+  const start = index.indexOf('<h2 class="card__title">No Such Passage</h2>');
+  assert.ok(start >= 0);
+  const card = index.slice(start, index.indexOf("</li>", start));
+  assert.match(card, /<cite class="card__cite">—&nbsp;<b>Leonhard Euler<\/b>, Solution of a Problem Relating to the Geometry of Position, §20<\/cite>/u);
+  assert.doesNotMatch(card, /1741/u);
+
+  const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
+  assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 232);
+  assert.ok(body.includes("— Leonhard Euler, Solution of a Problem Relating to the Geometry of Position, §20 (1741)"));
 });
