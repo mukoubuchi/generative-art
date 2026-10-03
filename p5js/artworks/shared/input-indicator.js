@@ -11,18 +11,18 @@ import {
 /**
  * The hand in the captured clip.
  *
- * Six artworks answer to the reader, and their clips replay a recorded gesture — a key
- * held, a bob dragged, a pointer swept. Until now the clips showed only the consequence:
- * the wheel starts turning on its own, the bob leaps unprompted. These marks put the cause
- * in the picture. They are a depiction of the artwork being operated, which is always true
- * of the clip; they are not the page's legend, which is an instruction to the viewer and
- * would be false in a clip that cannot be operated.
+ * Eight of the artworks that answer to the reader replay a recorded gesture in their
+ * clips — a key held, a bob dragged, a pointer swept. Until now the clips showed only the
+ * consequence: the wheel starts turning on its own, the bob leaps unprompted. These marks
+ * put the cause in the picture. They are a depiction of the artwork being operated, which
+ * is always true of the clip; they are not the page's legend, which is an instruction to
+ * the viewer and would be false in a clip that cannot be operated.
  *
  * Drawn only into captured clips: the page leaves the operating to the reader, and the
  * thumbnail already carries the legend. Everything is a pure function of the frame index
  * the sketches already compute from, so the clips stay deterministic.
  *
- * One design for all six, in two voices. A pointer is an abstract dot — dark core, light
+ * One design for all eight, in two voices. A pointer is an abstract dot — dark core, light
  * rim, so it reads on the white artworks and the black ones alike — with a ripple on press.
  * A key is the same token the page's legend sets it in, lit while it is down.
  */
