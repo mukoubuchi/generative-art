@@ -2,6 +2,7 @@ import { createReadStream } from "node:fs";
 import {
   mkdir,
   mkdtemp,
+  readFile,
   realpath,
   rm,
   stat,
@@ -19,6 +20,7 @@ import {
   thumbnailFrame
 } from "./catalog.mjs";
 import { metadataSegments, withoutMetadata } from "./jpeg.mjs";
+import { isTraceFree, videoTraces } from "./mp4.mjs";
 
 const CONTENT_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -161,6 +163,35 @@ async function renderImage(page, artifactPath) {
   return { bytes: artifactStats.size };
 }
 
+/**
+ * The ffmpeg arguments that encode a clip's frames.
+ *
+ * Besides the picture, x264 writes an SEI unit naming itself and every option it ran with,
+ * and the muxer writes its own name and version as tags in the container. The last group
+ * of arguments leaves them out: the SEI is filtered from the stream, the tags are not
+ * carried over, and the codec name is not written into the sample description. None of
+ * them changes a decoded frame (see `mp4.mjs`).
+ */
+export function videoEncodeArguments(framePattern, fps, outputPath) {
+  return [
+    "-y",
+    "-framerate", String(fps),
+    "-start_number", "0",
+    "-i", framePattern,
+    "-c:v", "libx264",
+    "-preset", "medium",
+    "-crf", "18",
+    "-pix_fmt", "yuv420p",
+    "-bsf:v", "filter_units=remove_types=6",
+    "-fflags", "+bitexact",
+    "-flags:v", "+bitexact",
+    "-map_metadata", "-1",
+    "-metadata:s:v:0", "encoder=",
+    "-movflags", "+faststart",
+    outputPath
+  ];
+}
+
 async function renderVideo(page, artwork, artifactPath, defaults, outputSize) {
   const frameCount = Math.round(artwork.render.durationSeconds * defaults.fps);
   const frameDirectory = await mkdtemp(join(tmpdir(), "generative-art-render-"));
@@ -178,23 +209,22 @@ async function renderVideo(page, artwork, artifactPath, defaults, outputSize) {
       });
     }
 
-    await runCommand("ffmpeg", [
-      "-y",
-      "-framerate", String(defaults.fps),
-      "-start_number", "0",
-      "-i", join(frameDirectory, "frame-%06d.png"),
-      "-c:v", "libx264",
-      "-preset", "medium",
-      "-crf", "18",
-      "-pix_fmt", "yuv420p",
-      "-movflags", "+faststart",
+    await runCommand("ffmpeg", videoEncodeArguments(
+      join(frameDirectory, "frame-%06d.png"),
+      defaults.fps,
       artifactPath
-    ]);
+    ));
     const duration = await verifyVideo(
       artifactPath,
       outputSize,
       defaults.maxVideoSeconds
     );
+    // Checked on the file as written, so an encoder that starts writing a new trace stops
+    // the render instead of leaving it in a clip.
+    const traces = videoTraces(await readFile(artifactPath));
+    if (!isTraceFree(traces)) {
+      throw new Error(`${artwork.id}: the clip still carries encoder traces: ${JSON.stringify(traces)}`);
+    }
     return { frameCount, duration };
   } finally {
     await removeTemporaryDirectory(frameDirectory);
