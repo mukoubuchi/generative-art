@@ -1,7 +1,7 @@
 import {
   ART_SEED, DURATION_SECONDS, FIELD_GRID_SIZE, LOGICAL_SIZE,
-  MODES, MODE_SUM, PLAYBACK_FPS, SUBSTEPS, TOTAL_FRAMES,
-  advanceGrains, createGrains, excitationAt, nearNodeFraction
+  MODES, MODE_SUM, PLAYBACK_FPS, TOTAL_FRAMES,
+  createGrains, excitationAt, nearNodeFraction, reachFrame
 } from "./field.js";
 import { createGrainView } from "./grains.js";
 
@@ -16,10 +16,9 @@ new window.p5((p) => {
   let startedAt;
 
   function drawUpTo(frameIndex) {
-    const requested = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.floor(frameIndex)));
-    const target = requested * SUBSTEPS;
-    if (target < grains.steps) grains = createGrains({ fields: grains.fields });
-    while (grains.steps < target) advanceGrains(grains);
+    const reached = reachFrame(grains, frameIndex);
+    grains = reached.grains;
+    const requested = reached.frame;
     view.draw(grains);
     p.drawingContext.drawImage(view.canvas, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
     const drive = excitationAt(requested / PLAYBACK_FPS);

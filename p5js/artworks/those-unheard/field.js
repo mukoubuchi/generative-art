@@ -134,6 +134,29 @@ export function sampleField(field, x, y) {
   return a * (1 - fy) + b * fy;
 }
 
+/**
+ * How the grains reach a requested frame. Frames past the end are the last frame, so the
+ * final figure holds. A frame before the grains' own is reached by starting over, because
+ * the grains can only be carried forward; any later one by carrying them on from where
+ * they are.
+ */
+export function stepsTo(frameIndex, currentSteps) {
+  const frame = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.floor(frameIndex)));
+  const target = frame * SUBSTEPS;
+  return { frame, target, restart: target < currentSteps };
+}
+
+/**
+ * The grains as they stand at a requested frame, carried there from `grains` as stepsTo
+ * says; `grains` itself is advanced in place unless they had to start over.
+ */
+export function reachFrame(grains, frameIndex) {
+  const { frame, target, restart } = stepsTo(frameIndex, grains.steps);
+  const state = restart ? createGrains({ count: grains.count, seed: grains.seed, fields: grains.fields }) : grains;
+  while (state.steps < target) advanceGrains(state);
+  return { grains: state, frame };
+}
+
 /** Four separate excitations, each with a crescendo and a dissipative ring-down. */
 export function excitationAt(time) {
   const index = Math.min(SHAPES.length - 1, Math.max(0, Math.floor(time / STROKE_SECONDS)));

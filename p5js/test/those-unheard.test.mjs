@@ -8,7 +8,7 @@ import {
   DT, DURATION_SECONDS, FRICTION_SECONDS, LIFT_THRESHOLD, LOGICAL_SIZE, MODES, MODE_SUM, ONSET,
   PLATE_SIZE, PLAYBACK_FPS, RELEASE, SHAPES, STROKE_SECONDS, SUBSTEPS, TOTAL_FRAMES,
   advanceGrains, agitation, createFields, createGrains, excitationAt,
-  fieldAt, gradientAt, nearNodeFraction, sampleField
+  fieldAt, gradientAt, nearNodeFraction, reachFrame, sampleField, stepsTo
 } from "../artworks/those-unheard/field.js";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
@@ -263,4 +263,36 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   const card = index.slice(start, index.indexOf("</li>", start));
   assert.equal(card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1],
     `—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(publicSource(quote))}`);
+});
+
+test("a frame past the end holds the last figure, and an earlier frame starts the grains over", () => {
+  assert.deepEqual(stepsTo(719, 0), { frame: 719, target: 719 * SUBSTEPS, restart: false });
+  assert.deepEqual(stepsTo(900, 0), { frame: 719, target: 719 * SUBSTEPS, restart: false });
+  assert.deepEqual(stepsTo(-5, 40), { frame: 0, target: 0, restart: true });
+  assert.equal(stepsTo(10, 30 * SUBSTEPS).restart, true);
+  assert.equal(stepsTo(30, 30 * SUBSTEPS).restart, false);
+  assert.equal(stepsTo(31, 30 * SUBSTEPS).restart, false);
+
+  // With real grains: forward to 30, back to 10, forward to 30 again.
+  const direct = (frame) => {
+    const grains = createGrains({ count: 512, fields });
+    advanceGrains(grains, frame * SUBSTEPS);
+    return grains;
+  };
+  let { grains } = reachFrame(createGrains({ count: 512, fields }), 30);
+  const atThirty = { x: Float64Array.from(grains.x), y: Float64Array.from(grains.y) };
+  ({ grains } = reachFrame(grains, 10));
+  assert.deepEqual([grains.x, grains.y, grains.steps], [direct(10).x, direct(10).y, 10 * SUBSTEPS]);
+  ({ grains } = reachFrame(grains, 30));
+  assert.deepEqual([grains.x, grains.y], [atThirty.x, atThirty.y]);
+  const held = reachFrame(grains, 5000);
+  assert.equal(held.frame, TOTAL_FRAMES - 1);
+  assert.equal(held.grains.steps, (TOTAL_FRAMES - 1) * SUBSTEPS);
+});
+
+test("a captured frame is drawn from its index alone", () => {
+  // The renderer asks for each frame by number; nothing on that path reads a clock.
+  const sketch = readFileSync(new URL("../artworks/those-unheard/sketch.js", import.meta.url), "utf8");
+  assert.match(sketch, /window\.__renderFrame = \(frameIndex\) => Promise\.resolve\(publishState\(drawUpTo\(frameIndex\)\)\);/u);
+  assert.match(sketch, /function drawUpTo\(frameIndex\) \{\n {4}const reached = reachFrame\(grains, frameIndex\);/u);
 });
