@@ -9,8 +9,7 @@ const SENTENCE = "Life beyond utility is the domain of sovereignty.";
 const { manifest, quoteCatalog } = await loadCatalog();
 const index = renderIndexPage(manifest, quoteCatalog);
 
-const attribution = `—&nbsp;<b>${EPIGRAPH.author}</b>, ${EPIGRAPH.source}`
-  + `${EPIGRAPH.year == null ? "" : ` (${EPIGRAPH.year})`}`;
+const attribution = `—&nbsp;<b>${EPIGRAPH.author}</b>, ${EPIGRAPH.source}`;
 
 test("the masthead carries the short English epigraph", () => {
   assert.equal(EPIGRAPH.text, SENTENCE);
@@ -38,6 +37,20 @@ test("the epigraph reaches the page with its language and its source", () => {
   assert.ok(block.startsWith(`<blockquote class="masthead__epigraph" lang="${EPIGRAPH.lang}">`));
   assert.ok(block.includes(EPIGRAPH.text), "the page's sentence is not the module's");
   assert.ok(block.includes(attribution), "the page's attribution is not the module's");
+});
+
+test("the masthead omits a known year without discarding its volume", () => {
+  const originalYear = EPIGRAPH.year;
+  try {
+    // A fixture exercises the known-year branch without changing the source record.
+    EPIGRAPH.year = 1900;
+    const html = renderIndexPage(manifest, quoteCatalog);
+    const cite = html.match(/<cite class="masthead__cite">(.*?)<\/cite>/u)?.[1];
+    assert.equal(cite, attribution);
+    assert.equal(EPIGRAPH.year, 1900, "rendering must not erase bibliographic data");
+  } finally {
+    EPIGRAPH.year = originalYear;
+  }
 });
 
 test("the epigraph is nowhere in the catalog, which is why the notes can say it is not", () => {

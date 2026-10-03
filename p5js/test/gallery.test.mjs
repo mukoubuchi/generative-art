@@ -81,7 +81,8 @@ test("text from the catalog cannot escape into markup", () => {
       text: "\"quoted\" & <angled>, a < b && b > c",
       lang: "en",
       author: "O'Hara",
-      source: "s"
+      source: "s",
+      siteSource: "<source> & title"
     }]
   };
   const html = renderIndexPage(manifest, quoteCatalog);
@@ -90,6 +91,7 @@ test("text from the catalog cannot escape into markup", () => {
   assert.ok(html.includes("&lt;script&gt;"));
   assert.ok(html.includes("a &lt; b &amp;&amp; b &gt; c"));
   assert.ok(html.includes("O&#39;Hara"));
+  assert.ok(html.includes("&lt;source&gt; &amp; title"));
 });
 
 test("the reveal order is the golden angle, so it neither sweeps nor clumps", async () => {

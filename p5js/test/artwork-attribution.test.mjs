@@ -5,16 +5,13 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { loadCatalog } from "../lib/catalog.mjs";
 import { artworkHref, escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
-import { buildPostBody, quoteYearSuffix } from "../lib/post-text.mjs";
+import { buildPostBody } from "../lib/post-text.mjs";
 import { buildSite } from "../lib/site.mjs";
 
 /**
- * The quotations were verified against primary sources, and two surfaces say so: the
- * gallery card and the post body, which date their attributions by one shared rule —
- * the year printed when the catalog has one, absent when it records unknown. The
- * artwork page is deliberately not one of them. Captions were tried there and removed
- * by decision: the page shows the artwork alone, and these tests hold the removal as
- * firmly as they hold the rule.
+ * The site omits dates while posts retain the catalogue's bibliographic attribution.
+ * Explicit site labels remove embedded dates without treating reference numbers as
+ * years. The artwork page continues to show the artwork alone.
  */
 const { manifest, quoteCatalog } = await loadCatalog();
 const quotesById = new Map(quoteCatalog.quotes.map((quote) => [quote.id, quote]));
@@ -31,7 +28,7 @@ try {
   await rm(built, { recursive: true, force: true });
 }
 
-test("the dating rule has both of its branches to exercise", () => {
+test("the post dating rule has both of its branches to exercise", () => {
   // If every entry gained a year, the omission branch below would pass vacuously —
   // and the catalog's records of "unknown" are themselves worth noticing the loss of.
   const years = quoteCatalog.quotes.map((quote) => quote.year);
@@ -39,18 +36,23 @@ test("the dating rule has both of its branches to exercise", () => {
   assert.ok(years.some((year) => year === null), "no undated quotes are left");
 });
 
-test("the card and the post date an attribution by one rule", () => {
+test("cards omit dates while posts retain bibliographic attributions", () => {
+  const siteSources = new Map([
+    ["descartes-theoreme-plus-beau", "Letter to Elisabeth"],
+    ["wren-rectas-innumeras", "Philosophical Transactions, no. 48, p. 962"]
+  ]);
+  assert.deepEqual(quoteCatalog.quotes.filter((quote) => quote.siteSource !== undefined)
+    .map((quote) => [quote.id, quote.siteSource]), [...siteSources]);
+
   for (const artwork of manifest.artworks) {
     const quote = quotesById.get(artwork.quoteIds[0]);
-    const suffix = quoteYearSuffix(quote);
+    const suffix = quote.year === null ? "" : ` (${quote.year})`;
 
     const card = index.slice(index.indexOf(`<h2 class="card__title">${escapeHtml(artwork.title)}</h2>`));
-    const cite = card.slice(card.indexOf("card__cite"), card.indexOf("</cite>"));
-    assert.ok(cite.includes(`${escapeHtml(quote.source)}${escapeHtml(suffix)}`),
-      `${artwork.id}'s card dates its source differently`);
-    if (quote.year === null) {
-      assert.ok(!cite.includes("("), `${artwork.id}'s card prints a date the catalog does not have`);
-    }
+    const cite = card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1];
+    const source = siteSources.get(quote.id) ?? quote.source;
+    assert.equal(cite, `—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(source)}`,
+      `${artwork.id}'s card must retain its source and reference numbers without a date`);
 
     const body = buildPostBody(artwork, quote, manifest.defaults.interactiveBaseUrl);
     // The quotation itself may span lines — an epitaph does — so the attribution line
@@ -59,6 +61,10 @@ test("the card and the post date an attribution by one rule", () => {
     assert.equal(attributionLine, `— ${quote.author}, ${quote.source}${suffix}`,
       `${artwork.id}'s post dates its source differently`);
   }
+  assert.equal(quotesById.get("descartes-theoreme-plus-beau").source,
+    "Letter to Elisabeth, November 1643");
+  assert.equal(quotesById.get("wren-rectas-innumeras").source,
+    "Philosophical Transactions, no. 48 (1669), p. 962");
 });
 
 test("the artwork page shows the artwork alone", () => {
