@@ -217,7 +217,11 @@ export function advanceGrains(state, substeps = SUBSTEPS, kickScale = 1) {
   return state;
 }
 
-/** The local linear estimate is used only to measure already-near-node grains. */
+/**
+ * The share of grains within `pixels` of a node of shape `index`. Every grain's distance
+ * is estimated as |psi| / |grad psi|, a local linear estimate that approximates the
+ * distance only close to a node.
+ */
 export function nearNodeFraction(state, index, pixels = 2) {
   const coefficients = state.fields[index].coefficients;
   let near = 0;
