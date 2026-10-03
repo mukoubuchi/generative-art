@@ -105,14 +105,20 @@ test("the first failed walks have a readable hold with an unused bridge elsewher
 
 test("the added bridge is present before the successful traversal; seeking is stateless", () => {
   const last = sceneAt(TOTAL_FRAMES - 1);
+  const forward = [];
   for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
     const scene = sceneAt(frame);
     assert.equal(scene.frameIndex, frame);
     if (scene.crossing > 0) assert.equal(scene.addedBridge, 1);
     if (scene.completed) assert.equal(scene.crossing, 1);
+    forward.push(scene);
   }
   assert.equal(last.completed, true);
-  assert.deepEqual(sceneAt(120), sceneAt(120));
+  // Every frame read again, in the opposite order, is the same scene: what a frame shows
+  // depends on its index alone, not on which frames were read before it or how often.
+  for (let frame = TOTAL_FRAMES - 1; frame >= 0; frame -= 1) {
+    assert.deepEqual(sceneAt(frame), forward[frame]);
+  }
   assert.equal(sceneAt(-1).frameIndex, 0);
   assert.equal(sceneAt(TOTAL_FRAMES + 9).frameIndex, TOTAL_FRAMES - 1);
 });
