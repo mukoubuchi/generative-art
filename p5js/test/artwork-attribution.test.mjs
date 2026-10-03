@@ -38,7 +38,7 @@ test("the catalog keeps both dated and undated quotes for the no-year rule to be
 
 test("each post prints its card's attribution word for word, with no date", () => {
   const siteSources = new Map([
-    ["descartes-theoreme-plus-beau", "Letter to Elisabeth"],
+    ["descartes-theoreme-plus-beau", "Letter to Elisabeth, AT IV 47"],
     ["wren-rectas-innumeras", "Philosophical Transactions, no. 48, p. 962"]
   ]);
   assert.deepEqual(quoteCatalog.quotes.filter((quote) => quote.siteSource !== undefined)
@@ -66,7 +66,7 @@ test("each post prints its card's attribution word for word, with no date", () =
   }
   assert.ok(dated > 0, "no artwork's quotation has a recorded year to leave out");
   assert.equal(quotesById.get("descartes-theoreme-plus-beau").source,
-    "Letter to Elisabeth, November 1643");
+    "Letter to Elisabeth, November 1643, AT IV 47");
   assert.equal(quotesById.get("wren-rectas-innumeras").source,
     "Philosophical Transactions, no. 48 (1669), p. 962");
 });
