@@ -131,6 +131,46 @@ test("a grain at rest on the common node is not pulled onto a prescribed path", 
   assert.equal(grains.vy[0], 0);
 });
 
+test("off the nodes, the kicks have no mean direction: nothing pulls grains towards a curve", () => {
+  // A force towards the nodal curves would show as a mean velocity change towards the
+  // nearest node. Many grains are kicked once from rest at the same point, at full
+  // amplitude, and the mean of their velocity change is compared with its standard error.
+  const count = 65_536;
+  const time = 2;
+  assert.equal(excitationAt(time).amplitude, 1);
+  const measured = [];
+  for (const [x, y] of [[0.21, 0.37], [0.63, 0.12], [0.08, 0.81], [0.37, 0.66]]) {
+    const grains = createGrains({ count, fields });
+    grains.steps = Math.round(time / DT);
+    grains.x.fill(x);
+    grains.y.fill(y);
+    advanceGrains(grains, 1);
+    const value = sampleField(fields[0], x, y);
+    assert.ok(Math.abs(value) > 0.25, "the point is well away from a node, so it is kicked");
+    // The direction a pull towards the nearest node would take: down the slope of |psi|.
+    const [gx, gy] = gradientAt(fields[0].coefficients, x, y);
+    const length = Math.hypot(gx, gy);
+    const towards = [-Math.sign(value) * gx / length, -Math.sign(value) * gy / length];
+    const along = Float64Array.from(grains.vx, (vx, k) => vx * towards[0] + grains.vy[k] * towards[1]);
+    measured.push(along);
+  }
+  const zScore = (samples) => {
+    const mean = samples.reduce((sum, v) => sum + v, 0) / samples.length;
+    const variance = samples.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (samples.length - 1);
+    return mean / Math.sqrt(variance / samples.length);
+  };
+  for (const along of measured) {
+    assert.ok(along.some((v) => v !== 0), "the grains were kicked");
+    assert.ok(Math.abs(zScore(along)) < 4, `mean change towards the node is ${zScore(along).toFixed(2)} standard errors`);
+  }
+  // The control: the same kicks with a pull towards the node of 2 per cent of their spread
+  // added. At this sample size the measurement must see it.
+  for (const along of measured) {
+    const spread = Math.sqrt(along.reduce((sum, v) => sum + v * v, 0) / along.length);
+    assert.ok(zScore(along.map((v) => v + 0.02 * spread)) > 4);
+  }
+});
+
 test("quiet grains dissipate velocity by friction, and the seeded process replays deterministically", () => {
   const grains = createGrains({ count: 128, fields });
   const replay = createGrains({ count: 128, fields });
