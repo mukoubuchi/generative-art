@@ -71,6 +71,16 @@ export function keepsItsShape(measured, canvas) {
 
 export const pageOf = (origin, artwork) => `${origin}/${artwork.entry}`;
 
+/**
+ * Stops a page's animation: every frame it asks for from now on is never drawn. The fit
+ * check measures layout, which a draw loop does not change, and a draw loop that keeps the
+ * main thread busy (Little Moons under a software GPU: long tasks of up to 2.2 s) only
+ * makes each measurement wait for it. Runs in the page.
+ */
+export function stopAnimation() {
+  window.requestAnimationFrame = () => 0;
+}
+
 /** How long a page may take to answer the measurement once its canvas is visible. */
 export const MEASURE_TIMEOUT_MS = 120_000;
 
@@ -119,6 +129,7 @@ export async function checkArtworksFit({
   const show = async (page, url) => {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.locator("#artwork canvas").first().waitFor({ state: "visible", timeout: 60_000 });
+    await withinTime(page.evaluate(stopAnimation), MEASURE_TIMEOUT_MS, `${url}: stopping its animation`);
     return await withinTime(page.evaluate(measureCanvas), MEASURE_TIMEOUT_MS, `${url}: the canvas measurement`);
   };
 

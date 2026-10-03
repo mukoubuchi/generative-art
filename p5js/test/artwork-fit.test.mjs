@@ -6,7 +6,7 @@ import test from "node:test";
 import { P5JS_DIRECTORY, loadCatalog, repositoryPath } from "../lib/catalog.mjs";
 import { artworkHref, canvasSizeProperties } from "../lib/gallery.mjs";
 import { buildSite } from "../lib/site.mjs";
-import { MEASURE_TIMEOUT_MS, withinTime } from "../lib/phone-check.mjs";
+import { MEASURE_TIMEOUT_MS, stopAnimation, withinTime } from "../lib/phone-check.mjs";
 
 /**
  * An artwork is drawn at the size its manifest entry gives it, and every one of those is
@@ -138,4 +138,25 @@ test("a page that never answers the measurement is named and given up on, not wa
   assert.ok(Date.now() - started < 1000);
   // A failure inside is passed through as itself.
   await assert.rejects(withinTime(Promise.reject(new Error("closed")), 50, "x"), /closed/u);
+});
+
+test("the fit check stops a page's animation before it measures the page", () => {
+  // In the page: once stopped, no frame asked for is ever drawn.
+  const drawn = [];
+  const page = { requestAnimationFrame: (callback) => { drawn.push(callback); return drawn.length; } };
+  const previous = globalThis.window;
+  globalThis.window = page;
+  try {
+    page.requestAnimationFrame(() => {});
+    stopAnimation();
+    const handle = page.requestAnimationFrame(() => drawn.push("late"));
+    assert.equal(handle, 0);
+    assert.equal(drawn.length, 1);
+  } finally {
+    globalThis.window = previous;
+  }
+  // And the check does it after the canvas is visible and before it measures.
+  return readFile(resolve(P5JS_DIRECTORY, "lib/phone-check.mjs"), "utf8").then((source) => {
+    assert.match(source, /waitFor\(\{ state: "visible", timeout: 60_000 \}\);\n {4}await withinTime\(page\.evaluate\(stopAnimation\), MEASURE_TIMEOUT_MS, `\$\{url\}: stopping its animation`\);\n {4}return await withinTime\(page\.evaluate\(measureCanvas\)/u);
+  });
 });
