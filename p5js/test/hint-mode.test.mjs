@@ -129,7 +129,8 @@ test("the README's roll of interactive artworks is the sketches' own", async () 
   for (const artwork of manifest.artworks) {
     const sketch = resolve(P5JS_DIRECTORY, "artworks", artwork.id, "sketch.js");
     const source = await readFile(sketch, "utf8").catch(() => "");
-    if (source.includes("drawKeyHint")) {
+    // A call, not the name: an import line alone draws nothing.
+    if (/^(?!\s*(?:\/\/|\*|import\b)).*\bdrawKeyHint\(/mu.test(source)) {
       carrying.push(artwork.id);
     }
   }
