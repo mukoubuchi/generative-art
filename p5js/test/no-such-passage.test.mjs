@@ -57,7 +57,7 @@ test("permuting every edge independently confirms impossibility and the open-tra
   assert.ok(complete.every(trail => [0, 3].includes(trail.vertices[0]) && [0, 3].includes(trail.vertices.at(-1))));
 });
 
-test("every silver thread is a distinct legal maximal trail, stopped by the graph", () => {
+test("every silver thread is a distinct legal walk, stopped where its end has no unused bridge", () => {
   const histogram = {};
   const signatures = new Set();
   for (const trail of FAILED_TRAILS) {

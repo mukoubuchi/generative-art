@@ -16,7 +16,11 @@ export function degrees(edges) {
   return result;
 }
 
-/** Enumerate maximal edge-simple walks, retaining both orientations. */
+/**
+ * Every edge-simple walk from each region, continued until its end has no unused bridge.
+ * Only the end is stuck: a walk may still have an unused bridge at its start, and then its
+ * reverse is not in the set.
+ */
 export function enumerateTrails(edges) {
   const trails = [];
   function extend(vertex, used, vertices, edgeIds) {
