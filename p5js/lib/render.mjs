@@ -18,6 +18,7 @@ import {
   repositoryPath,
   thumbnailFrame
 } from "./catalog.mjs";
+import { metadataSegments, withoutMetadata } from "./jpeg.mjs";
 
 const CONTENT_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -273,6 +274,17 @@ async function renderArtworkPage(browser, serverBaseUrl, manifest, artwork) {
   }
 }
 
+/**
+ * The bytes of a thumbnail, from the data URL the page encoded it to.
+ *
+ * The browser's encoder tags the JPEG with a colour profile of its own, which identifies
+ * the library that wrote it and changes nothing a reader sees, so it is taken out here,
+ * before anything is written (see `jpeg.mjs`).
+ */
+export function thumbnailFromDataUrl(dataUrl) {
+  return withoutMetadata(Buffer.from(dataUrl.split(",")[1], "base64"));
+}
+
 async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width) {
   // Thumbnails are taken at the logical size: a gallery card never needs the export scale,
   // and for a moving artwork it saves rendering a whole clip to keep one frame of it.
@@ -313,7 +325,7 @@ async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width
       context.drawImage(source, 0, 0, target.width, target.height);
       return target.toDataURL("image/jpeg", 0.82);
     }, width);
-    return { frame, bytes: Buffer.from(dataUrl.split(",")[1], "base64") };
+    return { frame, bytes: thumbnailFromDataUrl(dataUrl) };
   } finally {
     await page.close();
   }
@@ -363,6 +375,12 @@ export async function renderThumbnails(manifest, artworks, directory, width) {
         artwork,
         width
       );
+      // Checked on the bytes about to be written, so a capture that skipped the step
+      // above stops the build instead of publishing the encoder's profile.
+      const left = metadataSegments(bytes);
+      if (left.length > 0) {
+        throw new Error(`${artwork.id}: the thumbnail still carries ${left.join(", ")}`);
+      }
       const path = join(directory, `${artwork.id}.jpg`);
       await writeFile(path, bytes);
       results.push({ id: artwork.id, path, frame, bytes: bytes.length });
