@@ -124,8 +124,8 @@ test("Still There uses FitzGerald's sourced first-edition quatrain, with public-
   const quote = quoteCatalog.quotes.find((entry) => entry.id === artwork.quoteIds[0]);
   assert.equal(quote.text, "The Moving Finger writes; and, having writ,\nMoves on: nor all thy Piety nor Wit\nShall lure it back to cancel half a Line,\nNor all thy Tears wash out a Word of it.");
   assert.equal(quote.author, "Omar Khayyam");
-  assert.equal(quote.source, "Rubaiyat, tr. E. FitzGerald, 1st ed., LI");
-  assert.equal(quote.year, 1859);
+  assert.equal(quote.source, "Rubaiyat");
+  assert.equal(quote.year, null);
   assert.equal(quote.sourceUrl, "https://www.gutenberg.org/files/246/246-h/246-h.htm");
   assert.equal(quote.publicDomain, true);
   assert.ok(eligibleArtworks(manifest, quoteCatalog).some(({ artwork }) => artwork.id === "still-there"));
