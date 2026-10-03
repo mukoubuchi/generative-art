@@ -27,7 +27,8 @@ export const DT = 1 / (PLAYBACK_FPS * SUBSTEPS);
 const DECAY = Math.exp(-DT / FRICTION_SECONDS);
 const KICK = VELOCITY_SCALE * Math.sqrt(1 - DECAY * DECAY);
 
-// These special values are mathematical zeros, not tolerance-based classifications.
+// Exact values at x = 0, 1/2 and 1 (0 or ±1), not tolerance-based classifications. At
+// x = 1/2 an odd mode is zero, where Math.cos leaves residues of 2e-16 to 2.5e-15.
 function cosMode(m, x) {
   if (x === 0) return 1;
   if (x === 1) return m % 2 === 0 ? 1 : -1;
