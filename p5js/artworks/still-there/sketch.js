@@ -3,7 +3,7 @@ import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawKeyIndicator } from "../shared/input-indicator.js";
 import {
   SIZE, HALF, COUNT, FPS, CLIP_SECONDS, TOTAL_FRAMES,
-  Loom, movingPoint, positionDigest, demoAt
+  KEY_CAPS, Loom, movingPoint, positionDigest, demoAt
 } from "./lattice.js";
 
 const LOGICAL_SIZE = 680;
@@ -104,8 +104,7 @@ new window.p5((p) => {
     if (INDICATOR && pressedKey) {
       p.push();
       p.scale(RENDER_SCALE);
-      const label = pressedKey === "ArrowRight" ? "→" : pressedKey === "ArrowLeft" ? "←" : "R";
-      drawKeyIndicator(p, [{ label, active: true }], LOGICAL_SIZE, LOGICAL_SIZE);
+      drawKeyIndicator(p, [{ label: KEY_CAPS[pressedKey], active: true }], LOGICAL_SIZE, LOGICAL_SIZE);
       p.pop();
     }
   }

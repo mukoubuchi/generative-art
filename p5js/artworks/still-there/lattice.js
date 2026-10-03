@@ -112,6 +112,9 @@ export class Loom {
   get progress() { return this.active ? this.elapsed / STEP_SECONDS : 0; }
 }
 
+/** The cap each key the loom answers to is set in, the same as in the page's legend. */
+export const KEY_CAPS = Object.freeze({ ArrowLeft: "←", ArrowRight: "→", " ": "space", r: "R", R: "R" });
+
 // The film presses the same keys as the page: four steps out, four back, then reset.
 export const DEMO_KEYS = [
   [1, "ArrowRight"], [3, "ArrowRight"], [5, "ArrowRight"], [7, "ArrowRight"],

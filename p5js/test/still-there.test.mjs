@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
-  SIZE, HALF, COUNT, STEP_SECONDS, FPS, TOTAL_FRAMES, DEMO_KEYS,
+  SIZE, HALF, COUNT, STEP_SECONDS, FPS, TOTAL_FRAMES, DEMO_KEYS, KEY_CAPS,
   initialPositions, permute, movingPoint, Loom, demoAt
 } from "../artworks/still-there/lattice.js";
 import { loadCatalog } from "../lib/catalog.mjs";
@@ -163,6 +164,21 @@ test("all film frames retain a permutation and the inverse returns before reset"
   loom.advance((TOTAL_FRAMES - 1) / FPS - time);
   assert.equal(loom.steps, 0);
   assert.deepEqual(loom.positions, INITIAL);
+});
+
+test("the film marks each pressed key with the cap the page's legend sets it in", () => {
+  // The legend's caps, as the sketch writes them.
+  const sketch = readFileSync(new URL("../artworks/still-there/sketch.js", import.meta.url), "utf8");
+  const legend = sketch.slice(sketch.indexOf("const HINT_LEGEND"), sketch.indexOf("];", sketch.indexOf("const HINT_LEGEND")));
+  const caps = [...legend.matchAll(/cap: "([^"]+)"/gu)].map((match) => match[1]);
+  assert.deepEqual(caps, ["←", "→", "space", "R"]);
+  // Every key the loom answers to, and only those, has a cap, and every cap is the legend's.
+  const answered = ["ArrowLeft", "ArrowRight", " ", "r", "R", "ArrowUp", "Enter", "x"].filter((key) => new Loom().key(key));
+  assert.deepEqual(Object.keys(KEY_CAPS).sort(), answered.sort());
+  assert.deepEqual([...new Set(Object.values(KEY_CAPS))].sort(), [...caps].sort());
+  assert.equal(KEY_CAPS[" "], "space");
+  // And the sketch labels the mark from this table rather than from a guess of its own.
+  assert.match(sketch, /drawKeyIndicator\(p, \[\{ label: KEY_CAPS\[pressedKey\], active: true \}\]/u);
 });
 
 test("Still There uses FitzGerald's sourced first-edition quatrain, with public-domain eligibility", async () => {
