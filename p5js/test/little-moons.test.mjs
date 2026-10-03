@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { renderIndexPage } from "../lib/gallery.mjs";
+import { escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
+import { publicSource } from "../lib/citation.mjs";
 import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
   CANOPY_LAYOUT,
@@ -730,8 +731,9 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.ok(start >= 0);
   const card = index.slice(start, index.indexOf("</li>", start));
   assert.match(card, /<blockquote class="card__quote" lang="en">/u);
-  assert.ok(card.includes(quote.author));
-  assert.ok(card.includes(quote.source));
+  // The citation itself, exactly as the gallery and the post print it.
+  assert.equal(card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1],
+    `—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(publicSource(quote))}`);
 });
 
 test("the sketch draws one image of the light and nothing else, with no variant left to choose", () => {

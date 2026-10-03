@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { thumbnailFrame } from "../lib/catalog.mjs";
-import { renderIndexPage } from "../lib/gallery.mjs";
+import { escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
+import { publicSource } from "../lib/citation.mjs";
 import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
   BOX,
@@ -404,8 +405,9 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   const start = index.indexOf('<h2 class="card__title">Homo Bulla</h2>');
   assert.ok(start >= 0);
   const card = index.slice(start, index.indexOf("</li>", start));
-  assert.ok(card.includes(quote.author));
-  assert.ok(card.includes(quote.source));
+  // The citation itself, exactly as the gallery and the post print it.
+  assert.equal(card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1],
+    `—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(publicSource(quote))}`);
 });
 
 test("the sketch draws the one look, with no switch left to choose another", () => {

@@ -38,7 +38,8 @@ import {
   regionOnPage,
   sceneAt
 } from "../artworks/made-whole/made-whole.js";
-import { renderIndexPage } from "../lib/gallery.mjs";
+import { escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
+import { publicSource } from "../lib/citation.mjs";
 import {
   buildPostBody,
   validatePostBody
@@ -319,8 +320,9 @@ test("the gallery card and post carry the same English record within the post li
   assert.ok(cardStart >= 0);
   assert.match(card, /<blockquote class="card__quote" lang="en">/u);
   assert.ok(card.includes(quote.text));
-  assert.ok(card.includes(quote.author));
-  assert.ok(card.includes(quote.source));
+  // The citation itself, exactly as the gallery and the post print it.
+  assert.equal(card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1],
+    `—&nbsp;<b>${escapeHtml(quote.author)}</b>, ${escapeHtml(publicSource(quote))}`);
 });
 
 test("the notes state the proof choice, attribution boundary and witness level", () => {
