@@ -69,7 +69,13 @@ test("rapid presses and direction changes keep every command and finish on the l
   const loom = new Loom();
   const keys = [...Array(12).fill("ArrowRight"), ...Array(12).fill("ArrowLeft")];
   for (const key of keys) { loom.key(key); loom.advance(0.03); }
-  loom.advance(STEP_SECONDS * keys.length);
+  // Every press is one whole step: twelve out, then twelve back, one after another.
+  const visited = [loom.steps];
+  for (let time = 0; time < STEP_SECONDS * keys.length; time += 0.05) {
+    loom.advance(0.05);
+    if (loom.steps !== visited.at(-1)) visited.push(loom.steps);
+  }
+  assert.deepEqual(visited, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
   assert.equal(loom.steps, 0);
   assert.equal(loom.active, false);
   assert.equal(loom.queue.length, 0);
