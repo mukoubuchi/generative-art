@@ -19,8 +19,6 @@ test("the complete four-dimensional eigenspace has integer mode sum 130", () => 
   assert.equal(MODES.length, 4);
   assert.deepEqual(MODES, independentlyEnumerated);
   for (const [m, n] of MODES) assert.equal(m * m + n * n, 130);
-  // Same-looking indices are insufficient: this neighboring mode has a different eigenvalue.
-  assert.notEqual(4 * 4 + 11 * 11, MODE_SUM);
 });
 
 test("spatial finite differences obey Delta psi + 130*pi^2*psi = 0 for each shape", () => {
@@ -43,6 +41,7 @@ test("spatial finite differences obey Delta psi + 130*pi^2*psi = 0 for each shap
     return worst;
   }
   for (const shape of SHAPES) assert.ok(worstResidual(shape.coefficients) < 0.002);
+  // The neighbouring mode (4, 11) looks alike but has another eigenvalue.
   const changedMode = MODES.map(([m, n], k) => [k === 0 ? m + 1 : m, n]);
   assert.ok(worstResidual(SHAPES[0].coefficients, changedMode) > 20,
     "the wrong-eigenvalue control must fail the same numerical measurement");
