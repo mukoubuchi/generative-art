@@ -281,6 +281,7 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   const body = buildPostBody(artwork, quote, MANIFEST.defaults.interactiveBaseUrl);
   assert.ok(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters) <= MANIFEST.defaults.maxWeightedCharacters);
   assert.equal(body.split("\n")[0], quote.text);
+  assert.equal(body.split("\n")[1], `— ${quote.author}, ${quote.source} (1669)`);
   const index = renderIndexPage(MANIFEST, CATALOG);
   const start = index.indexOf('<h2 class="card__title">Innumerable Straight Lines</h2>');
   assert.ok(start >= 0);
@@ -288,7 +289,8 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.match(card, /<blockquote class="card__quote" lang="en">/u);
   assert.ok(card.includes(quote.text));
   assert.ok(card.includes(quote.author));
-  assert.ok(card.includes(quote.source));
+  assert.equal(card.match(/<cite class="card__cite">(.*?)<\/cite>/u)?.[1],
+    "—&nbsp;<b>Christopher Wren</b>, Philosophical Transactions, no. 48, p. 962");
   // Not an artwork that answers to the reader: no legend row.
   assert.doesNotMatch(NOTES, /\| `innumerable-straight-lines` \| [a-z, +]+ \| `/u);
 });
