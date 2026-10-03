@@ -150,6 +150,12 @@ const sixFromA = THREADS.findIndex(({ trail }) => trail.vertices[0] === 0 && tra
 const sixFromD = THREADS.findIndex(({ trail }) => trail.vertices[0] === 3 && trail.edges.length === 6);
 export const SOLO_INDICES = [sixFromA, sixFromD];
 
+/** The bridges as drawn, one bundle each; the eighth, index 7, is the added one. */
+export const BRIDGE_PATHS = EXTENDED_BRIDGES.map((_, id) => measurePath(bridgePoints(id)));
+
+/** The warm ribbon: 33 offset copies of the one open trail, the middle one (16) at lane 0. */
+export const GOLD_THREADS = Array.from({ length: 33 }, (_, i) => trailPoints(COMPLETE_TRAIL, (i - 16) / 25));
+
 export function sceneAt(frameIndex) {
   const frame = clamp(Math.floor(frameIndex), 0, TOTAL_FRAMES - 1);
   const seconds = frame / PLAYBACK_FPS;

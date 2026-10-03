@@ -5,8 +5,8 @@ import { renderIndexPage } from "../lib/gallery.mjs";
 import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
   BRIDGES, EXTENDED_BRIDGES, FAILED_TRAILS, COMPLETE_TRAIL,
-  THREADS, SOLO_INDICES, EYELETS, TOTAL_FRAMES, LOGICAL_SIZE,
-  degrees, enumerateTrails, traceEdges, pointAt, sceneAt
+  THREADS, SOLO_INDICES, EYELETS, TOTAL_FRAMES, LOGICAL_SIZE, BRIDGE_PATHS, GOLD_THREADS,
+  bridgePoints, degrees, enumerateTrails, traceEdges, pointAt, sceneAt
 } from "../artworks/no-such-passage/network.js";
 
 /** Independent oracle: permute edge labels first, then try each starting region. */
@@ -145,6 +145,33 @@ test("all embedded silver trails stay continuous and inside the canvas", () => {
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 const CATALOG = JSON.parse(readFileSync(new URL("../quotes.json", import.meta.url), "utf8"));
+
+test("the warm ribbon is 33 continuous copies of the open trail, the middle one along every bridge", () => {
+  const continuousInside = (path) => {
+    path.points.forEach((point, index) => {
+      assert.ok(point.x > 15 && point.x < LOGICAL_SIZE - 15 && point.y > 15 && point.y < LOGICAL_SIZE - 15);
+      if (index > 0) assert.ok(path.lengths[index] - path.lengths[index - 1] < 16, "a gold fibre has a disconnected jump");
+    });
+  };
+  assert.equal(GOLD_THREADS.length, 33);
+  GOLD_THREADS.forEach(continuousInside);
+  // The middle thread runs the full curve of each of the eight bridges, in the trail's order.
+  const heart = GOLD_THREADS[16];
+  const at = new Map(heart.points.map((point, index) => [`${point.x},${point.y}`, index]));
+  let previous = -1;
+  for (const edge of COMPLETE_TRAIL.edges) {
+    const indices = bridgePoints(edge, 0).map((point) => at.get(`${point.x},${point.y}`));
+    assert.ok(indices.every((index) => index !== undefined), `the heart misses part of bridge ${edge}`);
+    assert.ok(Math.min(...indices) > previous, `bridge ${edge} is not crossed after the one before it`);
+    previous = Math.max(...indices);
+  }
+  // And the eight bridges themselves are drawn whole.
+  assert.equal(BRIDGE_PATHS.length, 8);
+  BRIDGE_PATHS.forEach((path, edge) => {
+    continuousInside(path);
+    assert.deepEqual(path.points, bridgePoints(edge));
+  });
+});
 
 test("the quotation names Euler's paper by its English title, with no date on the card", () => {
   // The paper is E53, Solutio problematis ad geometriam situs pertinentis. "Geometry of

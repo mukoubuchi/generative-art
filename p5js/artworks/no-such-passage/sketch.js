@@ -1,7 +1,7 @@
 import {
   LOGICAL_SIZE, PLAYBACK_FPS, DURATION_SECONDS, TOTAL_FRAMES,
-  BRIDGES, EXTENDED_BRIDGES, EYELETS, THREADS, SOLO_INDICES, COMPLETE_TRAIL,
-  bridgePoints, measurePath, trailPoints, pointAt, sceneAt, clamp
+  BRIDGES, EXTENDED_BRIDGES, EYELETS, THREADS, SOLO_INDICES, BRIDGE_PATHS, GOLD_THREADS,
+  pointAt, sceneAt, clamp
 } from "./network.js";
 
 const PARAMETERS = new URLSearchParams(window.location.search);
@@ -11,8 +11,6 @@ const OUTPUT_SIZE = LOGICAL_SIZE * RENDER_SCALE;
 const GROUND = "#081317";
 const SILVER = [178, 205, 202];
 const GOLD = [237, 154, 81];
-const PATHS = EXTENDED_BRIDGES.map((_, id) => measurePath(bridgePoints(id)));
-const GOLD_THREADS = Array.from({ length: 33 }, (_, i) => trailPoints(COMPLETE_TRAIL, (i - 16) / 25));
 
 new window.p5((p) => {
   let startedAt;
@@ -49,7 +47,7 @@ new window.p5((p) => {
     ctx.lineCap = "round";
 
     // The same seven bridges remain visible even when no traveller has used one.
-    PATHS.forEach((path, edge) => {
+    BRIDGE_PATHS.forEach((path, edge) => {
       const progress = edge === 7 ? scene.addedBridge : 1;
       strokePath(path, progress, [20, 38, 42], 1, edge === 7 ? 20 : 27);
       strokePath(path, progress, edge === 7 ? GOLD : [78, 106, 111], edge === 7 ? 0.25 : 0.21, 0.7);
