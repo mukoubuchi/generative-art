@@ -6,7 +6,8 @@ import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
   BRIDGES, EXTENDED_BRIDGES, FAILED_TRAILS, COMPLETE_TRAIL,
   THREADS, SOLO_INDICES, EYELETS, TOTAL_FRAMES, LOGICAL_SIZE, BRIDGE_PATHS, GOLD_THREADS,
-  bridgePoints, degrees, enumerateTrails, traceEdges, pointAt, sceneAt
+  DURATION_SECONDS, PLAYBACK_FPS,
+  bridgePoints, degrees, enumerateTrails, pageFrame, traceEdges, pointAt, sceneAt, soloOpacity
 } from "../artworks/no-such-passage/network.js";
 
 /** Independent oracle: permute edge labels first, then try each starting region. */
@@ -196,4 +197,66 @@ test("the quotation names Euler's paper by its English title, with no date on th
   assert.equal(validatePostBody(body, MANIFEST.defaults.maxWeightedCharacters), 225);
   assert.ok(body.includes("— Leonhard Euler, Solution of a Problem Relating to the Geometry of Position, §20\n"));
   assert.doesNotMatch(body, /1741/u);
+});
+
+test("the woven threads all move at 1000 px a second and are whole before the history fades", () => {
+  const progress = (frame, index) => sceneAt(frame).threadProgress[index];
+  let measured = 0;
+  THREADS.forEach(({ path }, index) => {
+    if (SOLO_INDICES.includes(index)) return;
+    let done = null;
+    for (let frame = 0; frame < TOTAL_FRAMES - 1; frame += 1) {
+      const now = progress(frame, index);
+      const next = progress(frame + 1, index);
+      if (now > 0 && next < 1) {
+        assert.ok(Math.abs((next - now) * path.length * PLAYBACK_FPS - 1000) < 1e-6, `thread ${index} changes speed`);
+        measured += 1;
+      }
+      if (done === null && now === 1) done = frame;
+    }
+    // Every woven thread is whole before the history begins to fade at 15 s.
+    assert.ok(done !== null && done / PLAYBACK_FPS < 15, `thread ${index} is not whole by 15 s`);
+  });
+  assert.ok(measured > 3000, "the speed was measured on enough frames to mean something");
+});
+
+test("the two solo walks start on opposite sides, finish while whole, then fade by 12.2 s", () => {
+  assert.deepEqual(SOLO_INDICES.map((index) => THREADS[index].trail.vertices[0]), [0, 3]);
+  const finishes = SOLO_INDICES.map((index) => {
+    for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+      if (sceneAt(frame).threadProgress[index] === 1) return frame / PLAYBACK_FPS;
+    }
+    return null;
+  });
+  assert.deepEqual(finishes.map((seconds) => seconds.toFixed(2)), ["4.30", "9.80"]);
+  // Readable through the walks and their hold, then gone as the weave takes over.
+  for (let seconds = 0; seconds <= 11; seconds += 0.25) assert.ok(soloOpacity(seconds) > 1 - 1e-12);
+  assert.equal(soloOpacity(12.2), 0);
+  for (let seconds = 11; seconds < 12.2; seconds += 0.1) assert.ok(soloOpacity(seconds + 0.1) <= soloOpacity(seconds));
+});
+
+test("the open passage is complete by the thumbnail frame and the page holds it", () => {
+  const artwork = MANIFEST.artworks.find((entry) => entry.id === "no-such-passage");
+  const first = Array.from({ length: TOTAL_FRAMES }, (_, frame) => frame).find((frame) => sceneAt(frame).completed);
+  assert.equal(first, artwork.thumbnail.frame);
+  const drawn = (scene) => ({ ...scene, frameIndex: 0, seconds: 0 });
+  assert.deepEqual(drawn(sceneAt(first)), drawn(sceneAt(TOTAL_FRAMES - 1)));
+  assert.equal(pageFrame(0), 0);
+  assert.equal(pageFrame(1), PLAYBACK_FPS);
+  assert.equal(pageFrame(DURATION_SECONDS), TOTAL_FRAMES - 1);
+  assert.equal(pageFrame(1000), TOTAL_FRAMES - 1);
+  const sketch = readFileSync(new URL("../artworks/no-such-passage/sketch.js", import.meta.url), "utf8");
+  assert.match(sketch, /const frame = pageFrame\(\(performance\.now\(\) - startedAt\) \/ 1000\);\n {4}publishState\(drawFrame\(frame\)\);/u);
+  assert.match(sketch, /if \(frame === TOTAL_FRAMES - 1\) p\.noLoop\(\);/u);
+});
+
+test("the manifest, notes and module agree on the clip", () => {
+  const artwork = MANIFEST.artworks.find((entry) => entry.id === "no-such-passage");
+  assert.deepEqual(artwork.canvas, { width: LOGICAL_SIZE, height: LOGICAL_SIZE });
+  assert.deepEqual(artwork.render, { kind: "video", artifact: "exports/p5js/NoSuchPassage.mp4", durationSeconds: DURATION_SECONDS, scale: 2 });
+  assert.equal(artwork.render.durationSeconds * PLAYBACK_FPS, TOTAL_FRAMES);
+  assert.deepEqual(artwork.thumbnail, { frame: 795 });
+  const notes = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  assert.match(notes, /\| `no-such-passage` \| 720×720 \| 1440×1440 MP4 at 30 fps \| 28 seconds,/u);
+  assert.match(notes, /No Such Passage turns Euler[\s\S]*?the thumbnail is frame 795\./u);
 });

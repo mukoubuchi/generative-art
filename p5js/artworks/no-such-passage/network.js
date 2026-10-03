@@ -150,6 +150,16 @@ const sixFromA = THREADS.findIndex(({ trail }) => trail.vertices[0] === 0 && tra
 const sixFromD = THREADS.findIndex(({ trail }) => trail.vertices[0] === 3 && trail.edges.length === 6);
 export const SOLO_INDICES = [sixFromA, sixFromD];
 
+/** How visible the two solo walks are: whole until 11 s, gone by 12.2 s as the weave takes over. */
+export function soloOpacity(seconds) {
+  return clamp((12.2 - seconds) / 1.2);
+}
+
+/** The frame the page shows `elapsedSeconds` after it began: the clock's frame, then the last. */
+export function pageFrame(elapsedSeconds) {
+  return clamp(Math.floor(elapsedSeconds * PLAYBACK_FPS), 0, TOTAL_FRAMES - 1);
+}
+
 /** The bridges as drawn, one bundle each; the eighth, index 7, is the added one. */
 export const BRIDGE_PATHS = EXTENDED_BRIDGES.map((_, id) => measurePath(bridgePoints(id)));
 

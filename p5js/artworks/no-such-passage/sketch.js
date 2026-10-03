@@ -1,7 +1,7 @@
 import {
   LOGICAL_SIZE, PLAYBACK_FPS, DURATION_SECONDS, TOTAL_FRAMES,
   BRIDGES, EXTENDED_BRIDGES, EYELETS, THREADS, SOLO_INDICES, BRIDGE_PATHS, GOLD_THREADS,
-  pointAt, sceneAt, clamp
+  clamp, pageFrame, pointAt, sceneAt, soloOpacity
 } from "./network.js";
 
 const PARAMETERS = new URLSearchParams(window.location.search);
@@ -72,7 +72,7 @@ new window.p5((p) => {
     SOLO_INDICES.forEach((index, solo) => {
       const progress = scene.threadProgress[index];
       const age = scene.seconds - (solo ? 6 : 0.5);
-      const opacity = clamp((12.2 - scene.seconds) / 1.2);
+      const opacity = soloOpacity(scene.seconds);
       strokePath(THREADS[index].path, progress, SILVER, opacity * 0.82, 1.15);
       if (progress > 0) light(pointAt(THREADS[index].path, THREADS[index].path.length * progress), SILVER,
         opacity * Math.exp(-Math.max(0, age - 3.8) * 0.45), 13);
@@ -122,8 +122,9 @@ new window.p5((p) => {
   };
   p.draw = () => {
     if (CAPTURE_MODE) return;
-    const elapsed = (performance.now() - startedAt) / 1000;
-    publishState(drawFrame(Math.floor(elapsed * PLAYBACK_FPS)));
-    if (elapsed >= DURATION_SECONDS) p.noLoop();
+    const frame = pageFrame((performance.now() - startedAt) / 1000);
+    publishState(drawFrame(frame));
+    // The performance ends on the open passage and holds it there.
+    if (frame === TOTAL_FRAMES - 1) p.noLoop();
   };
 });
