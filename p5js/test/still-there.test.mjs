@@ -37,7 +37,12 @@ function assertPermutation(positions) {
 
 test("both integer shears agree with independent matrix multiplication over every cell", () => {
   assert.equal(COUNT, 16129);
-  assert.equal(1 * 2 - 1 * 1, 1);
+  // Each step's determinant, read off what the shears do to the two unit vectors: 1 mod 127.
+  for (const direction of [1, -1]) {
+    const [a, c] = permute(Int16Array.of(1, 0), direction);
+    const [b, d] = permute(Int16Array.of(0, 1), direction);
+    assert.equal(((a * d - b * c) % SIZE + SIZE) % SIZE, 1);
+  }
   assert.deepEqual(permute(INITIAL, 1), matrixWitness(INITIAL, [1, 1, 1, 2]));
   assert.deepEqual(permute(INITIAL, -1), matrixWitness(INITIAL, [2, -1, -1, 1]));
   assertPermutation(permute(INITIAL, 1));
