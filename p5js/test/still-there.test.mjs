@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  SIZE, HALF, COUNT, STEP_SECONDS, TOTAL_FRAMES,
+  SIZE, HALF, COUNT, STEP_SECONDS, FPS, TOTAL_FRAMES, DEMO_KEYS,
   initialPositions, permute, movingPoint, Loom, demoAt
 } from "../artworks/still-there/lattice.js";
 import { loadCatalog } from "../lib/catalog.mjs";
@@ -110,10 +110,14 @@ test("reset cancels a partial shear, repetition, and queued commands", () => {
 
 test("all film frames retain a permutation and the inverse returns before reset", () => {
   let scattered = false;
+  let restored = null;
   for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
     const { loom } = demoAt(frame);
     assertPermutation(loom.positions);
     if (loom.steps === 4) scattered = true;
+    if (scattered && restored === null && loom.steps === 0 && loom.positions.every((value, index) => value === INITIAL[index])) {
+      restored = frame;
+    }
     if (frame >= 517 && frame < 570) {
       assert.equal(loom.steps, 0);
       assert.equal(loom.active, false);
@@ -121,6 +125,24 @@ test("all film frames retain a permutation and the inverse returns before reset"
     }
   }
   assert.ok(scattered);
+
+  // The return is the inverse's, not the reset's. The film presses reset once, last, and
+  // only after the lattice is already whole again ...
+  const resets = DEMO_KEYS.filter(([, key]) => key === "r" || key === "R");
+  assert.equal(resets.length, 1);
+  assert.equal(DEMO_KEYS.at(-1), resets[0]);
+  assert.ok(restored !== null && restored / FPS < resets[0][0], `whole again at frame ${restored}, reset at ${resets[0][0]} s`);
+  // ... and the same presses with the reset taken out leave it whole all the same.
+  const loom = new Loom();
+  let time = 0;
+  for (const [at, key] of DEMO_KEYS.filter((entry) => entry !== resets[0])) {
+    loom.advance(at - time);
+    loom.key(key);
+    time = at;
+  }
+  loom.advance((TOTAL_FRAMES - 1) / FPS - time);
+  assert.equal(loom.steps, 0);
+  assert.deepEqual(loom.positions, INITIAL);
 });
 
 test("Still There uses FitzGerald's sourced first-edition quatrain, with public-domain eligibility", async () => {
