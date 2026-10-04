@@ -1,8 +1,8 @@
-import { pinLogicalCamera } from "../shared/camera-scale.js";
-import { hintMode } from "../shared/hint-mode.js";
-import { drawKeyHint } from "../shared/key-hint.js";
-import { edgesOf } from "./geometry.js";
-import { TOTAL_FRAMES, nestedSolids, sceneState } from "./staging.js";
+import { pinLogicalCamera } from "../../../artworks/shared/camera-scale.js";
+import { hintMode } from "../../../artworks/shared/hint-mode.js";
+import { drawKeyHint } from "../../../artworks/shared/key-hint.js";
+import { edgesOf } from "../../../artworks/platonic-duals/geometry.js";
+import { TOTAL_FRAMES, nestedSolids, sceneState } from "../../../artworks/platonic-duals/staging.js";
 
 /**
  * Two solids trading places forever. The icosahedron ignites a spark on the centre of
@@ -203,10 +203,7 @@ new P5((p) => {
   function drawLegend() {
     if (!legendLayer) {
       legendLayer = p.createGraphics(OUTPUT_WIDTH, OUTPUT_HEIGHT);
-      // At the canvas's own density, which setup pins at one when capturing and leaves to
-      // the screen on the page. Pinned at one everywhere, a dense display got the legend
-      // set at half its resolution and stretched.
-      legendLayer.pixelDensity(p.pixelDensity());
+      legendLayer.pixelDensity(1);
     }
     legendLayer.clear();
     legendLayer.push();
