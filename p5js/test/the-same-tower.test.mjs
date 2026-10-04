@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
@@ -722,10 +721,26 @@ test("starlight lines follow the exact floors and four corner axes on Recursive 
 
 test("the staging is the one the reader approved, frame for frame", () => {
   // The look changed and the motion did not: every frame's scene -- eye, look-at, lens,
-  // glows, act -- hashes to what it was when the starlight replaced the black lines.
-  const hash = createHash("sha256");
-  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) hash.update(JSON.stringify(sceneAt(frame)));
-  assert.equal(hash.digest("hex"), "e88482aba7f270b7a335526f207fe36c67fb87122307eaec2c2d11196bf2682d");
+  // glows, act -- is held to the staging frozen when the starlight replaced the black lines,
+  // to twelve significant figures. The comparison allows a relative 1e-9, because the last
+  // bits of a cosine or a square root are not the same on every machine; a hash of the
+  // exact values passed on the machine that wrote it and failed on the one that ran CI.
+  const frozen = JSON.parse(readFileSync(new URL("./fixtures/the-same-tower-staging/scenes.json", import.meta.url), "utf8"));
+  assert.equal(frozen.length, TOTAL_FRAMES);
+  const close = (actual, expected, label) => {
+    if (expected === null || typeof expected !== "number") {
+      assert.equal(actual, expected, label);
+      return;
+    }
+    assert.ok(Math.abs(actual - expected) <= 1e-9 * Math.max(1, Math.abs(expected)), `${label}: ${actual} against ${expected}`);
+  };
+  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+    const scene = sceneAt(frame);
+    const row = [scene.frameIndex, scene.act, scene.walk, scene.turn, scene.onLine, scene.distance,
+      ...scene.eye, ...scene.lookAt, scene.fieldOfView, scene.circleGlow, scene.squareGlow, scene.arrival];
+    assert.equal(row.length, frozen[frame].length);
+    row.forEach((value, index) => close(value, frozen[frame][index], `frame ${frame} field ${index}`));
+  }
 });
 
 async function loadSketch(search, record) {
