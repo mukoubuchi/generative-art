@@ -22,7 +22,6 @@ const HINT_LEGEND = [
   { cap: "←", text: "back" }, { cap: "→", text: "forward" },
   { cap: "space", text: "run / pause" }, { cap: "R", text: "reset" }
 ];
-const TONE = { plate: [8, 15, 25, 230], ink: [218, 223, 221, 230], cap: [153, 179, 188, 180] };
 const TESSERAE = Array.from({ length: COUNT }, (_, index) => tessera(index));
 
 new window.p5((p) => {
@@ -77,7 +76,7 @@ new window.p5((p) => {
     if (HINT.shown) {
       p.push();
       p.scale(RENDER_SCALE);
-      drawKeyHint(p, HINT_LEGEND, LOGICAL_SIZE, LOGICAL_SIZE, HINT.scale, TONE);
+      drawKeyHint(p, HINT_LEGEND, LOGICAL_SIZE, LOGICAL_SIZE, HINT.scale);
       p.pop();
     }
     if (INDICATOR && pressedKey) {
