@@ -5,6 +5,8 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 import { REPOSITORY_ROOT } from "../lib/catalog.mjs";
+import { metadataSegments } from "../lib/jpeg.mjs";
+import { videoTraces } from "../lib/mp4.mjs";
 
 /**
  * Nothing in this repository may carry a provenance mark, visible or not.
@@ -16,10 +18,14 @@ import { REPOSITORY_ROOT } from "../lib/catalog.mjs";
  * anything in the toolchain starts marking output, this goes red before the push.
  *
  * Two scans. Text is any tracked file without a NUL byte, and must contain none of the
- * invisible or control code points below. Binaries are the rest, and must not contain the
- * byte signatures of provenance containers. The one legitimate invisible character in the
- * tree — the joiner inside a deliberately emoji fixture — is admitted by an allowlist that
- * names the file, the code point, and how many, so a fourth one fails.
+ * invisible or control code points below. Binaries are the rest, and must carry nothing
+ * but their picture: no text-bearing metadata in any format this test can read, no byte
+ * signature of a provenance container, and no format it cannot read. The rule names
+ * structures, never a tool or its maker, so it holds whoever does the stamping. The one
+ * legitimate invisible character in the tree — the joiner inside a deliberately emoji
+ * fixture — is admitted by an allowlist that names the file, the code point, and how many,
+ * so a fourth one fails; the frozen specimens that carry what the binary rule refuses are
+ * admitted the same way.
  */
 const run = promisify(execFile);
 
@@ -46,8 +52,118 @@ const ALLOWED = [
   ["p5js/test/post-text.test.mjs", 0x200D, 3] // the family-emoji fixture's joiners
 ];
 
-/** Byte signatures of provenance and authorship containers, matched case-blind. */
-const BINARY_MARKERS = /c2pa|jumbf|contentauth|xmpmeta|anthropic|claude/giu;
+/** Byte signatures of provenance containers, matched case-blind wherever they stand. */
+const CONTAINER_WORDS = /c2pa|jumbf|contentauth|xmpmeta/giu;
+
+/** The PNG chunks a picture needs; any other chunk is about the file, not the picture. */
+const PICTURE_CHUNKS = new Set(["IHDR", "PLTE", "tRNS", "IDAT", "IEND"]);
+
+/** The chunk types of a PNG, in order. */
+function pngChunks(bytes) {
+  const types = [];
+  let offset = 8;
+  while (offset + 8 <= bytes.length) {
+    const length = bytes.readUInt32BE(offset);
+    types.push(bytes.toString("latin1", offset + 4, offset + 8));
+    offset += 12 + length;
+  }
+  return types;
+}
+
+const isPng = (bytes) => bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+const isJpeg = (bytes) => bytes[0] === 0xff && bytes[1] === 0xd8;
+const isMp4 = (bytes) => bytes.toString("latin1", 4, 8) === "ftyp";
+const isGlb = (bytes) => bytes.toString("latin1", 0, 4) === "glTF";
+
+/** The glTF fields that hold words about a model rather than the model itself. */
+const GLTF_ABOUT = new Set(["generator", "copyright", "extras"]);
+
+/**
+ * A binary glTF's findings: any field about the model, wherever it stands in the JSON, and
+ * whatever the images it embeds carry, by the same rule as a file of their own.
+ */
+function glbFindings(bytes) {
+  const found = [];
+  const jsonLength = bytes.readUInt32LE(12);
+  const json = JSON.parse(bytes.toString("utf8", 20, 20 + jsonLength));
+  const walk = (value, path) => {
+    if (value === null || typeof value !== "object") return;
+    for (const [key, child] of Object.entries(value)) {
+      if (GLTF_ABOUT.has(key)) found.push(`glTF ${path}${key}`);
+      walk(child, Array.isArray(value) ? path : `${path}${key}.`);
+    }
+  };
+  walk(json, "");
+  const binaryStart = 20 + jsonLength + 8;
+  for (const image of json.images ?? []) {
+    const view = json.bufferViews[image.bufferView];
+    const start = binaryStart + (view.byteOffset ?? 0);
+    for (const finding of findings(bytes.subarray(start, start + view.byteLength), false)) {
+      found.push(`glTF image ${finding}`);
+    }
+  }
+  return found;
+}
+
+/**
+ * Everything a binary carries besides its picture, one label per finding: chunks a PNG
+ * does not need, a JPEG's application segments and comments other than its JFIF header,
+ * an MP4's metadata items and SEI units, a glTF's fields about the model and whatever its
+ * embedded images carry, the words of a provenance container anywhere, and a format this
+ * test cannot read at all.
+ */
+function findings(bytes, wholeFile = true) {
+  const found = [];
+  if (isPng(bytes)) {
+    for (const type of pngChunks(bytes)) {
+      if (!PICTURE_CHUNKS.has(type)) found.push(`PNG ${type}`);
+    }
+  } else if (isJpeg(bytes)) {
+    for (const segment of metadataSegments(bytes)) found.push(`JPEG ${segment}`);
+  } else if (isMp4(bytes)) {
+    const traces = videoTraces(bytes);
+    for (let item = 0; item < traces.metadataItems; item += 1) found.push("MP4 metadata item");
+    for (let unit = 0; unit < traces.seiUnits; unit += 1) found.push("MP4 SEI unit");
+  } else if (isGlb(bytes)) {
+    found.push(...glbFindings(bytes));
+  } else {
+    found.push("unreadable format");
+  }
+  // The words are looked for once, over the whole file, not again in what it embeds.
+  if (wholeFile) {
+    for (const word of bytes.toString("latin1").match(CONTAINER_WORDS) ?? []) {
+      found.push(`container word ${word.toLowerCase()}`);
+    }
+  }
+  return found;
+}
+
+/**
+ * The frozen specimens that carry what the binary rule refuses, each finding with its exact
+ * count. The provenance-marks specimens each hold one refused kind and the words "neutral
+ * marker"; the other two are real faults, kept for their own tests.
+ */
+const MARKS = "p5js/test/fixtures/provenance-marks";
+const ALLOWED_FINDINGS = [
+  [`${MARKS}/text-chunk.png`, "PNG tEXt", 1],
+  [`${MARKS}/exif-chunk.png`, "PNG eXIf", 1],
+  [`${MARKS}/unknown-chunk.png`, "PNG caBX", 1],
+  [`${MARKS}/container-word.png`, "container word c2pa", 1],
+  [`${MARKS}/app1-segment.jpg`, "JPEG APP1 Exif", 1],
+  [`${MARKS}/comment.jpg`, "JPEG COM neutral marker", 1],
+  [`${MARKS}/unknown-format.bin`, "unreadable format", 1],
+  [`${MARKS}/generator.glb`, "glTF asset.generator", 1],
+  [`${MARKS}/image-chunk.glb`, "glTF image PNG tEXt", 1],
+  ["p5js/test/fixtures/thumbnail-encoder-profile/no-such-passage.jpg", "JPEG APP2 ICC_PROFILE", 1],
+  ["p5js/test/fixtures/video-encoder-traces/traced.mp4", "MP4 metadata item", 1],
+  ["p5js/test/fixtures/video-encoder-traces/traced.mp4", "MP4 SEI unit", 1]
+];
+
+function tally(labels) {
+  const counts = new Map();
+  for (const label of labels) counts.set(label, (counts.get(label) ?? 0) + 1);
+  return counts;
+}
 
 function forbidden(codePoint) {
   return FORBIDDEN_RANGES.some(([first, last]) => codePoint >= first && codePoint <= last);
@@ -102,13 +218,65 @@ test("every allowlist entry still earns its line", () => {
   }
 });
 
-test("no tracked binary carries a provenance container's signature", () => {
+test("no tracked binary carries anything but its picture", () => {
   const failures = [];
   for (const [file, buffer] of binaries) {
-    const hits = buffer.toString("latin1").match(BINARY_MARKERS);
-    if (hits) {
-      failures.push(`${file}: ${[...new Set(hits.map((hit) => hit.toLowerCase()))].join(", ")}`);
+    for (const [label, count] of tally(findings(buffer))) {
+      const admitted = ALLOWED_FINDINGS.some(([path, allowedLabel, allowedCount]) =>
+        path === file && allowedLabel === label && allowedCount === count);
+      if (!admitted) failures.push(`${file}: ${label} x${count}`);
     }
   }
   assert.deepEqual(failures, []);
+});
+
+test("every refused kind is caught on its frozen specimen, and every admitted finding is still there", () => {
+  // Each specimen yields exactly the findings it is admitted for: so the rule still fires
+  // on every kind it refuses, and no admission outlives what it admitted.
+  const bySpecimen = new Map();
+  for (const [path, label, count] of ALLOWED_FINDINGS) {
+    bySpecimen.set(path, { ...(bySpecimen.get(path) ?? {}), [label]: count });
+  }
+  assert.equal(bySpecimen.size, 11);
+  for (const [path, expected] of bySpecimen) {
+    const buffer = binaries.get(path);
+    assert.ok(buffer, `${path} is admitted but not tracked as a binary`);
+    assert.deepEqual(Object.fromEntries(tally(findings(buffer))), expected, path);
+  }
+  // The new specimens name no tool and no maker, only what they are.
+  for (const path of bySpecimen.keys()) {
+    if (path.startsWith(MARKS) && !path.endsWith(".bin")) {
+      assert.ok(binaries.get(path).includes(Buffer.from("neutral marker")), `${path} lost its neutral marker`);
+    }
+  }
+});
+
+test("the binary rule reads every format the tree holds, and each holds a clean picture", () => {
+  // A rule that cannot parse a file would pass it by finding nothing: every tracked binary
+  // outside the specimens is a PNG, a JPEG or an MP4 the rule actually walked.
+  const specimens = new Set(ALLOWED_FINDINGS.map(([path]) => path));
+  const kinds = { png: 0, jpeg: 0, mp4: 0, glb: 0, embedded: 0 };
+  for (const [file, buffer] of binaries) {
+    if (specimens.has(file)) continue;
+    if (isPng(buffer)) {
+      kinds.png += 1;
+      const chunks = pngChunks(buffer);
+      assert.equal(chunks[0], "IHDR", file);
+      assert.equal(chunks.at(-1), "IEND", file);
+    } else if (isJpeg(buffer)) {
+      kinds.jpeg += 1;
+    } else if (isMp4(buffer)) {
+      kinds.mp4 += 1;
+      assert.ok(videoTraces(buffer).pictureUnits > 0, `${file} has no picture the rule could find`);
+    } else if (isGlb(buffer)) {
+      kinds.glb += 1;
+      const json = JSON.parse(buffer.toString("utf8", 20, 20 + buffer.readUInt32LE(12)));
+      assert.ok(json.asset, `${file} has no asset the rule could read`);
+      // The images it embeds are walked too: the gallery's head carries three textures.
+      kinds.embedded += (json.images ?? []).length;
+    } else {
+      assert.fail(`${file} is a binary of a format the rule cannot read`);
+    }
+  }
+  assert.deepEqual(kinds, { png: 4, jpeg: 0, mp4: 1, glb: 1, embedded: 3 });
 });
