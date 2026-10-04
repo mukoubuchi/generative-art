@@ -8,9 +8,19 @@ const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
 const RENDER_SCALE = CAPTURE_MODE ? Math.max(1, Number.parseInt(PARAMETERS.get("renderScale") ?? "1", 10)) : 1;
 const OUTPUT_SIZE = LOGICAL_SIZE * RENDER_SCALE;
-const GROUND = "#081317";
-const SILVER = [178, 205, 202];
-const GOLD = [237, 154, 81];
+/**
+ * The palette of the dark, lit works -- All on One Circumference, Troubling of a Star, The
+ * Love That Moves: their night, bone hairlines, the steel family for the walks that fail and
+ * the gold family for the one that goes through.
+ */
+const GROUND = [6, 7, 12];
+const BED = [16, 18, 28];
+const BONE = [246, 244, 236];
+const STEEL_FACE = [104, 144, 204];
+const STEEL_EDGE = [156, 192, 240];
+const GOLD_FACE = [222, 166, 96];
+const GOLD_EDGE = [252, 204, 116];
+const HEART_WHITE = [248, 250, 255];
 
 new window.p5((p) => {
   let startedAt;
@@ -28,19 +38,30 @@ new window.p5((p) => {
     ctx.stroke();
   }
 
-  function light(position, colour, strength = 1, radius = 8) {
-    const glow = ctx.createRadialGradient(position.x, position.y, 0, position.x, position.y, radius);
-    glow.addColorStop(0, `rgba(255,246,219,${0.95 * strength})`);
-    glow.addColorStop(0.13, `rgba(${colour},${0.75 * strength})`);
-    glow.addColorStop(0.4, `rgba(${colour},${0.17 * strength})`);
-    glow.addColorStop(1, `rgba(${colour},0)`);
-    ctx.fillStyle = glow;
-    ctx.fillRect(position.x - radius, position.y - radius, 2 * radius, 2 * radius);
+  /**
+   * A travelling light, drawn as Troubling of a Star lights its bobs: six halo layers added
+   * to what lies beneath, a core in the family's colour, a white heart. Level 0.5 is the
+   * brightness that work and All on One Circumference use for their bodies.
+   */
+  function star(position, tint, level, alpha = 1) {
+    if (alpha <= 0) return;
+    const halo = (11 + 46 * level) / 2;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let layer = 6; layer >= 1; layer -= 1) {
+      ctx.fillStyle = `rgba(${tint[0]},${tint[1]},${tint[2]},${(4 + 20 * level) * alpha / 255})`;
+      ctx.beginPath(); ctx.arc(position.x, position.y, halo * layer / 6, 0, 2 * Math.PI); ctx.fill();
+    }
+    ctx.fillStyle = `rgba(${tint[0]},${tint[1]},${tint[2]},${(150 + 90 * level) * alpha / 255})`;
+    ctx.beginPath(); ctx.arc(position.x, position.y, 3 + 2 * level, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = `rgba(${HEART_WHITE[0]},${HEART_WHITE[1]},${HEART_WHITE[2]},${(130 + 110 * level) * alpha / 255})`;
+    ctx.beginPath(); ctx.arc(position.x, position.y, 1.5 + level, 0, 2 * Math.PI); ctx.fill();
+    ctx.restore();
   }
 
   function drawFrame(frameIndex) {
     const scene = sceneAt(frameIndex);
-    p.background(GROUND);
+    p.background(...GROUND);
     ctx.save();
     ctx.scale(RENDER_SCALE, RENDER_SCALE);
     ctx.lineJoin = "round";
@@ -49,46 +70,55 @@ new window.p5((p) => {
     // The same seven bridges remain visible even when no traveller has used one.
     BRIDGE_PATHS.forEach((path, edge) => {
       const progress = edge === 7 ? scene.addedBridge : 1;
-      strokePath(path, progress, [20, 38, 42], 1, edge === 7 ? 20 : 27);
-      strokePath(path, progress, edge === 7 ? GOLD : [78, 106, 111], edge === 7 ? 0.25 : 0.21, 0.7);
+      strokePath(path, progress, BED, 1, edge === 7 ? 20 : 27);
+      strokePath(path, progress, edge === 7 ? GOLD_EDGE : BONE, edge === 7 ? 0.5 : 0.3, 0.7);
     });
     for (const node of EYELETS) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
-      ctx.strokeStyle = "rgba(73,105,109,0.17)";
+      ctx.strokeStyle = `rgba(${BED[0]},${BED[1]},${BED[2]},1)`;
       ctx.lineWidth = 19;
       ctx.stroke();
-      ctx.strokeStyle = "rgba(116,147,147,0.22)";
-      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = `rgba(${BONE[0]},${BONE[1]},${BONE[2]},0.3)`;
+      ctx.lineWidth = 0.7;
       ctx.stroke();
     }
 
-    THREADS.forEach(({ path, lane }, index) => {
+    // The failed walks are added rather than painted, so a bridge that more of them cross is
+    // brighter: the light on a bridge is a count of the walks that used it. When the gold
+    // crossing begins they dim with the scene's history, to 0.55 of their light where the
+    // history goes to 0.29, so the cloth they make stays on the page under the passage.
+    ctx.globalCompositeOperation = "lighter";
+    THREADS.forEach(({ path }, index) => {
       const progress = scene.threadProgress[index];
-      const strength = 0.16 + 0.28 * (lane + 1) / 2;
-      strokePath(path, progress, SILVER, strength * scene.historyOpacity, 0.4);
-      if (progress > 0 && progress < 1) light(pointAt(path, path.length * progress), SILVER, 0.48, 4);
+      const history = 1 - 0.45 * (1 - scene.historyOpacity) / 0.71;
+      strokePath(path, progress, STEEL_FACE, 0.22 * history, 0.7);
+    });
+    ctx.globalCompositeOperation = "source-over";
+    THREADS.forEach(({ path }, index) => {
+      const progress = scene.threadProgress[index];
+      if (progress > 0 && progress < 1) star(pointAt(path, path.length * progress), STEEL_EDGE, 0.1, 0.8);
     });
     SOLO_INDICES.forEach((index, solo) => {
       const progress = scene.threadProgress[index];
       const age = scene.seconds - (solo ? 6 : 0.5);
       const opacity = soloOpacity(scene.seconds);
-      strokePath(THREADS[index].path, progress, SILVER, opacity * 0.82, 1.15);
-      if (progress > 0) light(pointAt(THREADS[index].path, THREADS[index].path.length * progress), SILVER,
-        opacity * Math.exp(-Math.max(0, age - 3.8) * 0.45), 13);
+      strokePath(THREADS[index].path, progress, STEEL_FACE, opacity * 0.9, 1.3);
+      if (progress > 0) star(pointAt(THREADS[index].path, THREADS[index].path.length * progress), STEEL_EDGE,
+        0.5, opacity * Math.exp(-Math.max(0, age - 3.8) * 0.45));
     });
 
     if (scene.crossing > 0) {
       for (let i = 0; i < GOLD_THREADS.length; i += 1) {
         const path = GOLD_THREADS[i];
-        strokePath(path, scene.crossing, GOLD, 0.2 + 0.48 * Math.sin(Math.PI * i / (GOLD_THREADS.length - 1)), 0.48);
+        strokePath(path, scene.crossing, GOLD_FACE, 0.25 + 0.5 * Math.sin(Math.PI * i / (GOLD_THREADS.length - 1)), 0.55);
       }
       const heart = GOLD_THREADS[16];
-      strokePath(heart, scene.crossing, [255, 221, 165], 0.8, 0.75);
-      if (scene.crossing < 1) light(pointAt(heart, scene.crossing * heart.length), GOLD, 1, 19);
+      strokePath(heart, scene.crossing, GOLD_EDGE, 0.95, 1.3);
+      if (scene.crossing < 1) star(pointAt(heart, scene.crossing * heart.length), GOLD_EDGE, 0.5);
       else {
-        light(heart.points[0], GOLD, 0.7, 12);
-        light(heart.points.at(-1), GOLD, 0.85, 15);
+        star(heart.points[0], GOLD_EDGE, 0.5);
+        star(heart.points.at(-1), GOLD_EDGE, 0.5);
       }
     }
     ctx.restore();

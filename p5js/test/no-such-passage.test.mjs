@@ -58,7 +58,7 @@ test("permuting every edge independently confirms impossibility and the open-tra
   assert.ok(complete.every(trail => [0, 3].includes(trail.vertices[0]) && [0, 3].includes(trail.vertices.at(-1))));
 });
 
-test("every silver thread is a distinct legal walk, stopped where its end has no unused bridge", () => {
+test("every failed thread is a distinct legal walk, stopped where its end has no unused bridge", () => {
   const histogram = {};
   const signatures = new Set();
   for (const trail of FAILED_TRAILS) {
@@ -124,7 +124,7 @@ test("the added bridge is present before the successful traversal; seeking is st
   assert.equal(sceneAt(TOTAL_FRAMES + 9).frameIndex, TOTAL_FRAMES - 1);
 });
 
-test("all embedded silver trails stay continuous and inside the canvas", () => {
+test("all embedded failed trails stay continuous and inside the canvas", () => {
   for (const { path, trail } of THREADS) {
     assert.ok(path.length > 0);
     assert.equal(path.lengths[0], 0);
@@ -259,4 +259,21 @@ test("the manifest, notes and module agree on the clip", () => {
   const notes = readFileSync(new URL("../README.md", import.meta.url), "utf8");
   assert.match(notes, /\| `no-such-passage` \| 720×720 \| 1440×1440 MP4 at 30 fps \| 28 seconds,/u);
   assert.match(notes, /No Such Passage turns Euler[\s\S]*?the thumbnail is frame 795\./u);
+});
+
+test("the palette is the dark, lit works' own: All on One Circumference's constants", () => {
+  // The night, the bone hairlines, the steel of the walks that fail and the gold of the one
+  // that goes through are that work's values, so the two read as one collection.
+  const sketch = readFileSync(new URL("../artworks/no-such-passage/sketch.js", import.meta.url), "utf8");
+  const reference = readFileSync(new URL("../artworks/all-on-one-circumference/sketch.js", import.meta.url), "utf8");
+  const literal = (source, name) => {
+    const match = source.match(new RegExp(`const ${name} = (\\[[^\\]]*\\]);`, "u"));
+    assert.ok(match, `${name} is not declared`);
+    return JSON.parse(match[1]);
+  };
+  for (const name of ["GROUND", "BONE", "STEEL_FACE", "STEEL_EDGE", "GOLD_FACE", "GOLD_EDGE", "HEART_WHITE"]) {
+    assert.deepEqual(literal(sketch, name), literal(reference, name), name);
+  }
+  // The failed walks are added, not painted: the light on a bridge counts its walks.
+  assert.match(sketch, /ctx\.globalCompositeOperation = "lighter";\n\s+THREADS\.forEach/u);
 });
