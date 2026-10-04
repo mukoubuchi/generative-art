@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { REPOSITORY_ROOT } from "../lib/catalog.mjs";
 import { metadataSegments } from "../lib/jpeg.mjs";
 import { videoTraces } from "../lib/mp4.mjs";
+import { cmapCodePoints, isWoff2, nameStrings, woff2Contents } from "../lib/woff2.mjs";
 
 /**
  * Nothing in this repository may carry a provenance mark, visible or not.
@@ -19,8 +20,9 @@ import { videoTraces } from "../lib/mp4.mjs";
  *
  * Two scans. Text is any tracked file without a NUL byte, and must contain none of the
  * invisible or control code points below. Binaries are the rest, and must carry nothing
- * but their picture: no text-bearing metadata in any format this test can read, no byte
- * signature of a provenance container, and no format it cannot read. The rule names
+ * but their picture (or, for the one font, its glyphs): no text-bearing metadata in any
+ * format this test can read, no byte signature of a provenance container, and no format
+ * it cannot read. The rule names
  * structures, never a tool or its maker, so it holds whoever does the stamping. The one
  * legitimate invisible character in the tree — the joiner inside a deliberately emoji
  * fixture — is admitted by an allowlist that names the file, the code point, and how many,
@@ -75,6 +77,54 @@ const isJpeg = (bytes) => bytes[0] === 0xff && bytes[1] === 0xd8;
 const isMp4 = (bytes) => bytes.toString("latin1", 4, 8) === "ftyp";
 const isGlb = (bytes) => bytes.toString("latin1", 0, 4) === "glTF";
 
+/**
+ * The tables a font needs to draw its glyphs, lay them out and be named, and nothing it
+ * might carry about itself: no signature table, no `meta` table of free-form data, no
+ * table this list has not been told about. They are the tables the legends' face holds.
+ */
+const FONT_TABLES = new Set([
+  "GDEF", "GPOS", "GSUB", "OS/2", "STAT", "cmap", "gasp", "glyf", "head", "hhea", "hmtx",
+  "loca", "maxp", "name", "post", "prep"
+]);
+
+/**
+ * A WOFF2 font's findings: a table outside the list, the format's own metadata and private
+ * blocks, and the words of a provenance container. The tables are one Brotli stream, so
+ * the words are looked for in the tables as the font holds them, and in the name table's
+ * strings as they read, which are UTF-16 and would slip past a byte scan.
+ */
+function woff2Findings(bytes) {
+  const found = [];
+  const { tables, metadata, privateData } = woff2Contents(bytes);
+  for (const { tag } of tables) {
+    if (!FONT_TABLES.has(tag)) found.push(`WOFF2 table ${tag.trim()}`);
+  }
+  if (metadata) found.push("WOFF2 metadata");
+  if (privateData) found.push("WOFF2 private data");
+  for (const { data } of tables) {
+    for (const word of data.toString("latin1").match(CONTAINER_WORDS) ?? []) {
+      found.push(`WOFF2 container word ${word.toLowerCase()}`);
+    }
+  }
+  const name = tables.find(({ tag }) => tag === "name");
+  for (const { text } of name ? nameStrings(name.data) : []) {
+    for (const word of text.match(CONTAINER_WORDS) ?? []) found.push(`WOFF2 name word ${word.toLowerCase()}`);
+  }
+  return found;
+}
+
+/** What a WOFF2 font says, uncompressed: its tables, its two blocks and its name strings. */
+function woff2Words(bytes) {
+  const { tables, metadata, privateData } = woff2Contents(bytes);
+  const name = tables.find(({ tag }) => tag === "name");
+  return [
+    ...tables.map(({ data }) => data.toString("latin1")),
+    metadata?.toString("utf8") ?? "",
+    privateData?.toString("latin1") ?? "",
+    ...(name ? nameStrings(name.data).map(({ text }) => text) : [])
+  ].join("\n");
+}
+
 /** The glTF fields that hold words about a model rather than the model itself. */
 const GLTF_ABOUT = new Set(["generator", "copyright", "extras"]);
 
@@ -109,8 +159,8 @@ function glbFindings(bytes) {
  * Everything a binary carries besides its picture, one label per finding: chunks a PNG
  * does not need, a JPEG's application segments and comments other than its JFIF header,
  * an MP4's metadata items and SEI units, a glTF's fields about the model and whatever its
- * embedded images carry, the words of a provenance container anywhere, and a format this
- * test cannot read at all.
+ * embedded images carry, a WOFF2 font's tables and blocks beyond what it draws with, the
+ * words of a provenance container anywhere, and a format this test cannot read at all.
  */
 function findings(bytes, wholeFile = true) {
   const found = [];
@@ -126,6 +176,8 @@ function findings(bytes, wholeFile = true) {
     for (let unit = 0; unit < traces.seiUnits; unit += 1) found.push("MP4 SEI unit");
   } else if (isGlb(bytes)) {
     found.push(...glbFindings(bytes));
+  } else if (isWoff2(bytes)) {
+    found.push(...woff2Findings(bytes));
   } else {
     found.push("unreadable format");
   }
@@ -154,6 +206,10 @@ const ALLOWED_FINDINGS = [
   [`${MARKS}/unknown-format.bin`, "unreadable format", 1],
   [`${MARKS}/generator.glb`, "glTF asset.generator", 1],
   [`${MARKS}/image-chunk.glb`, "glTF image PNG tEXt", 1],
+  [`${MARKS}/metadata-block.woff2`, "WOFF2 metadata", 1],
+  [`${MARKS}/private-block.woff2`, "WOFF2 private data", 1],
+  [`${MARKS}/meta-table.woff2`, "WOFF2 table meta", 1],
+  [`${MARKS}/name-word.woff2`, "WOFF2 name word c2pa", 1],
   ["p5js/test/fixtures/thumbnail-encoder-profile/no-such-passage.jpg", "JPEG APP2 ICC_PROFILE", 1],
   ["p5js/test/fixtures/video-encoder-traces/traced.mp4", "MP4 metadata item", 1],
   ["p5js/test/fixtures/video-encoder-traces/traced.mp4", "MP4 SEI unit", 1]
@@ -237,25 +293,28 @@ test("every refused kind is caught on its frozen specimen, and every admitted fi
   for (const [path, label, count] of ALLOWED_FINDINGS) {
     bySpecimen.set(path, { ...(bySpecimen.get(path) ?? {}), [label]: count });
   }
-  assert.equal(bySpecimen.size, 11);
+  assert.equal(bySpecimen.size, 15);
   for (const [path, expected] of bySpecimen) {
     const buffer = binaries.get(path);
     assert.ok(buffer, `${path} is admitted but not tracked as a binary`);
     assert.deepEqual(Object.fromEntries(tally(findings(buffer))), expected, path);
   }
-  // The new specimens name no tool and no maker, only what they are.
+  // The new specimens name no tool and no maker, only what they are. A font's words are
+  // compressed, so they are read where the font holds them.
   for (const path of bySpecimen.keys()) {
     if (path.startsWith(MARKS) && !path.endsWith(".bin")) {
-      assert.ok(binaries.get(path).includes(Buffer.from("neutral marker")), `${path} lost its neutral marker`);
+      const buffer = binaries.get(path);
+      const words = isWoff2(buffer) ? woff2Words(buffer) : buffer.toString("latin1");
+      assert.ok(words.includes("neutral marker"), `${path} lost its neutral marker`);
     }
   }
 });
 
 test("the binary rule reads every format the tree holds, and each holds a clean picture", () => {
   // A rule that cannot parse a file would pass it by finding nothing: every tracked binary
-  // outside the specimens is a PNG, a JPEG or an MP4 the rule actually walked.
+  // outside the specimens is a PNG, a JPEG, an MP4, a glTF or a font the rule actually walked.
   const specimens = new Set(ALLOWED_FINDINGS.map(([path]) => path));
-  const kinds = { png: 0, jpeg: 0, mp4: 0, glb: 0, embedded: 0 };
+  const kinds = { png: 0, jpeg: 0, mp4: 0, glb: 0, embedded: 0, woff2: 0 };
   for (const [file, buffer] of binaries) {
     if (specimens.has(file)) continue;
     if (isPng(buffer)) {
@@ -274,9 +333,14 @@ test("the binary rule reads every format the tree holds, and each holds a clean 
       assert.ok(json.asset, `${file} has no asset the rule could read`);
       // The images it embeds are walked too: the gallery's head carries three textures.
       kinds.embedded += (json.images ?? []).length;
+    } else if (isWoff2(buffer)) {
+      kinds.woff2 += 1;
+      const { tables } = woff2Contents(buffer);
+      const cmap = tables.find(({ tag }) => tag === "cmap");
+      assert.ok(cmap && cmapCodePoints(cmap.data).size > 0, `${file} maps no character the rule could find`);
     } else {
       assert.fail(`${file} is a binary of a format the rule cannot read`);
     }
   }
-  assert.deepEqual(kinds, { png: 4, jpeg: 0, mp4: 1, glb: 1, embedded: 3 });
+  assert.deepEqual(kinds, { png: 4, jpeg: 0, mp4: 1, glb: 1, embedded: 3, woff2: 0 });
 });
