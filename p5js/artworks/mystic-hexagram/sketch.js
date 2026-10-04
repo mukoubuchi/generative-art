@@ -22,10 +22,18 @@ const RENDER_SCALE = CAPTURE_MODE
 const OUTPUT_WIDTH = LOGICAL_WIDTH * RENDER_SCALE;
 const OUTPUT_HEIGHT = LOGICAL_HEIGHT * RENDER_SCALE;
 
-/** Deep water under one family of sea-glass ink and pearl light. */
-const GROUND = [7, 12, 15];
-const SEA_GLASS = [137, 174, 163];
-const PEARL = [239, 228, 196];
+/**
+ * The palette No Such Passage takes from the dark, lit works (All on One Circumference's
+ * constants): night, bone hairlines over a bed for the given figure, steel for the
+ * hexagon, gold for the line the three crossings share and for the crossings' light.
+ */
+const GROUND = [6, 7, 12];
+const BED = [16, 18, 28];
+const BONE = [246, 244, 236];
+const STEEL_FACE = [104, 144, 204];
+const GOLD_FACE = [222, 166, 96];
+const GOLD_EDGE = [252, 204, 116];
+const HEART_WHITE = [248, 250, 255];
 /** How far a witness's light reaches, and in how many veils. */
 const WITNESS_HALO = 46;
 const WITNESS_LAYERS = 12;
@@ -89,6 +97,7 @@ new P5((p) => {
   /**
    * A crossing is identified by accumulated light, not a diagram marker. The nested
    * veils have no rim; their shared centre is simply where the Pascal line burns most.
+   * The light is the house gold with the white heart the house stars carry.
    *
    * The light reaches 46 pixels, which is far enough for the line to burn rather than
    * merely carry three dots, and short enough that the three stay three: over the whole
@@ -98,13 +107,12 @@ new P5((p) => {
     p.noStroke();
     p.blendMode(p.ADD);
     for (let layer = WITNESS_LAYERS; layer >= 1; layer -= 1) {
-      const reach = WITNESS_HALO * layer / WITNESS_LAYERS;
-      p.fill(...PEARL, 5);
-      p.circle(point.x, point.y, 2 * reach);
+      p.fill(...GOLD_EDGE, 5);
+      p.circle(point.x, point.y, 2 * WITNESS_HALO * layer / WITNESS_LAYERS);
     }
-    p.fill(...PEARL, 150);
+    p.fill(...GOLD_EDGE, 150);
     p.circle(point.x, point.y, 2 * 6.5);
-    p.fill(...PEARL, 235);
+    p.fill(...HEART_WHITE, 235);
     p.circle(point.x, point.y, 2 * 3.2);
     p.blendMode(p.BLEND);
   }
@@ -117,43 +125,31 @@ new P5((p) => {
     p.scale(RENDER_SCALE);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
 
-    // A broad, almost imperceptible bloom keeps the ground from reading as a flat slide.
-    p.noStroke();
-    p.fill(...SEA_GLASS, 2);
-    p.ellipse(0, 0, 790, 530);
-    p.fill(...PEARL, 2);
-    p.ellipse(0, 0, 620, 400);
-
+    // The conic as No Such Passage draws its eyelets: a bed under a bone hairline.
     p.noFill();
-    p.stroke(...SEA_GLASS, 14);
+    p.stroke(...BED);
     p.strokeWeight(7);
     p.ellipse(0, 0, 2 * CONIC_RADIUS_X, 2 * CONIC_RADIUS_Y);
-    p.stroke(...SEA_GLASS, 145);
-    p.strokeWeight(0.9);
+    p.stroke(...BONE, 0.3 * 255);
+    p.strokeWeight(0.7);
     p.ellipse(0, 0, 2 * CONIC_RADIUS_X, 2 * CONIC_RADIUS_Y);
 
     // All six extensions recede into one ink; incidence, not colour coding, pairs them.
     for (const pair of OPPOSITE_PAIRS) {
       for (const side of pair) {
-        drawInfiniteLine(sides[side], SEA_GLASS, 20, 0.55);
+        drawInfiniteLine(sides[side], BONE, 20, 0.55);
       }
     }
 
-    // The Pascal line is a hairline inside a low halo, light rather than a white rule.
-    drawInfiniteLine(pascalLine, PEARL, 9, 11);
-    drawInfiniteLine(pascalLine, PEARL, 28, 4.2);
-    drawInfiniteLine(pascalLine, PEARL, 225, 0.85);
+    // The Pascal line is the passage: gold strokes under a gold heart line.
+    drawInfiniteLine(pascalLine, GOLD_FACE, 9, 11);
+    drawInfiniteLine(pascalLine, GOLD_FACE, 28, 4.2);
+    drawInfiniteLine(pascalLine, GOLD_EDGE, 0.95 * 255, 1.3);
 
+    // The hexagon in steel, as No Such Passage's walkers are drawn.
     p.noFill();
-    p.stroke(...SEA_GLASS, 18);
-    p.strokeWeight(4.5);
-    p.beginShape();
-    for (const label of VERTEX_LABELS) {
-      p.vertex(vertices[label].x, vertices[label].y);
-    }
-    p.endShape(p.CLOSE);
-    p.stroke(...SEA_GLASS, 205);
-    p.strokeWeight(1.15);
+    p.stroke(...STEEL_FACE, 0.9 * 255);
+    p.strokeWeight(1.3);
     p.beginShape();
     for (const label of VERTEX_LABELS) {
       p.vertex(vertices[label].x, vertices[label].y);

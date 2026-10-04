@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   CONIC_RADIUS_X,
@@ -117,4 +118,22 @@ test("ten seconds is one exact closed journey around the conic", () => {
   assert.equal(closingFrame, TOTAL_FRAMES);
   assert.equal(openingFrame, 0);
   assert.deepEqual(closing, opening);
+});
+
+test("the colours are No Such Passage's, and the crossings keep their own reach", () => {
+  // The palette is the one No Such Passage takes from the dark, lit works; the crossings'
+  // light keeps this work's own reach, which the reader chose over the house star's.
+  const sketch = readFileSync(new URL("../artworks/mystic-hexagram/sketch.js", import.meta.url), "utf8");
+  const reference = readFileSync(new URL("../artworks/no-such-passage/sketch.js", import.meta.url), "utf8");
+  const literal = (source, name) => {
+    const match = source.match(new RegExp(`const ${name} = (\\[[^\\]]*\\]);`, "u"));
+    assert.ok(match, `${name} is not declared`);
+    return JSON.parse(match[1]);
+  };
+  for (const name of ["GROUND", "BED", "BONE", "STEEL_FACE", "GOLD_FACE", "GOLD_EDGE", "HEART_WHITE"]) {
+    assert.deepEqual(literal(sketch, name), literal(reference, name), name);
+  }
+  assert.match(sketch, /const WITNESS_HALO = 46;/u);
+  assert.match(sketch, /const WITNESS_LAYERS = 12;/u);
+  assert.match(sketch, /p\.fill\(\.\.\.GOLD_EDGE, 5\);/u);
 });
