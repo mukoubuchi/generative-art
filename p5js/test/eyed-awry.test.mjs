@@ -4,18 +4,14 @@ import test from "node:test";
 import { renderIndexPage } from "../lib/gallery.mjs";
 import { buildPostBody, validatePostBody } from "../lib/post-text.mjs";
 import {
-  ACTS,
   ACT_FRAMES,
-  BACK_FRAME,
   BEAMS,
   BOUNDING_RADIUS,
   CUBE_SIZE,
   CUBES,
   CUBES_PER_BEAM,
   DURATION_SECONDS,
-  FRONT_FRAME,
   GROUND,
-  INK,
   JOINTS,
   JOINT_STEP,
   LOGICAL_SIZE,
@@ -23,7 +19,8 @@ import {
   MAGIC,
   MAGIC_AXIS,
   PLAYBACK_FPS,
-  SIDE_FRAME,
+  STRETCHES,
+  STRETCH_STARTS,
   STROKE_WEIGHT,
   TOTAL_FRAMES,
   TURN_AXIS,
@@ -35,10 +32,11 @@ import {
   eyeStepAt,
   jointGaps,
   jointsOf,
+  largestGap,
   projectedGap,
   sceneAt,
   silhouetteBounds,
-  turnAt,
+  tiltAt,
   viewDirection
 } from "../artworks/eyed-awry/eyed-awry.js";
 
@@ -57,22 +55,30 @@ function dot(a, b) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-test("the acts cover the clip and the wrap is the first station", () => {
+test("the stretches cover the clip, and the wrap is the first station", () => {
   assert.equal(ACT_FRAMES, TOTAL_FRAMES);
   assert.equal(TOTAL_FRAMES, PLAYBACK_FPS * DURATION_SECONDS);
   assert.equal(DURATION_SECONDS, 13);
-  assert.deepEqual(ACTS.map(([name]) => name), ["front", "leave", "side", "cross", "back", "home"]);
-  assert.equal(actAt(0).name, "front");
-  assert.equal(actAt(FRONT_FRAME).name, "front");
-  assert.equal(actAt(SIDE_FRAME).name, "side");
-  assert.equal(actAt(BACK_FRAME).name, "back");
+  assert.deepEqual(STRETCHES.map(([name, frames, tilt]) => [name, frames, tilt]), [
+    ["hold closed", 45, null], ["whip", 18, 49.5], ["settle", 30, 55], ["hold apart", 45, null],
+    ["return", 75, 0], ["hold closed", 36, null], ["over the top", 66, 180],
+    ["hold behind", 30, null], ["home", 45, 360]
+  ]);
+  // The whip is the Tower's: eighteen frames, six tenths of a second, to nine tenths of the
+  // way, and the settle carries the last tenth.
+  const [, whip] = STRETCHES;
+  assert.equal(whip[1] / PLAYBACK_FPS, 0.6);
+  assert.equal(whip[2] / STRETCHES[2][2], 0.9);
+  const at = (name, nth = 0) => STRETCH_STARTS[STRETCHES.map(([n]) => n).indexOf(name, nth === 0 ? 0 : 5)];
+  assert.equal(actAt(0).name, "hold closed");
+  assert.equal(tiltAt(0), 0);
+  assert.equal(tiltAt(at("hold apart")), 55);
+  assert.equal(tiltAt(at("hold closed", 1)), 0);
+  assert.equal(tiltAt(at("hold behind")), 180);
+  assert.equal(tiltAt(TOTAL_FRAMES - 1), 360);
   assert.equal(actAt(TOTAL_FRAMES - 1).name, "home");
-  assert.equal(actAt(TOTAL_FRAMES).name, "front");
-  assert.equal(turnAt(0), 0);
-  assert.equal(turnAt(SIDE_FRAME), 0.25);
-  assert.equal(turnAt(BACK_FRAME), 0.5);
-  assert.equal(turnAt(TOTAL_FRAMES - 1), 1);
-  assert.equal(turnAt(TOTAL_FRAMES), 0);
+  assert.equal(actAt(TOTAL_FRAMES).name, "hold closed");
+  assert.equal(tiltAt(TOTAL_FRAMES), 0);
 });
 
 test("fifteen integer cubes, three beams, no cell shared", () => {
@@ -148,7 +154,7 @@ test("the projected gap is nought on the axis and not nought off it", () => {
   const side = jointGaps(TURN_AXIS);
   assert.ok(side.every((gap) => gap > 1));
   // The side station is the direction of greatest split for this axis.
-  const halfway = jointGaps(viewDirection(0.125));
+  const halfway = jointGaps(viewDirection(45));
   assert.ok(halfway.every((gap, index) => gap < side[index]));
   // Shift one cube of a joint off the axis and the closed view splits.
   const [joint] = JOINTS;
@@ -156,48 +162,68 @@ test("the projected gap is nought on the axis and not nought off it", () => {
   assert.ok(projectedGap(joint.near, offAxis, MAGIC) > 0);
 });
 
-test("the two stations look along the axis, the side station across it", () => {
+test("the two stations look along the axis, the reveal well off it", () => {
   assert.ok(Math.abs(dot(MAGIC_AXIS, TURN_AXIS)) < 1e-15);
   assert.ok(Math.abs(hypot3ok(MAGIC_AXIS) - 1) < 1e-15);
   assert.ok(Math.abs(hypot3ok(TURN_AXIS) - 1) < 1e-15);
-  const front = sceneAt(FRONT_FRAME);
-  const side = sceneAt(SIDE_FRAME);
-  const back = sceneAt(BACK_FRAME);
+  const start = (name, from = 0) => STRETCH_STARTS[STRETCHES.findIndex(([n], index) => n === name && index >= from)];
+  const front = sceneAt(0);
+  const apart = sceneAt(start("hold apart"));
+  const behind = sceneAt(start("hold behind"));
   const last = sceneAt(TOTAL_FRAMES - 1);
-  const again = sceneAt(TOTAL_FRAMES);
   assert.deepEqual(front.direction, MAGIC_AXIS);
-  assert.deepEqual(back.direction, MAGIC_AXIS.map((part) => -part));
-  assert.deepEqual(side.direction, TURN_AXIS);
-  assert.deepEqual(last.direction, MAGIC_AXIS);
-  assert.deepEqual(again.direction, MAGIC_AXIS);
+  assert.ok(Math.abs(dot(behind.direction, MAGIC_AXIS) + 1) < 1e-15);
+  assert.ok(Math.abs(dot(last.direction, MAGIC_AXIS) - 1) < 1e-15);
   assert.equal(front.closed, true);
-  assert.equal(side.closed, false);
-  assert.equal(back.closed, true);
+  assert.equal(apart.closed, false);
+  assert.equal(behind.closed, true);
   assert.equal(last.closed, true);
   assert.deepEqual(jointGaps(front.direction), [0, 0, 0]);
-  assert.deepEqual(jointGaps(back.direction), [0, 0, 0]);
-  assert.ok(jointGaps(side.direction).every((gap) => gap > 1));
+  assert.ok(jointGaps(behind.direction).every((gap) => gap < 1e-9));
+  // At the reveal every joint stands more than a cell apart.
+  assert.ok(jointGaps(apart.direction).every((gap) => gap > 1));
   // The closed triangle is the smaller picture, so its frame is the tighter one.
-  assert.ok(front.orthoHalf < side.orthoHalf);
-  assert.ok(back.orthoHalf < side.orthoHalf);
-  assert.equal(front.orthoHalf, last.orthoHalf);
+  assert.ok(front.orthoHalf < apart.orthoHalf);
+  assert.ok(behind.orthoHalf < apart.orthoHalf);
+});
+
+test("no frame but a station's shows the triangle closed", () => {
+  // The whole point of the clip, held over all 390 frames rather than a sample: the
+  // figure closes exactly when the eye is on the axis, and at every other frame all
+  // three joints stand apart by the joint's length times the sine of the tilt.
+  let closedFrames = 0;
+  let smallestOpenGap = Infinity;
+  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) {
+    const scene = sceneAt(frame);
+    const onAxis = scene.tilt % 180 === 0;
+    assert.equal(scene.closed, onAxis, `frame ${frame} at ${scene.tilt} degrees`);
+    if (onAxis) {
+      closedFrames += 1;
+    } else {
+      smallestOpenGap = Math.min(smallestOpenGap, largestGap(scene.direction));
+    }
+  }
+  // The three holds at the stations (45, 36, 30), and the first and last frame of every
+  // move that leaves or reaches one, which stand on it: the whip's first, the return's
+  // last, the first and last of over the top, and of home.
+  assert.equal(closedFrames, 45 + 36 + 30 + 1 + 1 + 2 + 2);
+  assert.ok(smallestOpenGap > 1e-4, `an open frame came within ${smallestOpenGap} of closing`);
 });
 
 test("holds stand still, and the last frame of a move is the hold it arrives at", () => {
-  for (const frame of [FRONT_FRAME, SIDE_FRAME, BACK_FRAME]) {
-    assert.equal(eyeStepAt(frame), 0);
-    assert.equal(eyeStepAt(frame + 1), 0);
-  }
-  // The last frame of leave is the side station; the last of cross, the back.
-  assert.equal(turnAt(SIDE_FRAME - 1), 0.25);
-  assert.equal(turnAt(BACK_FRAME - 1), 0.5);
-  assert.equal(eyeStepAt(SIDE_FRAME - 1), 0);
-  assert.equal(eyeStepAt(BACK_FRAME - 1), 0);
-  // The wrap: last frame and first frame are the same eye.
+  STRETCHES.forEach(([name, frames, target], index) => {
+    const first = STRETCH_STARTS[index];
+    const last = first + frames - 1;
+    if (target === null) {
+      for (let frame = first; frame < last; frame += 1) assert.equal(eyeStepAt(frame), 0, `${name} moved at ${frame}`);
+    } else {
+      assert.equal(tiltAt(last), target, `${name} does not arrive at ${target}`);
+    }
+  });
+  // The wrap: the last frame and the first are the same eye, to the turn's rounding.
   const first = sceneAt(0).eye;
   const wrap = sceneAt(TOTAL_FRAMES - 1).eye;
-  assert.deepEqual(first, wrap);
-  assert.equal(eyeStepAt(TOTAL_FRAMES - 1), 0);
+  assert.ok(hypot3ok(first.map((part, axis) => part - wrap[axis])) < 1e-12);
 });
 
 test("a cube is smaller than its cell, and the frame holds the bounding sphere", () => {
@@ -210,17 +236,17 @@ test("a cube is smaller than its cell, and the frame holds the bounding sphere",
   assert.ok(Math.max(closed.width, closed.height) < Math.max(side.width, side.height));
 });
 
-test("the sketch is a clip of paper cubes in one stroke, timed from the clock", () => {
+test("the sketch is a clip of lit cubes, a beam to each earth, timed from the clock", () => {
   assert.match(SKETCH, /from "\.\/eyed-awry\.js"/u);
   assert.match(SKETCH, /p\.createCanvas\(OUTPUT_SIZE, OUTPUT_SIZE, p\.WEBGL\)/u);
   assert.match(SKETCH, /p\.linePerspective\(false\)/u);
   assert.match(SKETCH, /p\.ortho\(-scene\.orthoHalf, scene\.orthoHalf, -scene\.orthoHalf, scene\.orthoHalf/u);
-  assert.match(SKETCH, /p\.noLights\(\)/u);
-  assert.match(SKETCH, /p\.fill\(\.\.\.GROUND\)/u);
-  assert.match(SKETCH, /p\.stroke\(\.\.\.INK\)/u);
+  assert.match(SKETCH, /p\.ambientLight\(175\)/u);
+  assert.match(SKETCH, /p\.directionalLight\(110, 110, 110, 0\.35, 0\.9, 0\.45\)/u);
+  assert.match(SKETCH, /p\.ambientMaterial\(\.\.\.BEAM_EARTH\[beam\]\)/u);
+  assert.match(SKETCH, /p\.stroke\(\.\.\.EDGE_INK\)/u);
   assert.match(SKETCH, /STROKE_WEIGHT \* RENDER_SCALE/u);
   assert.match(SKETCH, /window\.performance\.now\(\)/u);
-  assert.match(SKETCH, /p\.buildGeometry\(/u);
   assert.match(SKETCH, /p\.box\(BOX\)/u);
   assert.match(SKETCH, /return Promise\.resolve\(publishState\(/u);
   assert.match(SKETCH, /return state/u);
@@ -228,7 +254,16 @@ test("the sketch is a clip of paper cubes in one stroke, timed from the clock", 
   assert.doesNotMatch(SKETCH, /p\.text\(/u);
   assert.doesNotMatch(SKETCH, /p\.sphere\(/u);
   assert.deepEqual(GROUND, [230, 224, 208]);
-  assert.deepEqual(INK, [0, 0, 0]);
+  // The three earths are the paper works' own threads.
+  const earths = JSON.parse(SKETCH.match(/const BEAM_EARTH = Object\.freeze\((\{[^}]*\})\);/u)[1].replace(/(\w+):/gu, '"$1":'));
+  const herringbone = readFileSync(new URL("../artworks/herringbone/sketch.js", import.meta.url), "utf8");
+  const pinwheel = readFileSync(new URL("../artworks/pinwheel/sketch.js", import.meta.url), "utf8");
+  const literal = (source, name) => JSON.parse(source.match(new RegExp(`const ${name} = (\\[[^\\]]*\\]);`, "u"))[1]);
+  assert.deepEqual(earths, {
+    a: literal(herringbone, "WARP_RUSSET"),
+    b: literal(pinwheel, "SMALL_RUSSET"),
+    c: literal(herringbone, "WEFT_STEEL")
+  });
   assert.equal(STROKE_WEIGHT, 1.7);
   assert.match(INDEX_HTML, /<title>Eyed Awry<\/title>/u);
   assert.doesNotMatch(MODEL, /Penrose|Escher|Reutersvärd drew/u);
@@ -264,7 +299,8 @@ test("the notes keep the figure as this project's, give the numbers the tests ho
   assert.match(section, /fitted to the silhouette/u);
   assert.match(section, /The thumbnail is frame 18/u);
   assert.match(section, /warm white/u);
-  assert.match(section, /No face is lit/u);
+  assert.match(section, /lit by one light fixed to the figure/u);
+  assert.match(section, /Herringbone's russet/u);
   assert.match(section, /1597/u);
   assert.match(section, /1623/u);
   assert.match(section, /`gazde\] Q1 1597 : gaz'd F1 1623`/u);
@@ -280,7 +316,7 @@ test("the manifest, notes, card and post agree on the clip and the quotation", (
   assert.deepEqual(artwork.canvas, { width: LOGICAL_SIZE, height: LOGICAL_SIZE });
   assert.deepEqual(artwork.quoteIds, ["shakespeare-eyed-awry"]);
   assert.deepEqual(artwork.thumbnail, { frame: 18 });
-  assert.equal(actAt(18).name, "front");
+  assert.equal(actAt(18).name, "hold closed");
   assert.equal(sceneAt(18).closed, true);
   assert.deepEqual(artwork.render, {
     kind: "video",

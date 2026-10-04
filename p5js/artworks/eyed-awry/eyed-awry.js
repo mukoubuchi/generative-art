@@ -35,9 +35,8 @@ export const JOINT_STEP = 2;
 /** Edge of a cube, less than one so neighbouring cubes of a beam stay distinct. */
 export const CUBE_SIZE = 0.86;
 
-/** The warm white shared by The Hat, Herringbone, Pinwheel and The Same Tower. */
+/** The warm white shared by The Hat, Herringbone and Pinwheel. */
 export const GROUND = [230, 224, 208];
-export const INK = [0, 0, 0];
 /** Platonic Duals' screen-space edge, the collection's standing stroke. */
 export const STROKE_WEIGHT = 1.7;
 
@@ -231,30 +230,44 @@ export function silhouetteBounds(direction) {
 }
 
 /*
- * The staging. One great-circle turn. Every moving stretch is smootherstep,
- * so it sets off and arrives with neither speed nor acceleration, and each
- * stretch begins where the one before it ended.
+ * The staging, built around the one thing the figure does: it closes along one axis and
+ * nowhere else. It takes the grammar of The Same Tower's clip -- a hold at a station, a
+ * decisive move, the reveal held, and the return -- rather than its shots.
  *
- * front  36  the triangle closed, looking along (1, 1, 1)
- * leave  84  the joints split
- * side   24  the three beams for what they are
- * cross  84  the joints close again
- * back   24  the triangle closed from the other station
- * home  138  around the rest of the circle and back to the first station
+ * The eye stays in the plane of the axis and (1, -1, 0), and its direction is a tilt off
+ * the axis in degrees: nought and a full turn are the first station, a half turn the
+ * second. Any other tilt splits all three joints, each by its own length times the sine
+ * of the tilt, so no frame but a station's shows the triangle closed.
+ *
+ * hold closed    45  the triangle, looking along (1, 1, 1)
+ * whip           18  six tenths of a second off the axis, to 49.5 degrees
+ * settle         30  the last tenth of the way, to 55
+ * hold apart     45  the three beams for what they are
+ * return         75  back into the closing, which arrives only at the axis
+ * hold closed    36
+ * over the top   66  to the opposite station, the beams parting and closing again
+ * hold behind    30  the triangle closed from the other side
+ * home           45  round to the first station
+ *
+ * Every stretch is smootherstep, so it sets off and arrives with neither speed nor
+ * acceleration, and each begins where the one before it ended. A hold names no target.
  */
-export const ACTS = [
-  ["front", 36],
-  ["leave", 84],
-  ["side", 24],
-  ["cross", 84],
-  ["back", 24],
-  ["home", 138]
-];
-export const ACT_FRAMES = ACTS.reduce((sum, [, frames]) => sum + frames, 0);
+export const STRETCHES = Object.freeze([
+  Object.freeze(["hold closed", 45, null]),
+  Object.freeze(["whip", 18, 49.5]),
+  Object.freeze(["settle", 30, 55]),
+  Object.freeze(["hold apart", 45, null]),
+  Object.freeze(["return", 75, 0]),
+  Object.freeze(["hold closed", 36, null]),
+  Object.freeze(["over the top", 66, 180]),
+  Object.freeze(["hold behind", 30, null]),
+  Object.freeze(["home", 45, 360])
+]);
+export const ACT_FRAMES = STRETCHES.reduce((sum, [, frames]) => sum + frames, 0);
 
-export const FRONT_FRAME = 0;
-export const SIDE_FRAME = ACTS[0][1] + ACTS[1][1];
-export const BACK_FRAME = SIDE_FRAME + ACTS[2][1] + ACTS[3][1];
+/** Where each stretch starts. */
+export const STRETCH_STARTS = Object.freeze(STRETCHES.map((unused, index) =>
+  STRETCHES.slice(0, index).reduce((sum, [, frames]) => sum + frames, 0)));
 
 /**
  * Smootherstep: first and second derivatives vanish at both ends, so one
@@ -265,86 +278,72 @@ export function eased(t) {
   return u * u * u * (u * (u * 6 - 15) + 10);
 }
 
+/**
+ * The stretch a frame falls in, how far through it, and the tilt off the axis there. The
+ * last frame of a stretch is the stretch's own end, so the next stretch (a hold, or the
+ * wrap to frame nought) begins where this one arrived rather than one step short of it.
+ */
 export function actAt(frameIndex) {
   if (!Number.isSafeInteger(frameIndex)) {
     throw new TypeError("The frame index must be a safe integer.");
   }
   const frame = ((frameIndex % TOTAL_FRAMES) + TOTAL_FRAMES) % TOTAL_FRAMES;
-  let start = 0;
-  for (const [name, frames] of ACTS) {
-    if (frame < start + frames) {
-      // The last frame of a stretch is the stretch's own end, so the next
-      // stretch (a hold, or the wrap to frame nought) begins where this one
-      // arrived rather than one step short of it.
-      const progress = frames === 1 ? 1 : (frame - start) / (frames - 1);
-      return { frame, name, progress };
+  let from = 0;
+  let at = 0;
+  for (const [name, frames, target] of STRETCHES) {
+    const to = target ?? from;
+    if (frame < at + frames) {
+      const progress = frames === 1 ? 1 : (frame - at) / (frames - 1);
+      return { frame, name, progress, tilt: from + (to - from) * eased(progress) };
     }
-    start += frames;
+    from = to;
+    at += frames;
   }
-  throw new RangeError("The acts do not cover the clip.");
+  throw new RangeError("The stretches do not cover the clip.");
 }
+
+/** The tilt off the magic axis at a frame, in degrees. */
+export function tiltAt(frameIndex) {
+  return actAt(frameIndex).tilt;
+}
+
+const DEGREE = Math.PI / 180;
 
 /**
- * How far around the great circle the eye has come. Nought and one turn are
- * the same station; a half turn is the opposite station.
+ * The unit direction from the look-at point to the eye, `tilt` degrees round from the
+ * magic axis towards (1, -1, 0). Nought is the axis; 180 its opposite.
  */
-export function turnAt(frameIndex) {
-  const { name, progress } = actAt(frameIndex);
-  if (name === "front") return 0;
-  if (name === "leave") return 0.25 * eased(progress);
-  if (name === "side") return 0.25;
-  if (name === "cross") return 0.25 + 0.25 * eased(progress);
-  if (name === "back") return 0.5;
-  return 0.5 + 0.5 * eased(progress);
+export function viewDirection(tilt) {
+  const angle = tilt * DEGREE;
+  return MAGIC_AXIS.map((part, axis) => Math.cos(angle) * part + Math.sin(angle) * TURN_AXIS[axis]);
 }
 
-/**
- * The unit direction from the look-at point to the eye, as a turn around the
- * great circle. Turn nought is the magic axis; a half turn is its opposite.
- */
-export function viewDirection(turn) {
-  if (!(turn >= 0 && turn <= 1)) {
-    throw new RangeError("The turn runs from nought to one.");
-  }
-  // The two stations and the wrap are returned as the axis itself, so a test
-  // can hold them with === on each component rather than against a cosine of 2π.
-  if (turn === 0 || turn === 1) return MAGIC_AXIS.slice();
-  if (turn === 0.5) return scale(MAGIC_AXIS, -1);
-  if (turn === 0.25) return TURN_AXIS.slice();
-  const angle = 2 * Math.PI * turn;
-  return add(scale(MAGIC_AXIS, Math.cos(angle)), scale(TURN_AXIS, Math.sin(angle)));
-}
-
-export function eyeAt(turn) {
-  return add(LOOK_AT, scale(viewDirection(turn), EYE_DISTANCE));
+/** The largest of the three joints' gaps in the picture of an eye looking along `direction`. */
+export function largestGap(direction) {
+  return Math.max(...jointGaps(direction));
 }
 
 export function sceneAt(frameIndex) {
-  const { frame, name } = actAt(frameIndex);
-  const turn = turnAt(frameIndex);
-  const direction = viewDirection(turn);
+  const { frame, name, tilt } = actAt(frameIndex);
+  const direction = viewDirection(tilt);
   const bounds = silhouetteBounds(direction);
   const { right, up } = viewBasis(direction);
-  // Shift the look-at in the picture plane so the silhouette sits in the middle
-  // of the frame, then fit a square ortho to the longer side with the same
-  // paper around it at every station.
-  const lookAt = add(
-    LOOK_AT,
-    add(
-      scale(right, (bounds.minX + bounds.maxX) / 2),
-      scale(up, (bounds.minY + bounds.maxY) / 2)
-    )
-  );
+  // Shift the look-at in the picture plane so the silhouette sits in the middle of the
+  // frame, then fit a square ortho to the longer side with the same paper around it.
+  const lookAt = LOOK_AT.map((part, axis) =>
+    part + right[axis] * (bounds.minX + bounds.maxX) / 2 + up[axis] * (bounds.minY + bounds.maxY) / 2);
   const half = Math.max(bounds.width, bounds.height) / 2 * (1 + FRAME_MARGIN);
+  const gap = largestGap(direction);
   return {
     frameIndex: frame,
     act: name,
-    turn,
+    tilt,
     direction,
-    eye: add(lookAt, scale(direction, EYE_DISTANCE)),
+    eye: lookAt.map((part, axis) => part + direction[axis] * EYE_DISTANCE),
     lookAt,
     orthoHalf: half * STAGE_SCALE,
-    closed: turn === 0 || turn === 0.5 || turn === 1
+    gap,
+    closed: gap < 1e-9
   };
 }
 

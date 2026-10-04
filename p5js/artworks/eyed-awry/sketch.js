@@ -4,7 +4,6 @@ import {
   DURATION_SECONDS,
   EYE_DISTANCE,
   GROUND,
-  INK,
   LOGICAL_SIZE,
   PLAYBACK_FPS,
   STAGE_SCALE,
@@ -15,10 +14,10 @@ import {
 } from "./eyed-awry.js";
 
 /**
- * Fifteen cubes in black single lines on warm white. The eye holds the closed
- * triangle, walks off the axis until the joints split, holds the three beams,
- * closes them from the other station, and comes home. Live playback and export
- * share the same thirteen-second staging.
+ * Fifteen cubes, a beam to each of three earths, lit, on warm white. The eye holds the
+ * closed triangle, is whipped off the axis until the three beams stand apart, holds them,
+ * comes back into the closing, goes over the top to the station behind, and comes home.
+ * Live playback and export share the same thirteen-second staging.
  */
 const PARAMETERS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMETERS.get("capture") === "1";
@@ -30,11 +29,17 @@ const OUTPUT_SIZE = LOGICAL_SIZE * RENDER_SCALE;
 const NEAR_PLANE = (EYE_DISTANCE - 12) * STAGE_SCALE;
 const FAR_PLANE = (EYE_DISTANCE + 12) * STAGE_SCALE;
 const BOX = CUBE_SIZE * STAGE_SCALE;
+/**
+ * One earth to a beam, from the paper works' own: Herringbone's russet, Pinwheel's lighter
+ * russet, Herringbone's steel. A beam is its own colour, so off the axis the eye sees three
+ * things; along it, the three colours meet in one triangle.
+ */
+const BEAM_EARTH = Object.freeze({ a: [166, 110, 66], b: [206, 158, 96], c: [88, 104, 124] });
+const EDGE_INK = [38, 34, 40];
 
 const P5 = window.p5;
 
 new P5((p) => {
-  let cubes;
   let playbackStartedAt;
 
   function drawScene(scene) {
@@ -42,13 +47,20 @@ new P5((p) => {
     p.ortho(-scene.orthoHalf, scene.orthoHalf, -scene.orthoHalf, scene.orthoHalf, NEAR_PLANE, FAR_PLANE);
     const eye = onStage(scene.eye);
     p.camera(...eye, ...onStage(scene.lookAt), 0, -1, 0);
-    // Flat paper faces, no lights: a face is the ground it stands on, and what
-    // it does is hide the strokes behind it. The picture is the edges.
-    p.noLights();
-    p.fill(...GROUND);
-    p.stroke(...INK);
     p.strokeWeight(STROKE_WEIGHT * RENDER_SCALE);
-    p.model(cubes);
+    // One light from above and to the left, fixed to the figure, so each of the three face
+    // directions keeps one tone as the figure turns. The beam's earth is the ambient
+    // material; the diffuse colour stays p5's own white.
+    p.ambientLight(175);
+    p.directionalLight(110, 110, 110, 0.35, 0.9, 0.45);
+    p.stroke(...EDGE_INK);
+    for (const { cell, beam } of CUBES) {
+      p.ambientMaterial(...BEAM_EARTH[beam]);
+      p.push();
+      p.translate(...onStage(cell));
+      p.box(BOX);
+      p.pop();
+    }
   }
 
   function publishState(frameIndex, scene) {
@@ -58,10 +70,10 @@ new P5((p) => {
       totalFrames: TOTAL_FRAMES,
       durationSeconds: DURATION_SECONDS,
       act: scene.act,
-      turn: scene.turn,
+      tilt: scene.tilt,
       closed: scene.closed,
       cubes: CUBES.length,
-      palette: "black on warm white",
+      palette: "three earths on warm white",
       logicalSize: { width: LOGICAL_SIZE, height: LOGICAL_SIZE },
       outputSize: { width: OUTPUT_SIZE, height: OUTPUT_SIZE }
     };
@@ -82,16 +94,6 @@ new P5((p) => {
     // has already closed.
     p.linePerspective(false);
     p.frameRate(PLAYBACK_FPS);
-    cubes = p.buildGeometry(() => {
-      p.fill(...GROUND);
-      p.stroke(...INK);
-      for (const { cell } of CUBES) {
-        p.push();
-        p.translate(...onStage(cell));
-        p.box(BOX);
-        p.pop();
-      }
-    });
     if (CAPTURE_MODE) {
       p.noLoop();
       window.__renderFrame = (frameIndex) => {
