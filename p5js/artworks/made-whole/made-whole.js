@@ -152,20 +152,36 @@ export function regionOnPage(region) {
   };
 }
 
+/**
+ * The count, tile by tile. The figure is laid one unit square at a time, so the areas the
+ * proof adds are counted out as they are made: the nine of the unknown square, the thirty
+ * of the two roots, then a beat on the empty corner, then the corner's twenty-five in
+ * diagonal waves from the field outwards, then the side of the whole counted along its
+ * top, eight, and the five of the corner's side falling away to leave the three.
+ */
 export const ACTS = Object.freeze(["unknown", "roots", "completion", "count"]);
-export const ACT_FRAMES = Object.freeze([60, 90, 90, 60]);
+export const ACT_FRAMES = Object.freeze([44, 96, 46, 114]);
 export const ACT_STARTS = Object.freeze(ACT_FRAMES.map((unused, index) => (
   ACT_FRAMES.slice(0, index).reduce((total, frames) => total + frames, 0)
 )));
+
+/** Unit tiles in the unknown square, in the two roots together, and diagonal waves in the corner. */
+export const UNKNOWN_TILES = UNKNOWN_SIDE * UNKNOWN_SIDE;
+export const ROOT_TILES = PROOF_SIDE_COUNT * UNKNOWN_SIDE * (SIDE_WIDTH_TWICE / HALF_UNITS_PER_UNIT);
+export const CORNER_WAVES = 2 * (SIDE_WIDTH_TWICE / HALF_UNITS_PER_UNIT) - 1;
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
 }
 
-/** A cubic with zero velocity at both ends, so a piece arrives rather than snaps into place. */
-export function smoothStep(value) {
-  const at = clamp01(value);
-  return at * at * (3 - 2 * at);
+/** Smootherstep: the first and second derivatives vanish at both ends. */
+export function eased(value) {
+  const t = clamp01(value);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function span(frame, from, to) {
+  return eased((frame - from) / (to - from));
 }
 
 export function actAt(frameIndex) {
@@ -180,29 +196,25 @@ export function actAt(frameIndex) {
   return ACT_FRAMES.length - 1;
 }
 
-/** The four-act proof at one exact frame. */
+/**
+ * The count at one exact frame. The tile counts run continuously, so a tile is part-laid
+ * between whole numbers; `gap` is the dashed outline of the empty corner, shown while the
+ * thirty-nine wait for it; `sideCount` is how many of the eight marks along the top are
+ * drawn and `fallAway` how far the five of the corner's side have gone.
+ */
 export function sceneAt(frameIndex) {
-  const wrapped = ((frameIndex % TOTAL_FRAMES) + TOTAL_FRAMES) % TOTAL_FRAMES;
-  const act = actAt(wrapped);
-  const rootFrame = wrapped - ACT_STARTS[1];
-  const completionFrame = wrapped - ACT_STARTS[2];
-  const countFrame = wrapped - ACT_STARTS[3];
-
-  const horizontalRoot = act < 1 ? 0 : smoothStep((rootFrame + 1) / 60);
-  const verticalRoot = act < 1 ? 0 : smoothStep((rootFrame - 14) / 60);
-  const completion = act < 2 ? 0 : smoothStep((completionFrame + 1) / 68);
-  const count = act < 3 ? 0 : smoothStep((countFrame + 1) / 35);
-
+  const frame = ((frameIndex % TOTAL_FRAMES) + TOTAL_FRAMES) % TOTAL_FRAMES;
+  const act = actAt(frame);
   return {
-    frameIndex: wrapped,
+    frameIndex: frame,
     act,
     actName: ACTS[act],
-    horizontalRoot,
-    verticalRoot,
-    completion,
-    // The five-by-five block begins five units above its place. Existing regions are
-    // painted over it, so it passes behind the thirty-nine and emerges only in the gap.
-    completionOffsetTwice: -SIDE_WIDTH_TWICE * (1 - completion),
-    count
+    unknownTiles: clamp01((frame - 4) / 36) * UNKNOWN_TILES,
+    rootTiles: clamp01((frame - 44) / 60) * ROOT_TILES,
+    cornerWave: clamp01((frame - 140) / 36) * CORNER_WAVES,
+    gap: span(frame, 108, 124) * (1 - span(frame, 140, 150)),
+    count: span(frame, 186, 206),
+    sideCount: clamp01((frame - 206) / 32) * COMPLETED_SIDE,
+    fallAway: span(frame, 244, 262)
   };
 }

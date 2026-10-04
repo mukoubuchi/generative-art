@@ -5,6 +5,7 @@ import {
   ACT_FRAMES,
   ACTS,
   ADDED_AREA,
+  CORNER_WAVES,
   ADDED_AREA_QUARTERS,
   COMPLETED_AREA,
   COMPLETED_AREA_QUARTERS,
@@ -20,11 +21,13 @@ import {
   PROOF_SIDE_COUNT,
   REGIONS,
   ROOT_COEFFICIENT,
+  ROOT_TILES,
   SIDE_WIDTH_TWICE,
   TOTAL_FRAMES,
   UNIT_ON_PAGE,
   UNKNOWN_SIDE,
   UNKNOWN_SIDE_TWICE,
+  UNKNOWN_TILES,
   WING_COUNT,
   WING_WIDTH,
   WING_WIDTH_TWICE,
@@ -159,11 +162,18 @@ test("the two strips and their missing corner partition one exact eight-by-eight
   assert.notDeepEqual(marginsOf(shifted), [PAGE_MARGIN, PAGE_MARGIN, PAGE_MARGIN, PAGE_MARGIN]);
 });
 
-test("the clip has four ordered acts and each adds only what the proof calls for", () => {
+test("the clip counts the proof tile by tile, in four ordered acts", () => {
   assert.equal(TOTAL_FRAMES, PLAYBACK_FPS * DURATION_SECONDS);
   assert.equal(TOTAL_FRAMES, 300);
   assert.deepEqual(ACTS, ["unknown", "roots", "completion", "count"]);
   assert.equal(ACT_FRAMES.reduce((sum, frames) => sum + frames, 0), TOTAL_FRAMES);
+  // The tiles are the areas: nine and thirty make the thirty-nine the problem states, and
+  // the corner's nine diagonal waves lay its twenty-five, which make the sixty-four.
+  assert.equal(UNKNOWN_TILES, 9);
+  assert.equal(ROOT_TILES, 30);
+  assert.equal(UNKNOWN_TILES + ROOT_TILES, GIVEN_AREA);
+  assert.equal(CORNER_WAVES, 9);
+  assert.equal(COMPLETED_SIDE * COMPLETED_SIDE, GIVEN_AREA + ADDED_AREA);
 
   let previous = -1;
   const seen = new Set();
@@ -176,25 +186,28 @@ test("the clip has four ordered acts and each adds only what the proof calls for
   }
   assert.deepEqual([...seen], [0, 1, 2, 3]);
 
-  const unknown = sceneAt(30);
+  const unknown = sceneAt(40);
   assert.equal(unknown.actName, "unknown");
-  assert.deepEqual([unknown.horizontalRoot, unknown.verticalRoot, unknown.completion, unknown.count],
-    [0, 0, 0, 0]);
+  assert.deepEqual([unknown.unknownTiles, unknown.rootTiles, unknown.cornerWave, unknown.count], [9, 0, 0, 0]);
 
-  const roots = sceneAt(135);
+  const roots = sceneAt(104);
   assert.equal(roots.actName, "roots");
-  assert.deepEqual([roots.horizontalRoot, roots.verticalRoot], [1, 1]);
-  assert.deepEqual([roots.completion, roots.count], [0, 0]);
+  assert.deepEqual([roots.unknownTiles, roots.rootTiles, roots.cornerWave], [9, 30, 0]);
+  // The empty corner is outlined while the thirty-nine wait, and only then.
+  assert.equal(sceneAt(130).gap, 1);
+  assert.equal(sceneAt(100).gap, 0);
+  assert.equal(sceneAt(160).gap, 0);
 
-  const corner = sceneAt(220);
+  const corner = sceneAt(180);
   assert.equal(corner.actName, "completion");
-  assert.equal(corner.completion, 1);
+  assert.equal(corner.cornerWave, CORNER_WAVES);
   assert.equal(corner.count, 0);
 
   const count = sceneAt(285);
   assert.equal(count.actName, "count");
-  assert.equal(count.completion, 1);
   assert.equal(count.count, 1);
+  assert.equal(count.sideCount, COMPLETED_SIDE);
+  assert.equal(count.fallAway, 1);
   assert.equal(actAt(TOTAL_FRAMES), 0);
 });
 
@@ -214,16 +227,8 @@ function forbiddenMarks(source) {
   return calls.sort();
 }
 
-test("the drawing vocabulary has fields, hatching, grids and borders but no notation", () => {
-  const allowedFunctions = [
-    "CellGrid",
-    "CountingGrid",
-    "Field",
-    "Frame",
-    "Hatch",
-    "InsideBorder",
-    "Region"
-  ];
+test("the drawing vocabulary has tiles, a gap, a count and the frame but no notation", () => {
+  const allowedFunctions = ["Count", "Frame", "Gap", "Tiles"];
   assert.deepEqual(drawingFunctions(SKETCH), allowedFunctions);
   for (const name of allowedFunctions) {
     const calls = [...SKETCH.matchAll(new RegExp(`\\bdraw${name}\\(`, "gu"))];
@@ -242,16 +247,24 @@ test("the drawing vocabulary has fields, hatching, grids and borders but no nota
   assert.deepEqual(forbiddenMarks(`${SKETCH}\np.text("8", 0, 0);`), ["text"]);
 });
 
-test("umber belongs only to the missing corner and cannot be changed by a URL", () => {
-  assert.match(SKETCH, /const UMBER = \[156, 100, 66\];/u);
-  assert.match(SKETCH, /const COMPLETION_INK = UMBER;/u);
-  assert.match(SKETCH, /colour: COMPLETION_INK,/u);
-  assert.match(SKETCH, /fillAlpha: 28,/u);
-  assert.match(SKETCH, /hatchAlpha: 142,/u);
-  assert.match(SKETCH, /gridAlpha: 54,/u);
-  assert.match(SKETCH, /palette: "umber",/u);
+test("each part of the proof has one of the paper works' colours, and a URL cannot change them", () => {
+  const colours = JSON.parse(SKETCH.match(/const COLOURS = Object\.freeze\((\{[\s\S]*?\})\);/u)[1]
+    .replace(/(\w+):/gu, '"$1":'));
+  const yinYang = readFileSync(new URL("../artworks/one-yin-one-yang/sketch.js", import.meta.url), "utf8");
+  const herringbone = readFileSync(new URL("../artworks/herringbone/sketch.js", import.meta.url), "utf8");
+  const literal = (source, name) => JSON.parse(source.match(new RegExp(`const ${name} = (\\[[\\s\\S]*?\\]);`, "u"))[1]);
+  assert.deepEqual(colours, {
+    unknown: literal(yinYang, "YIN")[1],
+    root: literal(herringbone, "WARP_RUSSET"),
+    completion: literal(yinYang, "YANG")[1]
+  });
+  assert.match(SKETCH, /const PAPER = \[230, 224, 208\];/u);
+  assert.match(SKETCH, /palette: "blue, russet and ochre on paper",/u);
   assert.doesNotMatch(SKETCH, /PARAMETERS\.get\("palette"\)/u);
-  assert.equal((SKETCH.match(/colour: COMPLETION_INK,/gu) ?? []).length, 1);
+  // Each colour is used by the one part it belongs to.
+  for (const part of ["unknown", "root", "completion"]) {
+    assert.ok((SKETCH.match(new RegExp(`COLOURS\\.${part}\\b`, "gu")) ?? []).length >= 1, part);
+  }
 });
 
 test("the manifest registers a ten-second square clip and its completed thumbnail", () => {
@@ -339,7 +352,8 @@ test("the notes state the proof choice, attribution boundary and witness level",
   assert.match(README, /title takes the older concrete sense carried by the Arabic root/u);
   assert.match(README, /al-jabr\* names the operation of moving a subtracted term to the other side/u);
   assert.match(README, /does not call the completion of this square \*al-jabr\*/u);
-  assert.match(README, /The missing corner alone is given one earth-coloured umber/u);
+  assert.match(README, /counted tile by tile/u);
+  assert.match(README, /One Yin, One Yang's ochre for the corner/u);
   assert.doesNotMatch(README, /visual gate/u);
 });
 
