@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   CATENARY_PARAMETER,
@@ -112,4 +113,20 @@ test("the travelling frontier reveals the arch from left to right", () => {
   for (let index = 1; index < HANGING.length; index += 1) {
     assert.ok(archShareAt(HANGING[index - 1].x, frame) >= archShareAt(HANGING[index].x, frame));
   }
+});
+
+test("the arch is in the steel of the dark, lit works, with their white heart", () => {
+  // The arch's colours are All on One Circumference's own STEEL_EDGE and HEART_WHITE.
+  const sketch = readFileSync(new URL("../artworks/what-hangs-stands/sketch.js", import.meta.url), "utf8");
+  const reference = readFileSync(new URL("../artworks/all-on-one-circumference/sketch.js", import.meta.url), "utf8");
+  const literal = (source, name) => {
+    const match = source.match(new RegExp(`const ${name} = (\\[[^\\]]*\\]);`, "u"));
+    assert.ok(match, `${name} is not declared`);
+    return JSON.parse(match[1]);
+  };
+  assert.deepEqual(literal(sketch, "ARCH"), literal(reference, "STEEL_EDGE"));
+  assert.deepEqual(literal(sketch, "HEART"), literal(reference, "HEART_WHITE"));
+  // The halo over the standing run is one path per pass, so it cannot bead at the joints.
+  assert.match(sketch, /for \(const \[alpha, weight\] of \[\[26, 26\], \[52, 14\]\]\)/u);
+  assert.match(sketch, /p\.beginShape\(\)/u);
 });

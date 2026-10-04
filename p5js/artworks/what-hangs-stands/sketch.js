@@ -33,7 +33,13 @@ const SPRINGING_Y = LOGICAL_HEIGHT / 2;
 const BACKGROUND = [10, 15, 24];
 const AXIS = [83, 96, 112];
 const CHAIN = [238, 173, 79];
-const ARCH = [102, 198, 211];
+/**
+ * The arch in the steel of the dark, lit works (All on One Circumference's STEEL_EDGE), with
+ * the white heart their stars carry drawn along it and a halo added under the part of it
+ * that already stands.
+ */
+const ARCH = [156, 192, 240];
+const HEART = [248, 250, 255];
 const STONE = [181, 196, 202];
 const LOAD = [226, 96, 79];
 
@@ -78,14 +84,46 @@ new P5((p) => {
     p.line(a.x, a.y, b.x, b.y);
   }
 
+  /**
+   * The halo under the arch, added to what lies beneath. The run of the arch that already
+   * stands is haloed as one path, so the two passes do not pile up into beads at its joints;
+   * a segment still at the front, part chain and part arch, is added on its own below.
+   */
+  function drawArchHalo(frameIndex) {
+    const lit = [];
+    for (let index = 0; index < HANGING.length - 1; index += 1) {
+      const middleX = (HANGING[index].x + HANGING[index + 1].x) / 2;
+      if (archShareAt(middleX, frameIndex) >= 0.999) lit.push(index);
+    }
+    p.blendMode(p.ADD);
+    p.noFill();
+    for (const [alpha, weight] of [[26, 26], [52, 14]]) {
+      p.stroke(...ARCH, alpha);
+      p.strokeWeight(weight);
+      let open = false;
+      lit.forEach((index, at) => {
+        if (!open) { p.beginShape(); const a = canvasPoint(ARCH_NODES[index]); p.vertex(a.x, a.y); open = true; }
+        const b = canvasPoint(ARCH_NODES[index + 1]); p.vertex(b.x, b.y);
+        if (at === lit.length - 1 || lit[at + 1] !== index + 1) { p.endShape(); open = false; }
+      });
+    }
+    p.blendMode(p.BLEND);
+  }
+
   function drawStructures(frameIndex) {
+    drawArchHalo(frameIndex);
     for (let index = 0; index < HANGING.length - 1; index += 1) {
       const middleX = (HANGING[index].x + HANGING[index + 1].x) / 2;
       const archShare = archShareAt(middleX, frameIndex);
       const chainShare = 1 - archShare;
       drawMember(HANGING[index], HANGING[index + 1], CHAIN, 32 + 223 * chainShare, 2.8);
+      if (archShare < 0.999) {
+        p.blendMode(p.ADD);
+        drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], ARCH, 26 * archShare, 26);
+        drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], ARCH, 52 * archShare, 14);
+        p.blendMode(p.BLEND);
+      }
       drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], ARCH, 32 + 223 * archShare, 7.5);
-      drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], STONE, 20 + 100 * archShare, 1.2);
     }
 
     for (let index = 1; index < HANGING.length - 1; index += 1) {
@@ -105,6 +143,13 @@ new P5((p) => {
       p.circle(lower.x, lower.y, 7);
       p.fill(...ARCH, 45 + 210 * archShare);
       p.circle(upper.x, upper.y, 5.5);
+    }
+
+    // The arch's white heart line goes over its joints, so it reads as one line.
+    for (let index = 0; index < HANGING.length - 1; index += 1) {
+      const middleX = (HANGING[index].x + HANGING[index + 1].x) / 2;
+      const archShare = archShareAt(middleX, frameIndex);
+      drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], HEART, 40 + 215 * archShare, 1.8);
     }
   }
 
