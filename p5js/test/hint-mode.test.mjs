@@ -191,7 +191,7 @@ function recordingSketch() {
     colours,
     RGB: "rgb", LEFT: "left", BOTTOM: "bottom",
     push() {}, pop() {}, colorMode() {}, noStroke() {}, noFill() {}, textAlign() {},
-    textSize() {}, strokeWeight() {}, rect() {}, text() {},
+    textFont() {}, textSize() {}, strokeWeight() {}, rect() {}, text() {},
     textWidth: (text) => String(text).length * 7,
     fill: (...colour) => colours.push(colour),
     stroke: (...colour) => colours.push(colour)

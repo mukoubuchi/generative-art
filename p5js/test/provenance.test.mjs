@@ -342,5 +342,5 @@ test("the binary rule reads every format the tree holds, and each holds a clean 
       assert.fail(`${file} is a binary of a format the rule cannot read`);
     }
   }
-  assert.deepEqual(kinds, { png: 4, jpeg: 0, mp4: 1, glb: 1, embedded: 3, woff2: 0 });
+  assert.deepEqual(kinds, { png: 4, jpeg: 0, mp4: 1, glb: 1, embedded: 3, woff2: 1 });
 });

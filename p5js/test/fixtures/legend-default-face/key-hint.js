@@ -1,57 +1,3 @@
-/**
- * The typeface every legend is set in, and every key the captured clips light: Inter
- * 4.001, by The Inter Project Authors, under the SIL Open Font License 1.1, whose text sits
- * beside the file. It is served from this repository so that a legend looks the same
- * wherever it is drawn. Named by nothing but the browser's default, the line came out in
- * each machine's own sans-serif: the gallery's cards, drawn on CI's Linux, set it thinner
- * than this Mac does, and Still There's arrows came out small and low in their caps.
- *
- * The file is the face's text design (optical size 14) at regular weight, cut down to the
- * printable ASCII characters, the middle dot and the four arrows: 11,460 bytes. Inter has
- * no Reserved Font Name, so the cut-down font keeps its name.
- */
-export const HINT_FACE = "Inter Legend";
-
-/** What the legend asks for: the face, and the browser's own sans-serif if it never arrives. */
-export const HINT_FONT = `${HINT_FACE}, sans-serif`;
-
-export const HINT_FACE_FILE = new URL("./fonts/inter-legend.woff2", import.meta.url);
-
-/**
- * Loads the face into the page's fonts and says how that went: "loaded", "failed", or
- * "absent" where there is no page to load it into, as when a test draws a legend.
- *
- * A failed load does not stop the artwork. The legend falls back to the browser's
- * sans-serif and the failure goes to the console, because a reader can still use a page
- * whose legend is in another face. It is the capture paths that refuse to go on without
- * it: a card or a clip drawn in a fallback is the very thing the face is here to prevent,
- * and the renderer reads the status this module publishes before it writes either.
- */
-export async function loadHintFace({ FontFace: Face, document: page, console: log } = globalThis) {
-  if (typeof Face !== "function" || !page?.fonts) {
-    return "absent";
-  }
-  try {
-    const face = new Face(HINT_FACE, `url("${HINT_FACE_FILE.href}")`);
-    await face.load();
-    page.fonts.add(face);
-    return "loaded";
-  } catch (error) {
-    log?.error(`The legend's typeface did not load, so the legend is set in the browser's sans-serif instead: ${error?.message ?? error}`);
-    return "failed";
-  }
-}
-
-/**
- * Awaited here, at the top of the module, so that no sketch drawing a legend or a key
- * indicator starts before the face has either loaded or failed. A page that stops drawing
- * once it has drawn — Still There at rest — would otherwise keep whatever it drew first.
- */
-export const HINT_FACE_STATUS = await loadHintFace();
-if (typeof window !== "undefined") {
-  window.__HINT_FACE__ = HINT_FACE_STATUS;
-}
-
 /** Type size and inset as fractions of the canvas's shorter side. */
 export const HINT_SIZE_RATIO = 0.026;
 export const HINT_INSET_RATIO = 0.032;
@@ -188,8 +134,6 @@ export function drawKeyHint(p, segments, width, height, scale = 1) {
   // Restores on pop, so this works whatever colour mode the artwork is drawing in.
   p.colorMode(p.RGB, 255);
   p.noStroke();
-  // Set before anything is measured, so the fitting below measures the face it draws in.
-  p.textFont(HINT_FONT);
   p.textAlign(p.LEFT, p.BOTTOM);
 
   // Set at the size it wants, or at the largest size that fits, whichever is smaller.
@@ -241,8 +185,7 @@ export function drawKeyHint(p, segments, width, height, scale = 1) {
     right: plate.left + plate.width,
     bottom: plate.top + plate.height,
     size,
-    canvas: { width, height },
-    face: HINT_FACE_STATUS
+    canvas: { width, height }
   };
   // Recorded where the renderer can find it. Text is only as wide as a browser says it
   // is, so whether a legend fits cannot be settled anywhere but in the page — and this

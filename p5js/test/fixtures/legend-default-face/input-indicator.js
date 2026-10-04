@@ -3,7 +3,6 @@ import {
   CAP_PADDING,
   CAP_RADIUS,
   CAP_RISE,
-  HINT_FONT,
   HINT_INSET_RATIO,
   capWidth,
   hintTextSize
@@ -25,8 +24,7 @@ import {
  *
  * One design for all eight, in two voices. A pointer is an abstract dot — dark core, light
  * rim, so it reads on the white artworks and the black ones alike — with a ripple on press.
- * A key is the same token the page's legend sets it in, lit while it is down, and in the
- * legend's own typeface.
+ * A key is the same token the page's legend sets it in, lit while it is down.
  */
 export const POINTER_RADIUS_RATIO = 0.011;
 export const RIPPLE_FRAMES = 12;
@@ -85,7 +83,6 @@ export function drawKeyIndicator(p, keys, width, height) {
 
   p.push();
   p.colorMode(p.RGB, 255);
-  p.textFont(HINT_FONT);
   p.textSize(size);
   p.textAlign(p.LEFT, p.BOTTOM);
 

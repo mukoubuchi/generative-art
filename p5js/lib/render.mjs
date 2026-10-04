@@ -27,7 +27,8 @@ const CONTENT_TYPES = new Map([
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
-  [".mjs", "text/javascript; charset=utf-8"]
+  [".mjs", "text/javascript; charset=utf-8"],
+  [".woff2", "font/woff2"]
 ]);
 
 function serveFile(response, path) {
@@ -245,6 +246,21 @@ async function renderVideo(page, artwork, artifactPath, defaults, outputSize) {
  */
 export const THUMBNAIL_HINT_SCALE = 1.7;
 
+/**
+ * Why a capture may not be written, as far as the legend's typeface goes, or null if it may.
+ *
+ * A page that draws a legend or a key indicator records whether the face loaded. On a
+ * reader's page a failure only costs the face; a card or a clip drawn in the fallback
+ * would be published that way, so the capture paths stop instead. A page with no legend
+ * module records nothing, and nothing is asked of it.
+ */
+export function hintFaceRefusal(artworkId, status) {
+  if (status === undefined || status === null || status === "loaded") {
+    return null;
+  }
+  return `${artworkId}: the legend's typeface has not loaded (${status}), so the capture would be set in a fallback`;
+}
+
 async function openArtworkPage(browser, serverBaseUrl, artwork, scale, extraParameters = {}) {
   const outputSize = {
     width: artwork.canvas.width * scale,
@@ -267,6 +283,12 @@ async function openArtworkPage(browser, serverBaseUrl, artwork, scale, extraPara
     });
     if (pageErrors.length > 0) {
       throw new Error(`Artwork page failed:\n${pageErrors.join("\n")}`);
+    }
+    // A clip's key indicator and a card's legend are set in the legend's face; neither is
+    // captured in a fallback.
+    const faceRefusal = hintFaceRefusal(artwork.id, await page.evaluate(() => window.__HINT_FACE__));
+    if (faceRefusal) {
+      throw new Error(faceRefusal);
     }
 
     const canvasSize = await page.locator("canvas").evaluate((canvas) => ({
@@ -338,6 +360,11 @@ async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width
     // place a legend overruns first — and the run stops rather than writing a card with
     // the words running off the edge.
     const hint = await page.evaluate(() => window.__KEY_HINT_BOUNDS__ ?? null);
+    // And the legend on this very picture says which face it was drawn in.
+    const legendRefusal = hint ? hintFaceRefusal(artwork.id, hint.face ?? "unrecorded") : null;
+    if (legendRefusal) {
+      throw new Error(legendRefusal);
+    }
     if (hint && (hint.left < 0 || hint.right > hint.canvas.width || hint.bottom > hint.canvas.height)) {
       throw new Error(
         `${artwork.id}: the legend runs outside the canvas ` +
