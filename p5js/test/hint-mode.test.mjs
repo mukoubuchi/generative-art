@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import { P5JS_DIRECTORY, loadCatalog } from "../lib/catalog.mjs";
@@ -7,6 +7,8 @@ import { hintMode } from "../artworks/shared/hint-mode.js";
 import { NUMBER_WORDS } from "./number-words.mjs";
 import {
   HINT_INSET_RATIO,
+  HINT_TONE,
+  drawKeyHint,
   fitHintSize,
   hintTextSize,
   legendRoom
@@ -136,4 +138,119 @@ test("the README's roll of interactive artworks is the sketches' own", async () 
   }
   assert.deepEqual(rows.slice().sort(), carrying.slice().sort());
   assert.equal(carrying.length, stated);
+});
+
+/**
+ * The legend is the page's, not the artwork's, so every page draws it in one tone. Still
+ * There passed its own, with a plate the colour of its ground, and its legend lost the
+ * plate that every other page has. Two things are held here: what the shared drawing
+ * actually paints, and what each artwork hands it.
+ */
+
+/** Every argument list of a drawKeyHint call in a source, split at its own top-level commas. */
+function keyHintCalls(source) {
+  const calls = [];
+  for (const match of source.matchAll(/^(?!\s*(?:\/\/|\*|import\b)).*?\bdrawKeyHint\(/gmu)) {
+    const args = [];
+    let depth = 0;
+    let quote = null;
+    let current = "";
+    for (let index = match.index + match[0].length; index < source.length; index += 1) {
+      const character = source[index];
+      if (quote) {
+        quote = character === quote ? null : quote;
+      } else if (`"'\``.includes(character)) {
+        quote = character;
+      } else if ("([{".includes(character)) {
+        depth += 1;
+      } else if (")]}".includes(character)) {
+        if (depth === 0) {
+          break;
+        }
+        depth -= 1;
+      } else if (character === "," && depth === 0) {
+        args.push(current.trim());
+        current = "";
+        continue;
+      }
+      current += character;
+    }
+    args.push(current.trim());
+    calls.push(args.filter((argument) => argument !== ""));
+  }
+  return calls;
+}
+
+/** Layer, segments, width, height and scale; anything after them is a tone of its own. */
+const handsItsOwnTone = (args) => args.length > 5;
+
+/** A stand-in for p5 that remembers every colour it is asked to paint in. */
+function recordingSketch() {
+  const colours = [];
+  return {
+    colours,
+    RGB: "rgb", LEFT: "left", BOTTOM: "bottom",
+    push() {}, pop() {}, colorMode() {}, noStroke() {}, noFill() {}, textAlign() {},
+    textSize() {}, strokeWeight() {}, rect() {}, text() {},
+    textWidth: (text) => String(text).length * 7,
+    fill: (...colour) => colours.push(colour),
+    stroke: (...colour) => colours.push(colour)
+  };
+}
+
+test("the shared legend paints only in the shared tone, whatever it is handed", () => {
+  const legend = [{ cap: "←", text: "back" }, { cap: "space", text: "run / pause" }];
+  const tones = new Set(Object.values(HINT_TONE).map((colour) => colour.join(",")));
+  // Called as every page calls it, and called as Still There used to, with a tone of its
+  // own: a plate the colour of its ground. Neither may reach the canvas.
+  const ownTone = { plate: [8, 15, 25, 230], ink: [218, 223, 221, 230], cap: [153, 179, 188, 180] };
+  for (const extra of [[], [ownTone]]) {
+    const sketch = recordingSketch();
+    drawKeyHint(sketch, legend, 680, 680, 1, ...extra);
+    assert.ok(sketch.colours.length >= 5, "the legend painted nothing to check");
+    for (const colour of sketch.colours) {
+      assert.ok(tones.has(colour.join(",")), `the legend painted in ${colour.join(",")}`);
+    }
+    // The plate is painted, and painted first, so the line always has its bar under it.
+    assert.deepEqual(sketch.colours[0], HINT_TONE.plate);
+  }
+});
+
+test("no artwork hands the legend a tone of its own", async () => {
+  const artworks = resolve(P5JS_DIRECTORY, "artworks");
+  const found = new Map();
+  for (const entry of await readdir(artworks, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === "shared") {
+      continue;
+    }
+    for (const file of await readdir(resolve(artworks, entry.name))) {
+      if (!file.endsWith(".js")) {
+        continue;
+      }
+      const calls = keyHintCalls(await readFile(resolve(artworks, entry.name, file), "utf8"));
+      if (calls.length > 0) {
+        found.set(entry.name, [...(found.get(entry.name) ?? []), ...calls]);
+      }
+    }
+  }
+  // The scan has to reach every legend there is, or a clean result means nothing. These
+  // are the nine pages that answer to the reader; a tenth is added here by hand.
+  assert.deepEqual([...found.keys()].sort(), [
+    "atan2", "electric-fan", "moire-rings", "platonic-duals", "pulse-button",
+    "still-there", "troubling-of-a-star", "turn-it-and-turn-it", "windmill"
+  ]);
+  for (const [id, calls] of found) {
+    assert.equal(calls.length, 1, `${id} draws ${calls.length} legends`);
+    for (const args of calls) {
+      assert.ok(!handsItsOwnTone(args), `${id} hands the legend ${args.join(", ")}`);
+    }
+  }
+
+  // Still There as it stood when its legend lost its plate, frozen outside artworks/.
+  const specimen = await readFile(new URL("./fixtures/legend-own-tone/sketch.js", import.meta.url), "utf8");
+  const [specimenCall, ...rest] = keyHintCalls(specimen);
+  assert.equal(rest.length, 0);
+  assert.deepEqual(specimenCall, ["p", "HINT_LEGEND", "LOGICAL_SIZE", "LOGICAL_SIZE", "HINT.scale", "TONE"]);
+  assert.ok(handsItsOwnTone(specimenCall), "the check passes the call it was written against");
+  assert.ok(specimen.includes("const TONE = { plate: [8, 15, 25, 230]"), "the specimen is not the faulty sketch");
 });
