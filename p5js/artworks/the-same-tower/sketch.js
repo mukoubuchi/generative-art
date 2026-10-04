@@ -25,7 +25,8 @@ const OUTPUT_SIZE = LOGICAL_SIZE * RENDER_SCALE;
 const NEAR_PLANE = STAGE_SCALE * 0.5;
 const FAR_PLANE = STAGE_SCALE * 40;
 const ETCHING = towerEtching();
-const LINE_SEGMENTS = ETCHING.reduce((count, layer) => count + layer.segments.length, 0);
+// Every pass draws the same lines, so the tower has as many as one pass does.
+const LINE_SEGMENTS = ETCHING[0].segments.length;
 
 const P5 = window.p5;
 
@@ -43,9 +44,11 @@ new P5((p) => {
     gl.disable(gl.DEPTH_TEST);
     p.noFill();
     for (const { geometry, colour, alpha, weight } of inkLayers) {
+      p.blendMode(p.ADD);
       p.stroke(...colour, alpha);
       p.strokeWeight(weight * RENDER_SCALE);
       p.model(geometry);
+      p.blendMode(p.BLEND);
     }
     gl.enable(gl.DEPTH_TEST);
   }
@@ -71,7 +74,7 @@ new P5((p) => {
       walls: 0,
       lineSegments: LINE_SEGMENTS,
       drawingLayers: inkLayers.length,
-      palette: "black on warm white",
+      palette: "starlight on night",
       logicalSize: { width: LOGICAL_SIZE, height: LOGICAL_SIZE },
       outputSize: { width: OUTPUT_SIZE, height: OUTPUT_SIZE }
     };

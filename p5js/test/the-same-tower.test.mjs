@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { escapeHtml, renderIndexPage } from "../lib/gallery.mjs";
@@ -62,7 +63,7 @@ import {
   wallQuads
 } from "../artworks/the-same-tower/the-same-tower.js";
 import {
-  CORE_ALPHA, CORE_WEIGHT, GROUND, INK, onStage, towerEtching
+  CORE_ALPHA, CORE_WEIGHT, GROUND, PASSES, STARLIGHT, onStage, towerEtching
 } from "../artworks/the-same-tower/etching.js";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
@@ -632,8 +633,8 @@ test("the notes name both editions, keep the extension as the project's, and say
   assert.match(section, /an arrival beat/u);
   assert.match(section, /multiplied by nineteen tenths and the multiplier falls back to one over eighteen frames/u);
   assert.match(section, /The glow it multiplies is the measurement and is unchanged; the beat is staging/u);
-  assert.match(section, /black single lines/u);
-  assert.match(section, /warm white ground shared by The Hat, Herringbone and Pinwheel/u);
+  assert.match(section, /Recursive Pentagram's starlight \(RGB 202, 192, 232\) on its night \(10, 12, 18\)/u);
+  assert.match(section, /two wider, fainter passes for a glow, then the line/u);
   assert.match(section, /No face is filled/u);
   assert.match(section, /thirty frames \(one second\)/u);
   assert.match(section, /elapsed time/u);
@@ -681,7 +682,7 @@ test("the sketch's whole drawing vocabulary is lines and the eye, and nothing of
   const source = readFileSync(SKETCH_URL, "utf8");
   const called = new Set([...source.matchAll(/\bp\.([a-zA-Z]+)\(/gu)].map((match) => match[1]));
   assert.deepEqual([...called].sort(), [
-    "background", "buildGeometry", "camera", "createCanvas", "frameRate", "line",
+    "background", "blendMode", "buildGeometry", "camera", "createCanvas", "frameRate", "line",
     "linePerspective", "model", "noFill", "noLoop", "perspective", "pixelDensity",
     "pop", "push", "setAttributes", "stroke", "strokeWeight"
   ]);
@@ -697,22 +698,34 @@ test("the sketch's whole drawing vocabulary is lines and the eye, and nothing of
   assert.match(source, /p\.linePerspective\(false\)/u);
 });
 
-test("black single lines follow the exact floors and four corner axes on the existing warm white ground", () => {
+test("starlight lines follow the exact floors and four corner axes on Recursive Pentagram's night", () => {
   const layers = towerEtching();
-  assert.equal(layers.length, 1);
-  const [layer] = layers;
-  assert.deepEqual(layer.colour, [0, 0, 0]);
-  assert.deepEqual(INK, [0, 0, 0]);
-  assert.equal(layer.alpha, 255);
-  assert.equal(layer.weight, CORE_WEIGHT);
-  const reference = readFileSync(new URL("../artworks/the-hat/sketch.js", import.meta.url), "utf8");
-  assert.deepEqual(GROUND, JSON.parse(reference.match(/const GROUND = (\[[^\]]+\]);/u)[1]));
+  // Three passes, all of the same lines: two wide faint ones for the glow, then the line.
+  assert.deepEqual(layers.map(({ role, alpha, weight }) => [role, alpha, weight]), [
+    ["glow-wide", 14, 9], ["glow-near", 40, 4], ["tower-lines", CORE_ALPHA, CORE_WEIGHT]
+  ]);
+  assert.equal(PASSES.length, layers.length);
+  const reference = readFileSync(new URL("../artworks/recursive-pentagram/sketch.js", import.meta.url), "utf8");
+  const literal = (name) => JSON.parse(reference.match(new RegExp(`const ${name} = (\\[[^\\]]+\\]);`, "u"))[1]);
+  assert.deepEqual(GROUND, literal("GROUND"));
+  assert.deepEqual(STARLIGHT, literal("STARLIGHT"));
   const floors = FLOOR_HEIGHTS.flatMap((height) => {
     const rim = rimAt(height);
     return rim.slice(1).map((to, index) => [onStage(rim[index]), onStage(to)]);
   });
-  assert.deepEqual(layer.segments, [...floors, ...verticals().map((ends) => ends.map(onStage))]);
-  assert.equal(layer.segments.length, FLOOR_COUNT * (RIM_SEGMENTS + 2) + 4);
+  for (const layer of layers) {
+    assert.deepEqual(layer.colour, STARLIGHT);
+    assert.deepEqual(layer.segments, [...floors, ...verticals().map((ends) => ends.map(onStage))]);
+    assert.equal(layer.segments.length, FLOOR_COUNT * (RIM_SEGMENTS + 2) + 4);
+  }
+});
+
+test("the staging is the one the reader approved, frame for frame", () => {
+  // The look changed and the motion did not: every frame's scene -- eye, look-at, lens,
+  // glows, act -- hashes to what it was when the starlight replaced the black lines.
+  const hash = createHash("sha256");
+  for (let frame = 0; frame < TOTAL_FRAMES; frame += 1) hash.update(JSON.stringify(sceneAt(frame)));
+  assert.equal(hash.digest("hex"), "e88482aba7f270b7a335526f207fe36c67fb87122307eaec2c2d11196bf2682d");
 });
 
 async function loadSketch(search, record) {
@@ -787,7 +800,7 @@ function freshRecord() {
   };
 }
 
-test("export draws each black line once, with a static opening and no glow passes", async () => {
+test("export draws each line in its three added passes, with a static opening", async () => {
   const priorWindow = globalThis.window;
   const record = freshRecord();
   const layers = towerEtching();
@@ -799,8 +812,10 @@ test("export draws each black line once, with a static opening and no glow passe
     assert.deepEqual(record.linePerspective, [false]);
     assert.deepEqual(record.density, [1]);
     assert.deepEqual(record.frameRate, [30]);
-    assert.equal(record.geometries.length, 1);
-    assert.deepEqual(record.geometries[0].lines, layers[0].segments.map((line) => line.flat()));
+    assert.equal(record.geometries.length, PASSES.length);
+    for (const [index, geometry] of record.geometries.entries()) {
+      assert.deepEqual(geometry.lines, layers[index].segments.map((line) => line.flat()));
+    }
     for (const frame of [0, 15, 29, 30, NEAR_FRAME, 220, 389, 390]) {
       const state = await window.__renderFrame(frame);
       const scene = sceneAt(frame);
@@ -809,21 +824,21 @@ test("export draws each black line once, with a static opening and no glow passe
       assert.deepEqual(state.eye, scene.eye);
       assert.equal(state.walls, 0);
       assert.equal(state.lineSegments, lineCount);
-      assert.equal(state.drawingLayers, 1);
-      assert.equal(state.palette, "black on warm white");
+      assert.equal(state.drawingLayers, PASSES.length);
+      assert.equal(state.palette, "starlight on night");
       assert.deepEqual(state.outputSize, { width: 1360, height: 1360 });
       assert.deepEqual(record.background, GROUND);
-      assert.deepEqual(record.strokes, [[0, 0, 0, CORE_ALPHA]]);
-      assert.deepEqual(record.weights, [CORE_WEIGHT * 2]);
+      assert.deepEqual(record.strokes, PASSES.map(({ alpha }) => [...STARLIGHT, alpha]));
+      assert.deepEqual(record.weights, PASSES.map(({ weight }) => weight * 2));
       assert.deepEqual(record.models, record.geometries);
-      assert.equal(record.lines.length, lineCount);
-      assert.deepEqual(record.blends, []);
+      assert.equal(record.lines.length, PASSES.length * lineCount);
+      assert.deepEqual(record.blends, PASSES.flatMap(() => ["ADD", "BLEND"]));
       assert.deepEqual(record.fills, []);
       assert.equal(record.vertices, 0);
       assert.deepEqual(record.camera, [[...onStage(scene.eye), ...onStage(scene.lookAt), 0, 1, 0]]);
       assert.deepEqual(record.perspective, [[scene.fieldOfView, 1, 50, 4000]]);
     }
-    assert.equal(record.geometries.length, 1);
+    assert.equal(record.geometries.length, PASSES.length);
     assert.equal(record.directLines, 0);
   } finally {
     if (priorWindow === undefined) delete globalThis.window;
