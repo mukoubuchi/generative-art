@@ -40,6 +40,11 @@ const CHAIN = [238, 173, 79];
  */
 const ARCH = [156, 192, 240];
 const HEART = [248, 250, 255];
+/**
+ * The chain lit the same way while it hangs: its own gold under the same halo, and a heart
+ * line in the gold edge the dark works' stars carry (All on One Circumference's GOLD_EDGE).
+ */
+const CHAIN_HEART = [252, 204, 116];
 const STONE = [181, 196, 202];
 const LOAD = [226, 96, 79];
 
@@ -148,7 +153,9 @@ new P5((p) => {
   }
 
   function drawStructures(frameIndex) {
-    drawHalo(ARCH_NODES, ARCH, (index) => archShareAt((HANGING[index].x + HANGING[index + 1].x) / 2, frameIndex));
+    const archShareOf = (index) => archShareAt((HANGING[index].x + HANGING[index + 1].x) / 2, frameIndex);
+    drawHalo(HANGING, CHAIN, (index) => 1 - archShareOf(index));
+    drawHalo(ARCH_NODES, ARCH, archShareOf);
     for (let index = 0; index < HANGING.length - 1; index += 1) {
       const middleX = (HANGING[index].x + HANGING[index + 1].x) / 2;
       const archShare = archShareAt(middleX, frameIndex);
@@ -176,11 +183,12 @@ new P5((p) => {
       p.circle(upper.x, upper.y, 5.5);
     }
 
-    // The arch's white heart line goes over its joints, so it reads as one line.
+    // The heart lines go over the joints, so each reads as one line.
     for (let index = 0; index < HANGING.length - 1; index += 1) {
       const middleX = (HANGING[index].x + HANGING[index + 1].x) / 2;
       const archShare = archShareAt(middleX, frameIndex);
       drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], HEART, 40 + 215 * archShare, 1.8);
+      drawMember(HANGING[index], HANGING[index + 1], CHAIN_HEART, 40 + 215 * (1 - archShare), 1.8);
     }
   }
 

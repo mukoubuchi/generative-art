@@ -126,6 +126,12 @@ test("the arch is in the steel of the dark, lit works, with their white heart", 
   };
   assert.deepEqual(literal(sketch, "ARCH"), literal(reference, "STEEL_EDGE"));
   assert.deepEqual(literal(sketch, "HEART"), literal(reference, "HEART_WHITE"));
+  // The chain is lit the same way while it hangs: its own gold under the halo, and a heart
+  // line in the stars' gold edge.
+  assert.deepEqual(literal(sketch, "CHAIN_HEART"), literal(reference, "GOLD_EDGE"));
+  assert.match(sketch, /drawHalo\(HANGING, CHAIN, \(index\) => 1 - archShareOf\(index\)\)/u);
+  assert.match(sketch, /drawHalo\(ARCH_NODES, ARCH, archShareOf\)/u);
+  assert.match(sketch, /drawMember\(HANGING\[index\], HANGING\[index \+ 1\], CHAIN_HEART, 40 \+ 215 \* \(1 - archShare\), 1\.8\)/u);
   // The halo's two passes, and the standing run drawn as one path per pass.
   assert.match(sketch, /const HALO_PASSES = \[\[26, 26\], \[52, 14\]\];/u);
   assert.match(sketch, /runPaths\(p, nodes, run\)/u);
@@ -248,8 +254,15 @@ function worstExcess(frames, colour, joints) {
 const ARCH_JOINTS = ARCH.map((node) => [480 + node.x, 320 + node.y]);
 const ARCH_COLOUR = [156, 192, 240];
 
+const CHAIN_JOINTS = HANGING.map((node) => [480 + node.x, 320 + node.y]);
+const CHAIN_COLOUR = [238, 173, 79];
+
 test("nothing at the frontier is brighter than the arch's standing halo beside it", async () => {
   const fixed = await haloLevels(new URL("../artworks/what-hangs-stands/sketch.js", import.meta.url));
+  // The chain is haloed while it hangs by the same rule, and holds to its own level too.
+  assert.ok(fixed.some((events) => events.some((event) => event.kind === "stroke" && event.weight === 26
+    && event.stroke[0] === CHAIN_COLOUR[0] && event.stroke[1] === CHAIN_COLOUR[1])), "the chain has no halo");
+  assert.ok(worstExcess(fixed, CHAIN_COLOUR, CHAIN_JOINTS) <= 1e-9);
   assert.equal(fixed.length, TOTAL_FRAMES);
   // The halo is there to be measured: the arch is haloed in most frames, and in some the
   // frontier crosses it, so the layer is used.
