@@ -9,7 +9,7 @@ import {
   jointLoads,
   reflectedNodes,
   reflectionProgressAt
-} from "./funicular.js";
+} from "../../../artworks/what-hangs-stands/funicular.js";
 
 /**
  * A hanging chain and its reflected arch carry the same loads by opposite internal forces.
@@ -51,8 +51,6 @@ const MAX_LOAD = Math.max(...LOADS.map(({ load }) => load));
 const P5 = window.p5;
 
 new P5((p) => {
-  let frontLayer;
-
   function canvasPoint(node) {
     return { x: CENTRE_X + node.x, y: SPRINGING_Y + node.y };
   }
@@ -86,74 +84,45 @@ new P5((p) => {
     p.line(a.x, a.y, b.x, b.y);
   }
 
-  /** The halo's two passes, alpha and width: a wide faint one and a nearer one. */
-  const HALO_PASSES = [[26, 26], [52, 14]];
-
-  /** The standing run of a structure as polylines, one per unbroken stretch of segments. */
-  function runPaths(target, nodes, run) {
-    let open = false;
-    run.forEach((index, at) => {
-      if (!open) { target.beginShape(); const a = canvasPoint(nodes[index]); target.vertex(a.x, a.y); open = true; }
-      const b = canvasPoint(nodes[index + 1]); target.vertex(b.x, b.y);
-      if (at === run.length - 1 || run[at + 1] !== index + 1) { target.endShape(); open = false; }
-    });
-  }
-
   /**
-   * The halo along a structure, added to what lies beneath. The run that stands fully lit
-   * is haloed as one path, so its passes do not pile up into beads at its joints. The
-   * segments at the frontier, each lit by its share, are drawn into a layer of their own
-   * where overlapping strokes keep the brighter and do not add, the standing run's halo is
-   * cut out of that layer, and the layer is added once: so nothing at the frontier can be
-   * brighter than the standing halo beside it.
+   * The halo under the arch, added to what lies beneath. The run of the arch that already
+   * stands is haloed as one path, so the two passes do not pile up into beads at its joints;
+   * a segment still at the front, part chain and part arch, is added on its own below.
    */
-  function drawHalo(nodes, colour, shareOf) {
-    const run = [];
-    const front = [];
-    for (let index = 0; index < nodes.length - 1; index += 1) {
-      const share = shareOf(index);
-      if (share >= 0.999) run.push(index);
-      else if (share > 0) front.push([index, share]);
+  function drawArchHalo(frameIndex) {
+    const lit = [];
+    for (let index = 0; index < HANGING.length - 1; index += 1) {
+      const middleX = (HANGING[index].x + HANGING[index + 1].x) / 2;
+      if (archShareAt(middleX, frameIndex) >= 0.999) lit.push(index);
     }
-    for (const [alpha, weight] of HALO_PASSES) {
-      p.blendMode(p.ADD);
-      p.noFill();
-      p.stroke(...colour, alpha);
+    p.blendMode(p.ADD);
+    p.noFill();
+    for (const [alpha, weight] of [[26, 26], [52, 14]]) {
+      p.stroke(...ARCH, alpha);
       p.strokeWeight(weight);
-      runPaths(p, nodes, run);
-      p.blendMode(p.BLEND);
-      if (front.length === 0) continue;
-      frontLayer.push();
-      frontLayer.background(0);
-      frontLayer.scale(RENDER_SCALE);
-      frontLayer.noFill();
-      frontLayer.strokeWeight(weight);
-      frontLayer.blendMode(frontLayer.LIGHTEST);
-      for (const [index, share] of front) {
-        // What the stroke would have added, as an opaque colour, so that keeping the
-        // brighter of two is the same as adding the larger of them.
-        frontLayer.stroke(...colour.map((part) => part * alpha * share / 255));
-        const a = canvasPoint(nodes[index]);
-        const b = canvasPoint(nodes[index + 1]);
-        frontLayer.line(a.x, a.y, b.x, b.y);
-      }
-      frontLayer.blendMode(frontLayer.BLEND);
-      frontLayer.stroke(0);
-      runPaths(frontLayer, nodes, run);
-      frontLayer.pop();
-      p.blendMode(p.ADD);
-      p.image(frontLayer, 0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-      p.blendMode(p.BLEND);
+      let open = false;
+      lit.forEach((index, at) => {
+        if (!open) { p.beginShape(); const a = canvasPoint(ARCH_NODES[index]); p.vertex(a.x, a.y); open = true; }
+        const b = canvasPoint(ARCH_NODES[index + 1]); p.vertex(b.x, b.y);
+        if (at === lit.length - 1 || lit[at + 1] !== index + 1) { p.endShape(); open = false; }
+      });
     }
+    p.blendMode(p.BLEND);
   }
 
   function drawStructures(frameIndex) {
-    drawHalo(ARCH_NODES, ARCH, (index) => archShareAt((HANGING[index].x + HANGING[index + 1].x) / 2, frameIndex));
+    drawArchHalo(frameIndex);
     for (let index = 0; index < HANGING.length - 1; index += 1) {
       const middleX = (HANGING[index].x + HANGING[index + 1].x) / 2;
       const archShare = archShareAt(middleX, frameIndex);
       const chainShare = 1 - archShare;
       drawMember(HANGING[index], HANGING[index + 1], CHAIN, 32 + 223 * chainShare, 2.8);
+      if (archShare < 0.999) {
+        p.blendMode(p.ADD);
+        drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], ARCH, 26 * archShare, 26);
+        drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], ARCH, 52 * archShare, 14);
+        p.blendMode(p.BLEND);
+      }
       drawMember(ARCH_NODES[index], ARCH_NODES[index + 1], ARCH, 32 + 223 * archShare, 7.5);
     }
 
@@ -251,11 +220,6 @@ new P5((p) => {
     if (CAPTURE_MODE) {
       p.pixelDensity(1);
     }
-    // The frontier's halo layer, at the canvas's own size and density. It is drawn from,
-    // never shown, so it is taken out of the page: the page holds the artwork's one canvas.
-    frontLayer = p.createGraphics(OUTPUT_WIDTH, OUTPUT_HEIGHT);
-    frontLayer.pixelDensity(p.pixelDensity());
-    frontLayer.elt.remove();
     p.frameRate(PLAYBACK_FPS);
     if (CAPTURE_MODE) {
       p.noLoop();
