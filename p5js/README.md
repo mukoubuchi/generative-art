@@ -1062,7 +1062,7 @@ Nine artworks answer to the reader. Each page prints a single line at the foot o
 
 The line is drawn where the line is drawn: an artwork that only plays a fixed loop says nothing, because there is nothing to say. Clinamen is the near case — its page is live, and its trails accumulate as you watch — but nothing it does depends on the reader, so it carries no line.
 
-Each control is set in a token of its own and its effect follows in plain type, which is how a legend reads rather than how a sentence reads: the eye finds the key before the clause. An arrow key needs no more than its own glyph; a letter and a mouse action are named in the token. Atan2 is the one that sets its own colours — it prints readouts of its own, and the lower of them passes behind the legend, so its plate is opaque where the others let a little of the artwork through.
+Each control is set in a token of its own and its effect follows in plain type, which is how a legend reads rather than how a sentence reads: the eye finds the key before the clause. An arrow key needs no more than its own glyph; a letter and a mouse action are named in the token. Every page draws it in the same tone, whatever lies under it: Atan2 once made its plate opaque and Still There once handed it a plate the colour of its own ground, and both now draw the shared one.
 
 It is never drawn into a captured export. A still or a clip posted elsewhere cannot be typed at, so the instruction would be an untruth printed on the artwork.
 
@@ -1070,7 +1070,7 @@ What the interactive artworks' exported clips carry instead is the cause. They r
 
 The gallery thumbnail is the other way about. It is a picture of a page that *can* be typed at, and a reader choosing which card to open should be able to see there is something to do there, so the thumbnail carries the hint — and carries it 1.7 times larger than the page does. That is the one thing in a thumbnail that is not to scale, and it is chrome rather than artwork: a card fits the canvas into an opening about 353 pixels wide, so both artworks arrive there at about two fifths of their size, and the page's own eighteen-point line would land at seven. A test pins the enlarged size to the range that survives the shrink without competing with the picture. The badge on artworks that move sits at the head of the frame for the same reason — at the foot it collided with the words, whichever corner it was pushed to, once a legend grew long enough.
 
-The line sits at the bottom left rather than the bottom right because the artwork pages do not scale their canvas to the window — it is drawn at its own size and clipped — so on a narrow screen the right of the canvas is the part that disappears. It is set on a pale plate, which is close to invisible on a white artwork and is what makes the line readable on one that is not: Truchet Tides fills the foot of its canvas with indigo arcs, where grey text alone could not be read.
+The line sits at the bottom left rather than the bottom right because the artwork pages do not scale their canvas to the window — it is drawn at its own size and clipped — so on a narrow screen the right of the canvas is the part that disappears. It is set on a pale plate, which is close to invisible on a light artwork and is what makes the line readable on a dark one, and seven of the nine are dark where the line falls.
 
 ### Where the motion comes from
 
