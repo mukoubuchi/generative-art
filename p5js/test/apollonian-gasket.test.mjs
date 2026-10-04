@@ -198,10 +198,10 @@ test("the plate draws the packing, at the size the catalog registers", () => {
   assert.match(SKETCH, /from "\.\/apollonian-gasket\.js"/u);
   assert.match(SKETCH, /const CIRCLES = buildPacking\(\);/u);
   assert.match(SKETCH, /CIRCLES\.forEach\(\(circle, index\)/u);
-  // The pen answers to how large a circle is drawn, not to its bend, so the hierarchy on
-  // the page is the hierarchy of sizes.
-  assert.match(SKETCH, /function penFor\(radiusOnPage\)/u);
-  assert.equal(SKETCH.includes("penFor(circle.bend)"), false);
+  // A disc's colour is read off the clock the clip is revealed by: where its bend falls
+  // between the given four and the finest, evenly per doubling.
+  assert.match(SKETCH, /p\.fill\(\.\.\.stopColour\(arrival\(BENDS\[index\]\)\)\)/u);
+  assert.match(SKETCH, /Math\.log\(bend \/ GIVEN_BEND\) \/ Math\.log\(FINEST_BEND \/ GIVEN_BEND\)/u);
 
   const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
   const artwork = manifest.artworks.find((entry) => entry.id === "apollonian-gasket");
@@ -309,7 +309,7 @@ test("the clip's clock is the packing's own scale, and it reaches every circle",
   }
 });
 
-test("every circle is decided by three that are already on the paper", () => {
+test("every circle is decided by three that are already on the page", () => {
   // What the clip's order rests on. Revealing by curvature shows a circle the moment the
   // clock reaches its bend, and that is only the picture of a gap being answered if the
   // three circles that answer it are there first. They are, and not by arrangement: the
@@ -330,4 +330,18 @@ test("every circle is decided by three that are already on the paper", () => {
   const backwards = children.filter((child) =>
     child.parents.every((parent) => Math.abs(child.bend) < Math.abs(circles[parent].bend)));
   assert.equal(backwards.length, 0);
+});
+
+test("the colours are Kissing Circles' own night and arrival stops", () => {
+  // The two works in the collection made of touching circles share one palette: the
+  // gasket takes Kissing Circles' constants as they stand rather than a copy of their look.
+  const kissing = readFileSync(new URL("../artworks/kissing-circles/sketch.js", import.meta.url), "utf8");
+  const literal = (source, name) => {
+    const match = source.match(new RegExp(`const ${name} = (\\[[\\s\\S]*?\\]);`, "u"));
+    assert.ok(match, `${name} is not declared`);
+    return JSON.parse(match[1]);
+  };
+  assert.deepEqual(literal(SKETCH, "NIGHT"), literal(kissing, "BACKGROUND"));
+  assert.deepEqual(literal(SKETCH, "AGE_STOPS"), literal(kissing, "AGE_STOPS"));
+  assert.deepEqual(literal(SKETCH, "NIGHT"), [13, 18, 27]);
 });

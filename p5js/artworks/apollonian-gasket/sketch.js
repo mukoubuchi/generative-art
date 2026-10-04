@@ -15,7 +15,7 @@ import {
  * time: every circle appears at the moment the clock reaches its own curvature. Two things
  * come of that. Every frame is a whole packing rather than a half-drawn one -- the picture
  * at any moment is exactly this packing cut off at a curvature. And the three circles that
- * decide a fourth are always already on the paper when it arrives, because a child's bend
+ * decide a fourth are always already on the page when it arrives, because a child's bend
  * is greater than all three of its parents', which is checked next door rather than
  * assumed. So a reader watching one circle appear is watching a gap being answered.
  */
@@ -46,13 +46,15 @@ const HOLD_FRAMES = 30;
 const TOTAL_FRAMES = GIVEN_FRAMES + CASCADE_FRAMES + HOLD_FRAMES;
 
 /**
- * Paper and one ink. The hierarchy is carried by the width of the line alone: a circle is
- * drawn at a weight that falls with its bend, so the first four hold the page and the
- * three hundredth is a hairline, and no second colour is asked to say what the sizes
- * already say.
+ * Kissing Circles' night and its arrival colours. That artwork fills each disc with the
+ * colour of the moment it was laid, so its first giants glow ember and its last grains
+ * arrive nearly white; here a disc arrives when the curvature clock reaches its bend, so
+ * the four given circles are ember and the finest of the cascade are bone. The colour is
+ * the clock read off the picture, and it runs with size only because the packing makes
+ * the small arrive late.
  */
-const PAPER = [230, 224, 208];
-const INK = [38, 34, 40];
+const NIGHT = [13, 18, 27];
+const AGE_STOPS = [[196, 106, 74], [222, 158, 96], [236, 208, 160], [246, 244, 236]];
 
 const CIRCLES = buildPacking();
 /** The packing is built in its own units; this puts its outer circle on the page. */
@@ -73,21 +75,7 @@ const P5 = window.p5;
 
 new P5((p) => {
   /**
-   * The line a circle is drawn with, from how large it is drawn. Weight falls as a low
-   * power of the radius, which is slow enough that the largest circles are plainly
-   * heavier and shallow enough that the smallest are still a line rather than a smudge.
-   * Nothing here reads the bend: the pen answers to the picture, so the hierarchy on the
-   * page is the hierarchy of sizes and not a second thing laid over it.
-   */
-  function penFor(radiusOnPage) {
-    const share = radiusOnPage / OUTER_RADIUS;
-    const weight = Math.max(0.45, 2.6 * Math.pow(share, 0.28));
-    const alpha = 150 + 85 * Math.pow(share, 0.25);
-    return { weight, alpha };
-  }
-
-  /**
-   * How sharp a circle may curve and still be on the paper at `frameIndex`.
+   * How sharp a circle may curve and still be on the page at `frameIndex`.
    *
    * Equal time per doubling of the bend, which is the packing's own scale: it is built by
    * a rule that keeps applying to what it has just made, so a clock that counted circles
@@ -104,6 +92,23 @@ new P5((p) => {
     return reachAt(part, GIVEN_BEND, FINEST_BEND);
   }
 
+  /** A colour between Kissing Circles' stops, `part` of the way from ember to bone. */
+  function stopColour(part) {
+    const scaled = part * (AGE_STOPS.length - 1);
+    const stop = Math.min(Math.floor(scaled), AGE_STOPS.length - 2);
+    const within = scaled - stop;
+    return AGE_STOPS[stop].map((value, i) => value + (AGE_STOPS[stop + 1][i] - value) * within);
+  }
+
+  /**
+   * Where a bend falls on the curvature clock: nought for the given four, one for the
+   * finest, and evenly per doubling between them, as `reachBy` walks it.
+   */
+  function arrival(bend) {
+    if (bend <= GIVEN_BEND) return 0;
+    return Math.log(bend / GIVEN_BEND) / Math.log(FINEST_BEND / GIVEN_BEND);
+  }
+
   /**
    * The packing cut off at `reach`. The circles are walked in the order the construction
    * made them rather than in the order they arrive, so which stroke lies over which never
@@ -111,22 +116,30 @@ new P5((p) => {
    * stroke for stroke.
    */
   function drawAll(reach = FINEST_BEND) {
-    p.background(...PAPER);
+    p.background(...NIGHT);
     p.push();
     p.scale(RENDER_SCALE);
     p.translate(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-    p.noFill();
     let drawn = 0;
     CIRCLES.forEach((circle, index) => {
       if (BENDS[index] > reach) {
         return;
       }
       const radiusOnPage = radiusOf(circle) * UNITS_TO_PAGE;
-      const { weight, alpha } = penFor(radiusOnPage);
-      p.stroke(...INK, alpha);
-      p.strokeWeight(weight);
-      p.circle(circle.x * UNITS_TO_PAGE, circle.y * UNITS_TO_PAGE, 2 * radiusOnPage);
+      const x = circle.x * UNITS_TO_PAGE;
+      const y = circle.y * UNITS_TO_PAGE;
       drawn += 1;
+      if (circle.bend < 0) {
+        // The outer circle holds the rest; it is a rim, never a disc.
+        p.noFill();
+        p.stroke(...AGE_STOPS[3], 150);
+        p.strokeWeight(1);
+        p.circle(x, y, 2 * radiusOnPage);
+        return;
+      }
+      p.noStroke();
+      p.fill(...stopColour(arrival(BENDS[index])));
+      p.circle(x, y, 2 * radiusOnPage);
     });
     p.pop();
     return drawn;
