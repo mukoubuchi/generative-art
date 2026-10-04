@@ -8,9 +8,12 @@ export function hintTextSize(width, height, scale = 1) {
 }
 
 /**
- * The default ink for a hint over a light artwork. Every artwork that answers to the reader
- * is light where the hint falls, so this is what all of them use; the fields are here so a
- * dark one could set its own rather than have the note vanish into it.
+ * The one tone every legend is drawn in, whatever the artwork is like where it falls. The
+ * plate is what keeps the line readable on any ground: over a light artwork it is barely
+ * there, and over a dark one it is a pale bar the note sits on. The legend belongs to the
+ * page rather than to the artwork, so it looks the same on every page and no artwork sets
+ * its own: Still There once passed a plate the colour of its own ground, and its legend
+ * lost its plate.
  */
 export const HINT_TONE = {
   plate: [255, 255, 255, 208],
@@ -123,7 +126,8 @@ function drawCap(p, label, x, baseline, size, tone) {
  * be — so it carries the legend, enlarged by `scale` because the card draws the canvas at
  * around two fifths of its own size and the page's type would arrive there unreadable.
  */
-export function drawKeyHint(p, segments, width, height, scale = 1, tone = HINT_TONE) {
+export function drawKeyHint(p, segments, width, height, scale = 1) {
+  const tone = HINT_TONE;
   const inset = Math.min(width, height) * HINT_INSET_RATIO;
 
   p.push();
