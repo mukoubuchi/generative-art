@@ -1243,6 +1243,21 @@
         "durationSeconds": 20,
         "scale": 2
       }
+    },
+    {
+      "id": "by-misunderstanding",
+      "title": "By Misunderstanding",
+      "entry": "p5js/artworks/by-misunderstanding/index.html",
+      "interactivePath": "by-misunderstanding/",
+      "canvas": { "width": 680, "height": 680 },
+      "quoteIds": ["baudelaire-malentendu"],
+      "thumbnail": { "frame": 400 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/ByMisunderstanding.mp4",
+        "durationSeconds": 22,
+        "scale": 2
+      }
     }
   ]
 }

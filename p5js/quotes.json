@@ -1062,6 +1062,26 @@
       "year": null,
       "publicDomain": true,
       "sourceUrl": "https://www.gutenberg.org/files/246/246-h/246-h.htm"
+    },
+    {
+      "id": "baudelaire-malentendu",
+      "text": "The world works only by misunderstanding. It is by universal misunderstanding that everyone agrees. For if, by ill luck, people understood one another, they could never agree.",
+      "lang": "en",
+      "author": "Charles Baudelaire",
+      "source": "My Heart Laid Bare",
+      "year": 1887,
+      "publicDomain": true,
+      "sourceUrl": "https://fr.wikisource.org/wiki/Page:Baudelaire_-_%C5%92uvres_posthumes_1908.djvu/129",
+      "rendering": "English rendering",
+      "original": {
+        "text": "Le monde ne marche que par le malentendu. C’est par le malentendu universel que tout le monde s’accorde. Car si, par malheur, on se comprenait, on ne pourrait jamais s’accorder.",
+        "lang": "fr",
+        "author": "Charles Baudelaire",
+        "source": "Mon cœur mis à nu",
+        "year": 1887,
+        "publicDomain": true,
+        "sourceUrl": "https://fr.wikisource.org/wiki/Page:Baudelaire_-_%C5%92uvres_posthumes_1908.djvu/129"
+      }
     }
   ]
 }
