@@ -1082,6 +1082,26 @@
         "publicDomain": true,
         "sourceUrl": "https://fr.wikisource.org/wiki/Page:Baudelaire_-_%C5%92uvres_posthumes_1908.djvu/129"
       }
+    },
+    {
+      "id": "li-bai-peach-blossom-water",
+      "text": "Peach blossoms on the flowing water go off into the deep distance; there is another heaven and earth, not the human world.",
+      "lang": "en",
+      "author": "Li Bai",
+      "source": "Question and Answer in the Mountains",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://zh.wikisource.org/wiki/%E5%85%A8%E5%94%90%E8%A9%A9/%E5%8D%B7178",
+      "rendering": "English rendering",
+      "original": {
+        "text": "桃花流水窅然去，別有天地非人間。",
+        "lang": "lzh",
+        "author": "李白",
+        "source": "山中問荅",
+        "year": null,
+        "publicDomain": true,
+        "sourceUrl": "https://zh.wikisource.org/wiki/%E5%85%A8%E5%94%90%E8%A9%A9/%E5%8D%B7178"
+      }
     }
   ]
 }
