@@ -1273,6 +1273,21 @@
         "durationSeconds": 22,
         "scale": 2
       }
+    },
+    {
+      "id": "nothing-but-nuance",
+      "title": "Nothing but Nuance",
+      "entry": "p5js/artworks/nothing-but-nuance/index.html",
+      "interactivePath": "nothing-but-nuance/",
+      "canvas": { "width": 680, "height": 680 },
+      "quoteIds": ["verlaine-nuance"],
+      "thumbnail": { "frame": 117 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/NothingButNuance.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }

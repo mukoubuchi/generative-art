@@ -1102,6 +1102,26 @@
         "publicDomain": true,
         "sourceUrl": "https://zh.wikisource.org/wiki/%E5%85%A8%E5%94%90%E8%A9%A9/%E5%8D%B7178"
       }
+    },
+    {
+      "id": "verlaine-nuance",
+      "text": "Not Colour, nothing but nuance!",
+      "lang": "en",
+      "author": "Paul Verlaine",
+      "source": "Art of Poetry",
+      "year": 1882,
+      "publicDomain": true,
+      "sourceUrl": "https://fr.wikisource.org/wiki/Jadis_et_nagu%C3%A8re_(1884)/Art_po%C3%A9tique",
+      "rendering": "English rendering",
+      "original": {
+        "text": "Pas la Couleur, rien que la nuance !",
+        "lang": "fr",
+        "author": "Paul Verlaine",
+        "source": "Art poétique, Jadis et Naguère, stanza IV",
+        "year": 1882,
+        "publicDomain": true,
+        "sourceUrl": "https://fr.wikisource.org/wiki/Jadis_et_nagu%C3%A8re_(1884)/Art_po%C3%A9tique"
+      }
     }
   ]
 }
