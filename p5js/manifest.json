@@ -1303,6 +1303,21 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "through-both",
+      "title": "Through Both",
+      "entry": "p5js/artworks/through-both/index.html",
+      "interactivePath": "through-both/",
+      "canvas": { "width": 900, "height": 680 },
+      "quoteIds": ["herrigel-through-both"],
+      "thumbnail": { "frame": 480 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/ThroughBoth.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }

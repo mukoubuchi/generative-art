@@ -1132,6 +1132,26 @@
       "year": 1907,
       "publicDomain": true,
       "sourceUrl": "https://brocku.ca/MeadProject/Bergson/Bergson_1911a/Bergson_1911_01.html"
+    },
+    {
+      "id": "herrigel-through-both",
+      "text": "But through both, ‘It’ dances.",
+      "lang": "en",
+      "author": "Eugen Herrigel",
+      "source": "Zen in the Art of Archery",
+      "year": 1948,
+      "publicDomain": true,
+      "sourceUrl": "https://www.phritz.de/lib/exe/fetch.php?media=oeffentlich%3Azen_in_der_kunst_des_bogenschiessens.pdf",
+      "rendering": "Direct English rendering of the short German phrase; the rights flag applies only to this short phrase, not the book or published translations.",
+      "original": {
+        "text": "Durch beide hindurch aber tanzt ‚Es‘",
+        "lang": "de",
+        "author": "Eugen Herrigel",
+        "source": "Zen in der Kunst des Bogenschießens",
+        "year": 1948,
+        "publicDomain": true,
+        "sourceUrl": "https://www.phritz.de/lib/exe/fetch.php?media=oeffentlich%3Azen_in_der_kunst_des_bogenschiessens.pdf"
+      }
     }
   ]
 }
