@@ -1122,6 +1122,16 @@
         "publicDomain": true,
         "sourceUrl": "https://fr.wikisource.org/wiki/Jadis_et_nagu%C3%A8re_(1884)/Art_po%C3%A9tique"
       }
+    },
+    {
+      "id": "bergson-duration",
+      "text": "Duration is the continuous progress of the past which gnaws into the future and which swells as it advances.",
+      "lang": "en",
+      "author": "Henri Bergson",
+      "source": "Creative Evolution, ch. I, p. 4",
+      "year": 1907,
+      "publicDomain": true,
+      "sourceUrl": "https://brocku.ca/MeadProject/Bergson/Bergson_1911a/Bergson_1911_01.html"
     }
   ]
 }

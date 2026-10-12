@@ -16,5 +16,5 @@ export const NUMBER_WORDS = [
   "thirty-nine", "forty", "forty-one", "forty-two", "forty-three", "forty-four",
   "forty-five", "forty-six", "forty-seven", "forty-eight", "forty-nine", "fifty",
   "fifty-one", "fifty-two", "fifty-three", "fifty-four", "fifty-five", "fifty-six",
-  "fifty-seven", "fifty-eight", "fifty-nine", "sixty", "sixty-one"
+  "fifty-seven", "fifty-eight", "fifty-nine", "sixty", "sixty-one", "sixty-two"
 ];

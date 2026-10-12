@@ -1288,6 +1288,21 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "as-it-advances",
+      "title": "As It Advances",
+      "entry": "p5js/artworks/as-it-advances/index.html",
+      "interactivePath": "as-it-advances/",
+      "canvas": { "width": 680, "height": 680 },
+      "quoteIds": ["bergson-duration"],
+      "thumbnail": { "frame": 600 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/AsItAdvances.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }
