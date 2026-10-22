@@ -234,9 +234,9 @@ test("no artwork hands the legend a tone of its own", async () => {
     }
   }
   // The scan has to reach every legend there is, or a clean result means nothing. These
-  // are the nine pages that answer to the reader; a tenth is added here by hand.
+  // are the ten pages that answer to the reader; a new page is added here by hand.
   assert.deepEqual([...found.keys()].sort(), [
-    "atan2", "electric-fan", "moire-rings", "platonic-duals", "pulse-button",
+    "atan2", "beside-itself", "electric-fan", "moire-rings", "platonic-duals", "pulse-button",
     "still-there", "troubling-of-a-star", "turn-it-and-turn-it", "windmill"
   ]);
   for (const [id, calls] of found) {

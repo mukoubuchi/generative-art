@@ -1318,6 +1318,21 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "beside-itself",
+      "title": "Beside Itself",
+      "entry": "p5js/artworks/beside-itself/index.html",
+      "interactivePath": "beside-itself/",
+      "canvas": { "width": 680, "height": 680 },
+      "quoteIds": ["mach-bright-surface"],
+      "thumbnail": { "frame": 90 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/BesideItself.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }

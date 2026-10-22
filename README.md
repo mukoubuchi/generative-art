@@ -83,6 +83,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [Nothing but Nuance](p5js/artworks/nothing-but-nuance/) | Fixed waves weave gold into folds, divide into lace and recover their image through phase alone, rendered as an MP4 |
 | [As It Advances](p5js/artworks/as-it-advances/) | A growing contour redirected by its accumulated history, leaving blue and gold folds, rendered as an MP4 |
 | [Through Both](p5js/artworks/through-both/) | Fine currents and broad traversals independently following one field, meeting across an open paper passage, rendered as an MP4 |
+| [Beside Itself](p5js/artworks/beside-itself/) | One fixed grey ribbon changes its apparent lightness as its surroundings exchange dark and pale fields; hold to compare on a neutral ground, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, the English aphorism policy, source notes, and the nightly publishing workflow.
 

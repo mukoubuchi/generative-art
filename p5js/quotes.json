@@ -1152,6 +1152,17 @@
         "publicDomain": true,
         "sourceUrl": "https://www.phritz.de/lib/exe/fetch.php?media=oeffentlich%3Azen_in_der_kunst_des_bogenschiessens.pdf"
       }
+    },
+    {
+      "id": "mach-bright-surface",
+      "text": "A bright surface is brighter beside a dark surface than beside one brighter than itself.",
+      "lang": "en",
+      "author": "Ernst Mach",
+      "source": "The Analysis of Sensations, ch. I, section 5",
+      "year": 1886,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/analysisofsensat00mach/page/10/mode/2up",
+      "rendering": "C. M. Williams translation, revised and supplemented by Sydney Waterlow, Open Court, 1914, pp. 10–11."
     }
   ]
 }
