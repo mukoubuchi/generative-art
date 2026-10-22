@@ -1152,6 +1152,17 @@
         "publicDomain": true,
         "sourceUrl": "https://www.phritz.de/lib/exe/fetch.php?media=oeffentlich%3Azen_in_der_kunst_des_bogenschiessens.pdf"
       }
+    },
+    {
+      "id": "aquinas-supplied-by-another",
+      "text": "what was wanting to one in the representation of the divine goodness might be supplied by another.",
+      "lang": "en",
+      "author": "Thomas Aquinas",
+      "source": "Summa Theologiae, I, q. 47, a. 1",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://oll-resources.s3.us-east-2.amazonaws.com/oll3/store/titles/1980/0961-02_Bk_Sm.pdf#page=267",
+      "rendering": "Fragment from Aquinas's own answer, printed p. 257; Fathers of the English Dominican Province, second and revised edition, 1921. The original publication year is not supplied by the translation date."
     }
   ]
 }

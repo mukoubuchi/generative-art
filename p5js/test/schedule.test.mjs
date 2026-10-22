@@ -63,6 +63,7 @@ const AWAITING_SCHEDULE = [
   "another-heaven-and-earth",
   "nothing-but-nuance",
   "as-it-advances",
+  "supplied-by-another",
   "through-both"
 ];
 

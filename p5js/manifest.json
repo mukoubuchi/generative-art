@@ -1318,6 +1318,19 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "supplied-by-another",
+      "title": "Supplied by Another",
+      "entry": "p5js/artworks/supplied-by-another/index.html",
+      "interactivePath": "supplied-by-another/",
+      "canvas": { "width": 900, "height": 680 },
+      "quoteIds": ["aquinas-supplied-by-another"],
+      "render": {
+        "kind": "image",
+        "artifact": "exports/p5js/SuppliedByAnother.png",
+        "scale": 3
+      }
     }
   ]
 }
