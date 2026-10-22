@@ -139,13 +139,14 @@ test("the face is the repository's own file, with its licence beside it", async 
 });
 
 test("the scan reaches every legend and every lit key there is", () => {
-  // A clean result over nothing would mean nothing: these are the nine pages that answer to
-  // the reader and the three clips that light a key; a tenth is added here by hand.
+  // A clean result over nothing would mean nothing: these are the ten pages that answer to
+  // the reader and the four clips that light a key; a new page is added here by hand.
   assert.deepEqual([...legends.keys()].sort(), [
-    "atan2", "electric-fan", "moire-rings", "platonic-duals", "pulse-button",
+    "atan2", "beside-itself", "electric-fan", "moire-rings", "platonic-duals", "pulse-button",
     "still-there", "troubling-of-a-star", "turn-it-and-turn-it", "windmill"
   ]);
   assert.deepEqual(Object.fromEntries([...keys].sort()), {
+    "beside-itself": ["space"],
     "electric-fan": ["K"],
     "still-there": ["←", "→", "space", "R"],
     windmill: ["K"]
@@ -161,7 +162,7 @@ test("every piece of type a legend or a lit key sets is set in the face", () => 
     const expected = kind === "legend" ? legends.get(id).length * 3 - 1 : keys.get(id).length;
     assert.equal(texts, expected, `${id} ${kind} set ${texts} pieces of type`);
   }
-  assert.equal(drawn.flatMap(({ typed }) => typed).filter(({ call }) => call === "text").length, 78);
+  assert.equal(drawn.flatMap(({ typed }) => typed).filter(({ call }) => call === "text").length, 84);
   assert.deepEqual(outsideTheFace(drawn), []);
 });
 

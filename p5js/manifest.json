@@ -1320,6 +1320,36 @@
       }
     },
     {
+      "id": "beside-itself",
+      "title": "Beside Itself",
+      "entry": "p5js/artworks/beside-itself/index.html",
+      "interactivePath": "beside-itself/",
+      "canvas": { "width": 680, "height": 680 },
+      "quoteIds": ["mach-bright-surface"],
+      "thumbnail": { "frame": 90 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/BesideItself.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
+    },
+    {
+      "id": "a-general-process",
+      "title": "A General Process",
+      "entry": "p5js/artworks/a-general-process/index.html",
+      "interactivePath": "a-general-process/",
+      "canvas": { "width": 900, "height": 680 },
+      "quoteIds": ["cassirer-individual-case"],
+      "thumbnail": { "frame": 150 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/AGeneralProcess.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
+    },
+    {
       "id": "supplied-by-another",
       "title": "Supplied by Another",
       "entry": "p5js/artworks/supplied-by-another/index.html",
