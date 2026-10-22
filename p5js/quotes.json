@@ -1152,6 +1152,17 @@
         "publicDomain": true,
         "sourceUrl": "https://www.phritz.de/lib/exe/fetch.php?media=oeffentlich%3Azen_in_der_kunst_des_bogenschiessens.pdf"
       }
+    },
+    {
+      "id": "cassirer-individual-case",
+      "text": "The individual case is not excluded from consideration, but is fixed and retained as a perfectly determinate step in a general process of change.",
+      "lang": "en",
+      "author": "Ernst Cassirer",
+      "source": "Substance and Function, ch. I, section III",
+      "year": 1910,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/download/substanceandfunc033163mbp/page/n37.jpg",
+      "rendering": "William Curtis Swabey and Marie Collins Swabey, Open Court, 1923, p. 20; inspected in the 1953 Dover unabridged reprint."
     }
   ]
 }

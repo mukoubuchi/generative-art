@@ -63,7 +63,8 @@ const AWAITING_SCHEDULE = [
   "another-heaven-and-earth",
   "nothing-but-nuance",
   "as-it-advances",
-  "through-both"
+  "through-both",
+  "a-general-process"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {
