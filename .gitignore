@@ -1,21 +1,13 @@
 # macOS
 .DS_Store
-
-# Node.js and browser tests
+# Node.js
 node_modules/
-playwright-report/
-test-results/
-
 # Generated output; nothing rendered is committed
 exports/*
 !exports/.gitkeep
-
-# The libraries are served from the site itself, copied out of node_modules when it is built
-p5js/vendor/
-
-# The Pages site, built from the manifest at deploy time
+# The Pages site, built from the manifest at deploy time; the p5 library is copied into it
 site/
-
-# Credentials written by the X authorization scripts; never committed
+# X credentials belong outside the repository, and the authorization scripts refuse paths inside it;
+# these names stay ignored as a safeguard
 p5js/x-access-token
 p5js/x-refresh-token
