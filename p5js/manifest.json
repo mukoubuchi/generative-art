@@ -1361,6 +1361,21 @@
         "artifact": "exports/p5js/SuppliedByAnother.png",
         "scale": 3
       }
+    },
+    {
+      "id": "not-in-the-field",
+      "title": "Not in the Field",
+      "entry": "p5js/artworks/not-in-the-field/index.html",
+      "interactivePath": "not-in-the-field/",
+      "canvas": { "width": 900, "height": 680 },
+      "quoteIds": ["wittgenstein-not-in-the-field"],
+      "thumbnail": { "frame": 180 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/NotInTheField.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }

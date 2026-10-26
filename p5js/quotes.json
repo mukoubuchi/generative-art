@@ -1185,6 +1185,26 @@
       "publicDomain": true,
       "sourceUrl": "https://oll-resources.s3.us-east-2.amazonaws.com/oll3/store/titles/1980/0961-02_Bk_Sm.pdf#page=267",
       "rendering": "Fragment from Aquinas's own answer, printed p. 257; Fathers of the English Dominican Province, second and revised edition, 1921. The original publication year is not supplied by the translation date."
+    },
+    {
+      "id": "wittgenstein-not-in-the-field",
+      "text": "But you do not really see the eye. And from nothing in the field of sight can it be concluded that it is seen from an eye.",
+      "lang": "en",
+      "author": "Ludwig Wittgenstein",
+      "source": "Tractatus Logico-Philosophicus, 5.633",
+      "year": 1921,
+      "publicDomain": true,
+      "sourceUrl": "https://www.gutenberg.org/files/5740/5740-pdf.pdf",
+      "rendering": "C. K. Ogden translation, first published 1922 (London: Kegan Paul, Trench, Trubner & Co.; New York: Harcourt, Brace & Co.); German original first published 1921 in Annalen der Naturphilosophie. Inspected in the retypeset Project Gutenberg #5740 bilingual PDF (PDF p. 77, numbered p. 75 for English; PDF p. 147, numbered p. 145 for German; not the pagination of the 1922 printed book). Public-domain status in this catalog is determined under United States copyright law.",
+      "original": {
+        "text": "Aber das Auge siehst du wirklich nicht. Und nichts am Gesichtsfeld lässt darauf schliessen, dass es von einem Auge gesehen wird.",
+        "lang": "de",
+        "author": "Ludwig Wittgenstein",
+        "source": "Logisch-philosophische Abhandlung, 5.633",
+        "year": 1921,
+        "publicDomain": true,
+        "sourceUrl": "https://www.gutenberg.org/files/5740/5740-pdf.pdf"
+      }
     }
   ]
 }
