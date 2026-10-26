@@ -160,13 +160,14 @@ jobs:
           retention-days: 14
 
       # After the post, so the count describes the queue as the night leaves it, and on
-      # publishing runs only — a rehearsal or a dry run is not a posting night and must
-      # not speak for one. It runs on empty nights too, which is where its final word is
-      # said, and it still spends nothing there: this step never holds an X credential.
-      # A missed reminder is recoverable in a way a missed post is not, so a failure
-      # here is not allowed to take the pipeline down with it.
+      # publishing runs of the schedule only — a rehearsal, a dry run, or a manual one-off
+      # post of a named artwork is not a scheduled night and must not speak for the queue.
+      # It runs on empty nights too, which is where its final word is said, and it still
+      # spends nothing there: this step never holds an X credential. A missed reminder is
+      # recoverable in a way a missed post is not, so a failure here is not allowed to take
+      # the pipeline down with it.
       - name: Report the queue level
-        if: env.PUBLISH == 'true'
+        if: env.PUBLISH == 'true' && env.ARTWORK_INPUT == ''
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
