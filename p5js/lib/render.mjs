@@ -19,6 +19,7 @@ import {
   repositoryPath,
   thumbnailFrame
 } from "./catalog.mjs";
+import { SHARE_IMAGE, SHARE_MOUNT, sharePlacement } from "./gallery.mjs";
 import { metadataSegments, withoutMetadata } from "./jpeg.mjs";
 import { isTraceFree, videoTraces } from "./mp4.mjs";
 
@@ -337,7 +338,7 @@ export function thumbnailFromDataUrl(dataUrl) {
   return withoutMetadata(Buffer.from(dataUrl.split(",")[1], "base64"));
 }
 
-async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width) {
+async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width, withShareImage) {
   // Thumbnails are taken at the logical size: a gallery card never needs the export scale,
   // and for a moving artwork it saves rendering a whole clip to keep one frame of it.
   //
@@ -372,7 +373,20 @@ async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width
       );
     }
     // Scaled down and encoded inside the page, so no image library is needed on this side.
-    const dataUrl = await page.evaluate((targetWidth) => {
+    //
+    // The share image, when one is asked for, is set from the same canvas in the same call:
+    // the thumbnail's picture, one frame drawn once, laid whole on the gallery's mount at
+    // 2:1. It is taken at this size rather than at a larger scale because a page drawn larger
+    // does not always draw its legend to scale, and the box it goes into is never larger
+    // than the canvas (see `SHARE_IMAGE`), so nothing is enlarged.
+    const share = withShareImage
+      ? {
+        size: { width: SHARE_IMAGE.width, height: SHARE_IMAGE.height },
+        box: sharePlacement(artwork),
+        mount: SHARE_MOUNT
+      }
+      : null;
+    const encoded = await page.evaluate(({ targetWidth, share: wanted }) => {
       const source = document.querySelector("canvas");
       const target = document.createElement("canvas");
       target.width = Math.min(targetWidth, source.width);
@@ -380,11 +394,38 @@ async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width
       const context = target.getContext("2d");
       context.imageSmoothingQuality = "high";
       context.drawImage(source, 0, 0, target.width, target.height);
-      return target.toDataURL("image/jpeg", 0.82);
-    }, width);
-    return { frame, bytes: thumbnailFromDataUrl(dataUrl) };
+      const thumbnail = target.toDataURL("image/jpeg", 0.82);
+      if (wanted === null) {
+        return { thumbnail };
+      }
+      const image = document.createElement("canvas");
+      image.width = wanted.size.width;
+      image.height = wanted.size.height;
+      const mounted = image.getContext("2d");
+      mounted.fillStyle = wanted.mount;
+      mounted.fillRect(0, 0, image.width, image.height);
+      mounted.imageSmoothingQuality = "high";
+      mounted.drawImage(source, wanted.box.x, wanted.box.y, wanted.box.width, wanted.box.height);
+      return { thumbnail, share: image.toDataURL("image/jpeg", 0.82) };
+    }, { targetWidth: width, share });
+    return {
+      frame,
+      bytes: thumbnailFromDataUrl(encoded.thumbnail),
+      shareBytes: encoded.share === undefined ? undefined : thumbnailFromDataUrl(encoded.share)
+    };
   } finally {
     await page.close();
+  }
+}
+
+/**
+ * Checked on the bytes about to be written, so that a capture that skipped the step that
+ * strips them stops the build instead of publishing the encoder's profile.
+ */
+function refuseMetadata(artwork, what, bytes) {
+  const left = metadataSegments(bytes);
+  if (left.length > 0) {
+    throw new Error(`${artwork.id}: the ${what} still carries ${left.join(", ")}`);
   }
 }
 
@@ -417,30 +458,37 @@ export async function renderArtworks(manifest, artworks) {
 }
 
 /**
- * One JPEG per artwork, written into `directory` as `<id>.jpg`. Nothing here is committed:
- * the gallery is built from these at deploy time.
+ * One JPEG per artwork, written into `directory` as `<id>.jpg`, and, when `shareDirectory` is
+ * given, its share image written into that as `<id>.jpg` too, from the same capture. Nothing
+ * here is committed: the gallery is built from these at deploy time.
  */
-export async function renderThumbnails(manifest, artworks, directory, width) {
+export async function renderThumbnails(manifest, artworks, directory, width, shareDirectory) {
   await mkdir(directory, { recursive: true });
+  if (shareDirectory !== undefined) {
+    await mkdir(shareDirectory, { recursive: true });
+  }
   return await withBrowserSession(async (browser, serverBaseUrl) => {
     const results = [];
     for (const artwork of artworks) {
-      const { frame, bytes } = await captureThumbnail(
+      const { frame, bytes, shareBytes } = await captureThumbnail(
         browser,
         serverBaseUrl,
         manifest,
         artwork,
-        width
+        width,
+        shareDirectory !== undefined
       );
-      // Checked on the bytes about to be written, so a capture that skipped the step
-      // above stops the build instead of publishing the encoder's profile.
-      const left = metadataSegments(bytes);
-      if (left.length > 0) {
-        throw new Error(`${artwork.id}: the thumbnail still carries ${left.join(", ")}`);
-      }
+      refuseMetadata(artwork, "thumbnail", bytes);
       const path = join(directory, `${artwork.id}.jpg`);
       await writeFile(path, bytes);
-      results.push({ id: artwork.id, path, frame, bytes: bytes.length });
+      const result = { id: artwork.id, path, frame, bytes: bytes.length };
+
+      if (shareDirectory !== undefined) {
+        refuseMetadata(artwork, "share image", shareBytes);
+        result.share = { path: join(shareDirectory, `${artwork.id}.jpg`), bytes: shareBytes.length };
+        await writeFile(result.share.path, shareBytes);
+      }
+      results.push(result);
     }
     return results;
   });

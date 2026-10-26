@@ -6,8 +6,13 @@ import {
   artworkHref,
   buildStamp,
   canvasSizeProperties,
+  SHARE_DIRECTORY,
+  escapeHtml,
+  renderArtworkHead,
   renderArtworkNav,
-  renderIndexPage
+  renderIndexPage,
+  renderSitemap,
+  shareImageHref
 } from "./gallery.mjs";
 import { renderThumbnails } from "./render.mjs";
 
@@ -67,8 +72,11 @@ const HEAD_ANCHOR = '<meta charset="utf-8">';
  * Done here, on the copy, rather than in the artwork pages themselves: both are derived
  * from the manifest, so they cannot drift from the gallery's links or from the size the
  * canvas is actually created at, and the pages stay what they are in the repository — a
- * canvas and the sketch that fills it. Nothing else is added: the page shows the artwork
- * alone, and the quotation's attribution lives on the gallery card and in the post.
+ * canvas and the sketch that fills it. Nothing else is added to the page's body: it shows
+ * the artwork alone, and the quotation's attribution lives on the gallery card and in the
+ * post. The head is the one other place it goes, for search engines and link previews, and
+ * the page's title, which a browser shows on its tab, gains the site's name (see
+ * `renderArtworkHead`).
  *
  * The markup is written into the file rather than added by a script on load, because it has
  * to survive a reader with scripting turned off, who is exactly the reader most likely to
@@ -79,12 +87,15 @@ const HEAD_ANCHOR = '<meta charset="utf-8">';
  * page silently missing its size is a page a phone shows the corner of. The same is now
  * true of the head: a page without the build's marker is a page that cannot be told apart
  * from a copy of itself left over in a cache, and a check that cannot tell those apart is a
- * check that measures whichever of them it is handed.
+ * check that measures whichever of them it is handed. And of the title: a page whose title
+ * is not the manifest's name for it would be described to search engines as one work while
+ * showing another.
  */
-async function prepareArtworkPages(directory, manifest, build) {
+async function prepareArtworkPages(directory, manifest, quoteCatalog, build) {
   for (const artwork of manifest.artworks) {
     const page = resolve(directory, artworkHref(artwork), "index.html");
     const html = await readFile(page, "utf8");
+    const title = `<title>${escapeHtml(artwork.title)}</title>`;
     if (!html.includes("</body>")) {
       throw new Error(`${artwork.id} has no body to add its navigation to.`);
     }
@@ -94,7 +105,12 @@ async function prepareArtworkPages(directory, manifest, build) {
     if (!html.includes(HEAD_ANCHOR)) {
       throw new Error(`${artwork.id} has no ${HEAD_ANCHOR} to stamp the build onto.`);
     }
-    const stamped = html.replace(HEAD_ANCHOR, `${HEAD_ANCHOR}\n    ${buildStamp(build)}`);
+    if (!html.includes(title)) {
+      throw new Error(`${artwork.id} has no ${title} matching its manifest title.`);
+    }
+    const stamped = html
+      .replace(HEAD_ANCHOR, `${HEAD_ANCHOR}\n    ${buildStamp(build)}`)
+      .replace(title, renderArtworkHead(manifest, quoteCatalog, artwork));
     const sized = stamped.replace(
       ARTWORK_MAIN,
       `<main id="artwork" style="${canvasSizeProperties(artwork)}">`
@@ -130,7 +146,8 @@ export async function buildSite(manifest, quoteCatalog, options = {}) {
     await cp(resolve(REPOSITORY_ROOT, source), target, { recursive: true });
   }
 
-  await prepareArtworkPages(directory, manifest, options.build);
+  await prepareArtworkPages(directory, manifest, quoteCatalog, options.build);
+  await writeFile(resolve(directory, "sitemap.xml"), renderSitemap(manifest), "utf8");
 
   const vendorTarget = resolve(directory, VENDOR_DESTINATION);
   await mkdir(dirname(vendorTarget), { recursive: true });
@@ -148,8 +165,19 @@ export async function buildSite(manifest, quoteCatalog, options = {}) {
       manifest,
       manifest.artworks,
       resolve(directory, "thumbnails"),
-      options.thumbnailWidth ?? THUMBNAIL_WIDTH
+      options.thumbnailWidth ?? THUMBNAIL_WIDTH,
+      resolve(directory, SHARE_DIRECTORY)
     );
 
-  return { directory, thumbnails: thumbnails.length };
+  // Each artwork page's share card names its picture by `shareImageHref`, and the renderer
+  // names the file it writes by itself. The two are held to one path here, so that a page
+  // cannot go out pointing its share card at a picture the build did not write.
+  for (const result of thumbnails) {
+    const artwork = manifest.artworks.find((candidate) => candidate.id === result.id);
+    if (result.share?.path !== resolve(directory, shareImageHref(artwork))) {
+      throw new Error(`${result.id}: its share card names a picture the build did not write.`);
+    }
+  }
+
+  return { directory, thumbnails: thumbnails.length, shareImages: thumbnails.length };
 }

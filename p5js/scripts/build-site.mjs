@@ -16,3 +16,4 @@ const result = await buildSite(manifest, quoteCatalog, {
 
 console.log(`Built ${manifest.artworks.length} artworks into ${result.directory}`);
 console.log(`Thumbnails: ${result.thumbnails}`);
+console.log(`Share images: ${result.shareImages}`);

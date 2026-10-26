@@ -61,6 +61,7 @@ test("text from the catalog cannot escape into markup", () => {
   const manifest = {
     defaults: {
       interactiveBaseUrl: "https://example.test/site/p5js/artworks/",
+      siteBaseUrl: "https://example.test/site/",
       sourceBaseUrl: "https://example.test/code/tree/main/"
     },
     artworks: [{

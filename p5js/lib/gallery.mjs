@@ -41,6 +41,86 @@ export function thumbnailHref(artwork) {
 }
 
 /**
+ * What a thumbnail is called for a reader who cannot see it: the artwork's title, which is
+ * all the catalog says about any picture. A sentence describing each one would be a
+ * description, and the catalog refuses those (see `validateManifest`). Kept in one place so
+ * that the gallery card and the share card cannot call one picture by two names.
+ */
+export function thumbnailAlt(artwork) {
+  return artwork.title;
+}
+
+/**
+ * What the site calls itself to anything outside the page: the index's title, the end of
+ * every artwork page's title, and the site name a link preview shows.
+ */
+export const SITE_NAME = "Generative Art";
+
+/** What the index says about itself, to a search result and to a link preview alike. */
+const SITE_DESCRIPTION = "Generative works in p5.js, each paired with an aphorism in English. "
+  + "Art beyond the claims of utility.";
+
+/**
+ * The address an artwork page is published at, spelled out in full: the card's own link,
+ * resolved against `siteBaseUrl`. A post builds the same address another way, from
+ * `interactiveBaseUrl` and `interactivePath`, and a test holds the two to one value. Every
+ * place a page names itself to the outside — its canonical link, its share card, the
+ * sitemap — takes the address from here, so none of them can name a page a post does not
+ * lead to.
+ */
+export function artworkUrl(manifest, artwork) {
+  return new URL(artworkHref(artwork), manifest.defaults.siteBaseUrl).href;
+}
+
+/**
+ * Where an artwork's share image is published, relative to the site root. A link preview
+ * gets a picture of its own rather than the card's thumbnail, because X specifies 2:1 for its
+ * large-image card and the canvases run from 2:1 to square.
+ */
+export const SHARE_DIRECTORY = "share";
+
+/**
+ * The share image's size, and the margin kept clear round the picture on every side. 2:1 as
+ * X specifies. The margin is mount showing round the picture, so that no part of the artwork
+ * meets the edge of the image, and it is wide enough that no picture is enlarged to fill its
+ * box: the 2:1 canvas, 960 by 480, is drawn at its own size, and every other canvas in the
+ * manifest is drawn down. A test holds every canvas to that.
+ */
+export const SHARE_IMAGE = { width: 1200, height: 600, margin: 60 };
+
+/** The mount the picture is set on: the gallery card's own, `--ground-raised` in gallery.css. */
+export const SHARE_MOUNT = "#1c1e25";
+
+export function shareImageHref(artwork) {
+  return `${SHARE_DIRECTORY}/${artwork.id}.jpg`;
+}
+
+export function shareImageUrl(manifest, artwork) {
+  return new URL(shareImageHref(artwork), manifest.defaults.siteBaseUrl).href;
+}
+
+/**
+ * Where the picture goes in its share image: as large as fits inside the margin, centred, in
+ * the canvas's own proportions. Fitted rather than cropped, as the gallery card fits it, so
+ * the whole artwork is there; in whole pixels, so this is the box it is actually drawn into.
+ */
+export function sharePlacement(artwork) {
+  const { width, height, margin } = SHARE_IMAGE;
+  const fit = Math.min(
+    (width - 2 * margin) / artwork.canvas.width,
+    (height - 2 * margin) / artwork.canvas.height
+  );
+  const boxWidth = Math.round(artwork.canvas.width * fit);
+  const boxHeight = Math.round(artwork.canvas.height * fit);
+  return {
+    x: Math.round((width - boxWidth) / 2),
+    y: Math.round((height - boxHeight) / 2),
+    width: boxWidth,
+    height: boxHeight
+  };
+}
+
+/**
  * The two icons the artwork pages carry, drawn inline rather than referenced from the sprite
  * above: those pages are standalone documents that share nothing with the index, so a
  * `<use>` would have nothing to point at. Both are Font Awesome Free's solid style, copied
@@ -195,7 +275,7 @@ function renderCard(manifest, artwork, quote, index) {
               <img
                 class="card__image"
                 src="${escapeHtml(thumbnailHref(artwork))}"
-                alt="${escapeHtml(artwork.title)}"
+                alt="${escapeHtml(thumbnailAlt(artwork))}"
                 width="${artwork.canvas.width}"
                 height="${artwork.canvas.height}"
                 loading="lazy"
@@ -260,6 +340,107 @@ export function readBuildStamp(html) {
   return found ? found[1] : null;
 }
 
+/**
+ * The quotation and its attribution as one line: what a search result shows under an
+ * artwork's title, and a link preview under its picture. Word for word the two lines a post
+ * opens with (see `buildPostBody`), joined by a space rather than a line break. The gallery
+ * card and the post are the only words the site gives a work, and a summary written for
+ * search engines alone would be a third set that nobody on the site ever reads.
+ */
+export function quotationSummary(quote) {
+  return `${quote.text} — ${quote.author}, ${publicSource(quote)}`;
+}
+
+/**
+ * The head elements that search engines and link previews read. They go in the head, and the
+ * page's body is left as it was.
+ *
+ * The canonical link is absolute, as Google asks, and names the page's own address, so that a
+ * copy of the page reached some other way — by `…/index.html`, say — names the address a post
+ * links to as the one to prefer. That is a preference stated to search engines, which they
+ * weigh with other signals rather than obey. Open Graph carries the title, the summary and
+ * the picture, and X's card documentation names each of those as the fallback for its own
+ * tag, so the card type is the only X tag written. `twitter:site` would name an account,
+ * which is a decision about the account rather than about the page, and is left out.
+ */
+function renderShareMetadata({ url, title, description, image, card }) {
+  return [
+    description === undefined ? null : `<meta name="description" content="${escapeHtml(description)}">`,
+    `<link rel="canonical" href="${escapeHtml(url)}">`,
+    '<meta property="og:type" content="website">',
+    `<meta property="og:site_name" content="${escapeHtml(SITE_NAME)}">`,
+    `<meta property="og:title" content="${escapeHtml(title)}">`,
+    description === undefined ? null : `<meta property="og:description" content="${escapeHtml(description)}">`,
+    `<meta property="og:url" content="${escapeHtml(url)}">`,
+    ...(image === undefined ? [] : [
+      `<meta property="og:image" content="${escapeHtml(image.url)}">`,
+      `<meta property="og:image:width" content="${image.width}">`,
+      `<meta property="og:image:height" content="${image.height}">`,
+      `<meta property="og:image:alt" content="${escapeHtml(image.alt)}">`
+    ]),
+    `<meta name="twitter:card" content="${escapeHtml(card)}">`
+  ].filter((tag) => tag !== null).join("\n    ");
+}
+
+/**
+ * An artwork page's title and the metadata under it, which the site build writes over the
+ * page's own `<title>`.
+ *
+ * The title gains the site's name after a delimiter, which is how Google asks a page to
+ * carry its site's name. Google Search does not support site names for a site that lives in
+ * a subdirectory of its host, as this one does, so the title is the place the name can go. A
+ * browser shows the title on its tab. The share card is the large one, because the picture
+ * is the work, and its picture is the share image; an artwork without a quotation gets no
+ * summary rather than an invented one, as its card gets no quotation.
+ */
+export function renderArtworkHead(manifest, quoteCatalog, artwork) {
+  const quote = quoteFor(artwork, quoteCatalog);
+  return [
+    `<title>${escapeHtml(artwork.title)} — ${escapeHtml(SITE_NAME)}</title>`,
+    renderShareMetadata({
+      url: artworkUrl(manifest, artwork),
+      title: artwork.title,
+      description: quote ? quotationSummary(quote) : undefined,
+      image: {
+        url: shareImageUrl(manifest, artwork),
+        width: SHARE_IMAGE.width,
+        height: SHARE_IMAGE.height,
+        alt: thumbnailAlt(artwork)
+      },
+      card: "summary_large_image"
+    })
+  ].join("\n    ");
+}
+
+/**
+ * Every page the site wants found, by the address each one claims for itself.
+ *
+ * Written beside the index, at the root of the project rather than of the host, which is as
+ * high as a project site reaches: a sitemap may list what lies at or below its own
+ * directory, and every page here does. There is no `lastmod`, because Google uses it only
+ * when it is accurate, and when a page last changed in a way a reader would notice is not
+ * something the build knows. No robots.txt names the sitemap either, and none is shipped:
+ * crawlers read that file only at the root of the host, and GitHub Pages serves the root of
+ * this host from the owner's user site, not from this repository. So the way to point Google
+ * at the sitemap is to submit it in Search Console, which Google treats as a hint: it does
+ * not promise to fetch the sitemap or to use it. The same file is meant for Bing, submitted
+ * in Bing Webmaster Tools or imported there from Search Console.
+ */
+export function renderSitemap(manifest) {
+  const addresses = [
+    manifest.defaults.siteBaseUrl,
+    ...manifest.artworks.map((artwork) => artworkUrl(manifest, artwork))
+  ];
+  const entries = addresses
+    .map((address) => `  <url>\n    <loc>${escapeHtml(address)}</loc>\n  </url>`)
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>
+`;
+}
+
 export function renderIndexPage(manifest, quoteCatalog, build) {
   const cards = manifest.artworks
     .map((artwork, index) => renderCard(manifest, artwork, quoteFor(artwork, quoteCatalog), index))
@@ -271,8 +452,15 @@ export function renderIndexPage(manifest, quoteCatalog, build) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     ${buildStamp(build)}
-    <title>Generative Art</title>
-    <meta name="description" content="Generative works in p5.js, each paired with an aphorism in English. Art beyond the claims of utility.">
+    <title>${escapeHtml(SITE_NAME)}</title>
+    ${renderShareMetadata({
+      url: manifest.defaults.siteBaseUrl,
+      title: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      // No picture. X asks for one that represents the page itself rather than a logo or a
+      // portrait standing for the whole site, and no single artwork stands for the gallery.
+      card: "summary"
+    })}
     <link rel="stylesheet" href="assets/gallery.css">
     <!-- three.js resolves its own parts by name, and its glTF loader reaches for the
          library the same way, so the names are given addresses here. Nothing is fetched by

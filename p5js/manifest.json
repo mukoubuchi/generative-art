@@ -5,6 +5,7 @@
     "maxVideoSeconds": 140,
     "maxWeightedCharacters": 280,
     "interactiveBaseUrl": "https://mukoubuchi.github.io/generative-art/p5js/artworks/",
+    "siteBaseUrl": "https://mukoubuchi.github.io/generative-art/",
     "sourceBaseUrl": "https://github.com/mukoubuchi/generative-art/tree/main/"
   },
   "artworks": [

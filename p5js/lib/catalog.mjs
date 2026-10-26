@@ -54,6 +54,12 @@ export function validateManifest(manifest) {
   if (!URL.canParse(defaults.sourceBaseUrl) || !defaults.sourceBaseUrl.endsWith("/")) {
     throw new Error("manifest.json has an invalid source base URL.");
   }
+  // The same rule for the address the site itself is served from, which every absolute URL
+  // a page gives out about itself -- its canonical link, its share card, the sitemap -- is
+  // resolved against.
+  if (!URL.canParse(defaults.siteBaseUrl) || !defaults.siteBaseUrl.endsWith("/")) {
+    throw new Error("manifest.json has an invalid site base URL.");
+  }
 
   assertUniqueIds(manifest.artworks, "manifest.json");
   for (const artwork of manifest.artworks) {
