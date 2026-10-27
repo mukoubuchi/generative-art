@@ -6,7 +6,10 @@
     "maxWeightedCharacters": 280,
     "interactiveBaseUrl": "https://mukoubuchi.github.io/generative-art/p5js/artworks/",
     "siteBaseUrl": "https://mukoubuchi.github.io/generative-art/",
-    "sourceBaseUrl": "https://github.com/mukoubuchi/generative-art/tree/main/"
+    "sourceBaseUrl": "https://github.com/mukoubuchi/generative-art/tree/main/",
+    "siteVerification": {
+      "google-site-verification": "h0kAuILsClA2kl21VbPP_FyGy_CrWT9cmqXh4eKD6Pc"
+    }
   },
   "artworks": [
     {

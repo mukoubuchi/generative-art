@@ -441,6 +441,20 @@ ${entries}
 `;
 }
 
+/**
+ * The ownership tags that search engines' webmaster tools ask a site's home page to carry,
+ * taken from the manifest and written into the index's head, each on a line of its own. They
+ * are public by design, since a search engine reads them off the page, and they are generated
+ * with the page rather than written into a finished build: a build replaces the index, and
+ * Search Console looks for its tag again from time to time after verifying, so every build
+ * carries it.
+ */
+export function renderSiteVerification(manifest) {
+  return Object.entries(manifest.defaults.siteVerification ?? {})
+    .map(([name, value]) => `\n    <meta name="${escapeHtml(name)}" content="${escapeHtml(value)}">`)
+    .join("");
+}
+
 export function renderIndexPage(manifest, quoteCatalog, build) {
   const cards = manifest.artworks
     .map((artwork, index) => renderCard(manifest, artwork, quoteFor(artwork, quoteCatalog), index))
@@ -460,7 +474,7 @@ export function renderIndexPage(manifest, quoteCatalog, build) {
       // No picture. X asks for one that represents the page itself rather than a logo or a
       // portrait standing for the whole site, and no single artwork stands for the gallery.
       card: "summary"
-    })}
+    })}${renderSiteVerification(manifest)}
     <link rel="stylesheet" href="assets/gallery.css">
     <!-- three.js resolves its own parts by name, and its glTF loader reaches for the
          library the same way, so the names are given addresses here. Nothing is fetched by

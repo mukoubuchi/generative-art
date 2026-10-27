@@ -311,6 +311,39 @@ test("text from the catalog cannot escape into the metadata", () => {
   assert.ok(head.includes(escapeHtml(catalog.quotes[0].text)));
 });
 
+test("the index carries the ownership tag Search Console checks, from the manifest", () => {
+  // Search Console reads this tag off the home page when it verifies the site, and looks for
+  // it again from time to time afterwards, so every build keeps it. The test looks for it on
+  // the page the build writes, with the value taken from the one place it is kept.
+  const tags = Object.entries(manifest.defaults.siteVerification ?? {});
+  assert.ok(
+    tags.some(([name]) => name === "google-site-verification"),
+    "the manifest no longer names the Search Console ownership tag"
+  );
+  const index = pages.get("the gallery index");
+  for (const [name, value] of tags) {
+    assert.deepEqual(meta(index, "name", name), [value], `the index does not carry ${name}`);
+  }
+});
+
+test("an ownership tag that is not a plain name and a token is refused", () => {
+  // Both halves are printed into the index's head, so anything that could close the
+  // attribute, or a name that is not a meta name, stops the build instead.
+  const samples = [
+    null,
+    "token",
+    {},
+    { "google-site-verification": "" },
+    { "google-site-verification": 'abc" onload="x' },
+    { "Not A Name": "abc" }
+  ];
+  for (const sample of samples) {
+    const doctored = structuredClone(manifest);
+    doctored.defaults.siteVerification = sample;
+    assert.throws(() => validateManifest(doctored), /invalid site verification/u, JSON.stringify(sample));
+  }
+});
+
 test("a site base that does not end in a separator is rejected", () => {
   const doctored = structuredClone(manifest);
   doctored.defaults.siteBaseUrl = "https://example.test/site";

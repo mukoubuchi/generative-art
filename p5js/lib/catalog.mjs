@@ -60,6 +60,22 @@ export function validateManifest(manifest) {
   if (!URL.canParse(defaults.siteBaseUrl) || !defaults.siteBaseUrl.endsWith("/")) {
     throw new Error("manifest.json has an invalid site base URL.");
   }
+  // Optional: the ownership tags a search engine's webmaster tools ask the home page to carry,
+  // as the tag's name and its value. Both are written into the index's head, so a name that is
+  // not a plain meta name, or a value that is not a token, is refused rather than printed.
+  if (defaults.siteVerification !== undefined) {
+    const entries = Object.entries(defaults.siteVerification ?? {});
+    if (
+      typeof defaults.siteVerification !== "object"
+      || defaults.siteVerification === null
+      || entries.length === 0
+      || !entries.every(([name, value]) => /^[a-z][a-z0-9.-]*$/u.test(name)
+        && typeof value === "string"
+        && /^[A-Za-z0-9_-]+$/u.test(value))
+    ) {
+      throw new Error("manifest.json has an invalid site verification entry.");
+    }
+  }
 
   assertUniqueIds(manifest.artworks, "manifest.json");
   for (const artwork of manifest.artworks) {
