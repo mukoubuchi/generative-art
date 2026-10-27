@@ -1130,6 +1130,14 @@ The gallery thumbnail is the other way about. It is a picture of a page that *ca
 
 The line sits at the bottom left rather than the bottom right because the artwork pages do not scale their canvas to the window — it is drawn at its own size and clipped — so on a narrow screen the right of the canvas is the part that disappears. It is set on a pale plate, which is close to invisible on a light artwork and is what makes the line readable on a dark one, and seven of the nine are dark where the line falls.
 
+### The artworks' own type
+
+Two artworks set words of their own on the canvas: Atan2 its two readouts, the coordinates and the equation, and Still There its step counter. Both used to name the browser's `monospace`, which is whatever face a machine keeps under that name. In a diagnostic run the system's match for it was DejaVu Sans Mono on CI's runner and WenQuanYi Zen Hei Mono in Playwright's image, and the cards built in the two environments differed only where those words are. They are now set in [IBM Plex Mono](https://www.ibm.com/plex/), by IBM, under the SIL Open Font License 1.1, served from this site with IBM's license beside it in [`artworks/shared/fonts/ibm-plex/`](artworks/shared/fonts/ibm-plex/).
+
+[`artworks/shared/typefaces.js`](artworks/shared/typefaces.js) holds the choice. An artwork names a role, `mono` or `sans` (IBM Plex Sans), and a weight, 400 or 700, and gets the same font from it whether it draws through p5 (`useTypeface`) or on a context of its own (`typefaceFont`). A role or a weight the table does not serve is an error rather than something left to the browser, which may stand another weight's face in for it or thicken one into a bold. Each file is IBM's own Latin1 cut, copied unmodified from the family's npm package (17,544 to 21,256 bytes a face), and holds printable ASCII and the Latin-1 letters and signs, the degree sign among them, with the dashes, the curly quotes, the ellipsis and the minus sign. The license reserves the name "Plex", so a cut made here would have to take another name; none is made.
+
+A reader's page and a capture part ways when a face is not there. The page still runs: a face that failed to load, a face chosen before the page had loaded it, or a character the cut does not hold leaves the browser to set the text in the role's fallback family, `monospace` or `sans-serif`, or in whatever it puts in their place, and the console says which. The thumbnail run and the clip renderer stop instead, on any of the three: the page records how the load of each face it asked for went, each face its text was set in with whether it had loaded by then, and each character no served face holds. The legends and the key caps are still set in Inter, as described above.
+
 ### Where the motion comes from
 
 The page's two timing constants are taken from the artworks rather than chosen by eye, which is also why it resembles no other gallery.

@@ -210,6 +210,9 @@ async function renderVideo(page, artwork, artifactPath, defaults, outputSize) {
         path: join(frameDirectory, `frame-${String(frameIndex).padStart(6, "0")}.png`)
       });
     }
+    // Every frame has been drawn by now, so any text that reached outside the faces has
+    // been noted, whichever frame it was in.
+    await refuseTypefaces(page, artwork);
 
     await runCommand("ffmpeg", videoEncodeArguments(
       join(frameDirectory, "frame-%06d.png"),
@@ -262,6 +265,39 @@ export function hintFaceRefusal(artworkId, status) {
   return `${artworkId}: the legend's typeface has not loaded (${status}), so the capture would be set in a fallback`;
 }
 
+/**
+ * Why a capture may not be written, as far as an artwork's own typefaces go, or null if it
+ * may: every face the page asked for has to have loaded, every face it set text in has to
+ * have been loaded when it set it, and no text it drew may have reached outside the
+ * characters the faces hold (see `artworks/shared/typefaces.js`). A page that neither asks
+ * for a face nor sets text in one records nothing, and nothing is asked of it.
+ */
+export function typefaceRefusal(artworkId, record) {
+  if (record === undefined || record === null) {
+    return null;
+  }
+  const unloaded = Object.entries(record.faces ?? {}).filter(([, status]) => status !== "loaded");
+  if (unloaded.length > 0) {
+    const named = unloaded.map(([face, status]) => `${face} (${status})`).join(", ");
+    return `${artworkId}: its typefaces have not loaded (${named}), so the capture would be set in a fallback`;
+  }
+  if ((record.unready ?? []).length > 0) {
+    return `${artworkId}: it set text in faces it had not loaded (${record.unready.join(", ")}), so the browser may have set that text in another face`;
+  }
+  if ((record.missing ?? []).length > 0) {
+    return `${artworkId}: its text reaches characters no served face holds (${record.missing.join(" ")}), so the browser would set them in a face of its own`;
+  }
+  return null;
+}
+
+/** Stops a capture whose page has not drawn its own text in the faces it asked for. */
+async function refuseTypefaces(page, artwork) {
+  const refusal = typefaceRefusal(artwork.id, await page.evaluate(() => window.__TYPEFACES__ ?? null));
+  if (refusal) {
+    throw new Error(refusal);
+  }
+}
+
 async function openArtworkPage(browser, serverBaseUrl, artwork, scale, extraParameters = {}) {
   const outputSize = {
     width: artwork.canvas.width * scale,
@@ -291,6 +327,9 @@ async function openArtworkPage(browser, serverBaseUrl, artwork, scale, extraPara
     if (faceRefusal) {
       throw new Error(faceRefusal);
     }
+    // And an artwork's own text is set in the faces it asked for, as far as the first
+    // drawing shows; a frame drawn later is checked once it has been drawn.
+    await refuseTypefaces(page, artwork);
 
     const canvasSize = await page.locator("canvas").evaluate((canvas) => ({
       width: canvas.width,
@@ -372,6 +411,9 @@ async function captureThumbnail(browser, serverBaseUrl, manifest, artwork, width
         `(${hint.left.toFixed(1)}..${hint.right.toFixed(1)} of ${hint.canvas.width})`
       );
     }
+    // The frame the card shows has been drawn, so its text has been checked against the
+    // faces it was set in.
+    await refuseTypefaces(page, artwork);
     // Scaled down and encoded inside the page, so no image library is needed on this side.
     //
     // The share image, when one is asked for, is set from the same canvas in the same call:

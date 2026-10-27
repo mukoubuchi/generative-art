@@ -1,6 +1,7 @@
 import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawPointerIndicator } from "../shared/input-indicator.js";
 import { drawKeyHint } from "../shared/key-hint.js";
+import { loadTypefaces, noteText, useTypeface } from "../shared/typefaces.js";
 import {
   angleArc,
   angleTone,
@@ -111,6 +112,11 @@ function toneColor(tone) {
 
 const live = { probe: orbitPoint(0, TOTAL_FRAMES, ORBIT_RADIUS), followPointer: false };
 
+// The readouts' face, awaited before the sketch starts, so that the first frame comes after
+// it has loaded or failed. If it failed, the reader's page goes on in the browser's
+// monospace or whatever stands in for it, and the capture paths stop.
+await loadTypefaces([["mono", 400]]);
+
 const P5 = window.p5;
 
 new P5((p) => {
@@ -166,22 +172,21 @@ new P5((p) => {
     // The readouts, top and centre: the coordinates named as coordinates, then the
     // whole computation as the equation it is — atan2 taking y first, which is the
     // function's own signature and the thing every diagram forgets to teach. Monospace
-    // type, every sign always printed, every field zero-jitter wide, so the line holds
-    // still while its numbers run.
+    // type (IBM Plex Mono, served with the gallery), every sign always printed, every
+    // field zero-jitter wide, so the line holds still while its numbers run.
     p.push();
     p.scale(RENDER_SCALE);
     p.noStroke();
     p.fill(...READOUT_INK);
-    p.textFont("monospace");
-    p.textSize(TEXT_SIZE);
+    useTypeface(p, "mono", 400, TEXT_SIZE);
     p.textAlign(p.CENTER, p.BASELINE);
     p.text(
-      `(x, y) = (${signedPixels(probe.x)}, ${signedPixels(probe.y)})`,
+      noteText(`(x, y) = (${signedPixels(probe.x)}, ${signedPixels(probe.y)})`),
       LOGICAL_WIDTH / 2,
       TEXT_SIZE * 1.9
     );
     p.text(
-      `atan2(y, x) = ${signedFixed(centreAngle, 3, 1)} rad = ${signedFixed(p.degrees(centreAngle), 1, 3)}°`,
+      noteText(`atan2(y, x) = ${signedFixed(centreAngle, 3, 1)} rad = ${signedFixed(p.degrees(centreAngle), 1, 3)}°`),
       LOGICAL_WIDTH / 2,
       TEXT_SIZE * 3.5
     );

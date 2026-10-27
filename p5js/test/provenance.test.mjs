@@ -80,11 +80,13 @@ const isGlb = (bytes) => bytes.toString("latin1", 0, 4) === "glTF";
 /**
  * The tables a font needs to draw its glyphs, lay them out and be named, and nothing it
  * might carry about itself: no signature table, no `meta` table of free-form data, no
- * table this list has not been told about. They are the tables the legends' face holds.
+ * table this list has not been told about. They are the tables the legends' face holds,
+ * and the two that IBM Plex's hinting adds to them: the values its instructions read
+ * (`cvt `) and the functions they call (`fpgm`).
  */
 const FONT_TABLES = new Set([
-  "GDEF", "GPOS", "GSUB", "OS/2", "STAT", "cmap", "gasp", "glyf", "head", "hhea", "hmtx",
-  "loca", "maxp", "name", "post", "prep"
+  "GDEF", "GPOS", "GSUB", "OS/2", "STAT", "cmap", "cvt ", "fpgm", "gasp", "glyf", "head",
+  "hhea", "hmtx", "loca", "maxp", "name", "post", "prep"
 ]);
 
 /**
@@ -342,5 +344,5 @@ test("the binary rule reads every format the tree holds, and each holds a clean 
       assert.fail(`${file} is a binary of a format the rule cannot read`);
     }
   }
-  assert.deepEqual(kinds, { png: 4, jpeg: 0, mp4: 1, glb: 1, embedded: 3, woff2: 1 });
+  assert.deepEqual(kinds, { png: 4, jpeg: 0, mp4: 1, glb: 1, embedded: 3, woff2: 5 });
 });

@@ -1,10 +1,16 @@
 import { drawKeyHint } from "../shared/key-hint.js";
 import { hintMode, indicatorShown } from "../shared/hint-mode.js";
 import { drawKeyIndicator } from "../shared/input-indicator.js";
+import { loadTypefaces, noteText, typefaceFont } from "../shared/typefaces.js";
 import {
   SIZE, HALF, COUNT, FPS, CLIP_SECONDS, TOTAL_FRAMES,
   KEY_CAPS, Loom, keydownAction, movingPoint, positionDigest, demoAt, tessera
 } from "./lattice.js";
+
+// The counter's face, awaited before the sketch starts, so that the first frame comes after
+// it has loaded or failed. If it failed, the reader's page goes on in the browser's
+// monospace or whatever stands in for it, and the capture paths stop.
+await loadTypefaces([["mono", 400]]);
 
 const LOGICAL_SIZE = 680;
 const PARAMETERS = new URLSearchParams(window.location.search);
@@ -68,10 +74,10 @@ new window.p5((p) => {
     ctx.strokeRect(FIELD_X - 4, FIELD_Y - 4, FIELD_SIZE + 8, FIELD_SIZE + 8);
     // The counter belongs to the operation: it remains useful after the rosette disappears.
     ctx.fillStyle = "rgba(164,187,192,0.75)";
-    ctx.font = "10px monospace";
+    ctx.font = typefaceFont("mono", 400, 10);
     ctx.textAlign = "right";
     const label = state.active ? (state.activeDirection === 1 ? "FORWARD" : "BACK") : "STILL THERE";
-    ctx.fillText(`${label}  ${state.steps > 0 ? "+" : ""}${state.steps}`, FIELD_X + FIELD_SIZE, 20);
+    ctx.fillText(noteText(`${label}  ${state.steps > 0 ? "+" : ""}${state.steps}`), FIELD_X + FIELD_SIZE, 20);
     ctx.restore();
     if (HINT.shown) {
       p.push();
