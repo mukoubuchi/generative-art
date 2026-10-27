@@ -2,6 +2,7 @@
 
 [![Gallery](https://img.shields.io/badge/Gallery-mukoubuchi.github.io-1f6feb)](https://mukoubuchi.github.io/generative-art/)
 [![Tests](https://github.com/mukoubuchi/generative-art/actions/workflows/tests.yml/badge.svg)](https://github.com/mukoubuchi/generative-art/actions/workflows/tests.yml)
+[![Latest release](https://img.shields.io/github/v/release/mukoubuchi/generative-art)](https://github.com/mukoubuchi/generative-art/releases/latest)
 [![License: Source-Available](https://img.shields.io/badge/License-Source--Available-blue)](LICENSE)
 [![p5.js 2.3.2](https://img.shields.io/badge/p5.js-2.3.2-ed225d)](https://p5js.org/)
 
