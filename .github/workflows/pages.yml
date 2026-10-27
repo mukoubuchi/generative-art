@@ -44,6 +44,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Playwright's own image, at the version the lockfile pins. The browsers and the system
+    # libraries they need are already in it, so nothing is fetched from the Ubuntu archive
+    # here, and that fetch was the slow part: on 2026-10-26 and 27 six builds ran out of their
+    # twenty minutes downloading those libraries before any browser was installed, while the
+    # builds that finished fetched the same 119 MB in under ten seconds. The tag has to move
+    # with the lockfile, or Playwright will not find its browsers, and a test holds the two to
+    # one version.
+    #
+    # WebKit is checked as well as Chromium because of what happened on 2026-08-13: an
+    # artwork that Chromium drew perfectly was a blank square in WebKit, for want of ever
+    # having been opened in that engine. The image carries both.
+    #
+    # The user is 1001, as in Playwright's CI guide. The host's IPC namespace is what
+    # Playwright's Docker guide recommends for Chromium, which can otherwise run out of shared
+    # memory and crash. And a container's run steps default to sh, so bash is named to keep
+    # the shell the steps were written for.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user 1001 --ipc=host
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -57,16 +79,6 @@ jobs:
 
       - name: Install JavaScript dependencies
         run: npm ci --prefix p5js
-
-      # The gallery needs Chromium to capture thumbnails, but no ffmpeg: a thumbnail is one
-      # frame, so nothing here is encoded into a clip.
-      #
-      # WebKit as well, because Chromium is not what a reader on a phone has. Every browser on
-      # iOS is WebKit, and on 2026-08-13 an artwork that Chromium drew perfectly was a blank
-      # square there — for want of ever having opened it in the engine the reader uses.
-      - name: Install Chromium and WebKit
-        run: npx playwright install --with-deps chromium webkit
-        working-directory: p5js
 
       - name: Run unit tests
         run: npm test --prefix p5js
@@ -133,6 +145,14 @@ jobs:
     # says nothing about why. This has to outlast the wait and everything around it: ten
     # minutes of waiting, a few for Node and Chromium, and a few more for thirty-seven pages.
     timeout-minutes: 25
+    # The same image as the build, for the same reasons: it brings Chromium and its libraries,
+    # so this check does not wait on the Ubuntu archive either.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user 1001 --ipc=host
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -146,10 +166,6 @@ jobs:
 
       - name: Install JavaScript dependencies
         run: npm ci --prefix p5js
-
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-        working-directory: p5js
 
       - name: Check the published gallery on a phone
         run: >-
