@@ -88,6 +88,7 @@ The artworks began as Processing and py5 sketches. All 25 have been ported to p5
 | [A General Process](p5js/artworks/a-general-process/) | A luminous case passes from circle through ellipse and parabola into two hyperbola branches, held among the other forms of its family, rendered as an MP4 |
 | [Supplied by Another](p5js/artworks/supplied-by-another/) | Three incomplete edge systems jointly enclose a warped fabric, rendered as a static PNG |
 | [Not in the Field](p5js/artworks/not-in-the-field/) | Fixed obstacles and their shifting occlusion boundaries make an unmarked moving viewpoint felt across a luminous field without ever drawing the eye, rendered as an MP4 |
+| [Increased by One](p5js/artworks/increased-by-one/) | Past contours gather into a new form whose added frequency becomes part of the next gathering, rendered as an MP4 |
 
 See [p5js/README.md](p5js/README.md) for rendering, dry runs, the English aphorism policy, source notes, and the nightly publishing workflow.
 

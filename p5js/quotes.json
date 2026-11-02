@@ -1205,6 +1205,17 @@
         "publicDomain": true,
         "sourceUrl": "https://www.gutenberg.org/files/5740/5740-pdf.pdf"
       }
+    },
+    {
+      "id": "whitehead-many-become-one",
+      "text": "The many become one, and are increased by one.",
+      "lang": "en",
+      "author": "Alfred North Whitehead",
+      "source": "Process and Reality, part I, ch. II, section II",
+      "year": 1929,
+      "publicDomain": true,
+      "sourceUrl": "https://archive.org/details/processrealityes00whit_1/page/32/mode/2up",
+      "rendering": "Original English, Macmillan, 1929, p. 32. Princeton Theological Seminary's digitized copy is marked No Copyright - United States; the catalog's public-domain determination is scoped to the United States."
     }
   ]
 }

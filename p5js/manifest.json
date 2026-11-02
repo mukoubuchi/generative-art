@@ -1380,6 +1380,21 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "increased-by-one",
+      "title": "Increased by One",
+      "entry": "p5js/artworks/increased-by-one/index.html",
+      "interactivePath": "increased-by-one/",
+      "canvas": { "width": 900, "height": 680 },
+      "quoteIds": ["whitehead-many-become-one"],
+      "thumbnail": { "frame": 636 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/IncreasedByOne.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }
