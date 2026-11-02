@@ -1216,6 +1216,26 @@
       "publicDomain": true,
       "sourceUrl": "https://archive.org/details/processrealityes00whit_1/page/32/mode/2up",
       "rendering": "Original English, Macmillan, 1929, p. 32. Princeton Theological Seminary's digitized copy is marked No Copyright - United States; the catalog's public-domain determination is scoped to the United States."
+    },
+    {
+      "id": "hilbert-second-statement",
+      "text": "The second statement of the axiom of parallels is independent of all the other axioms.",
+      "lang": "en",
+      "author": "David Hilbert",
+      "source": "The Foundations of Geometry, §10",
+      "year": 1899,
+      "publicDomain": true,
+      "sourceUrl": "https://www.gutenberg.org/files/17384/17384-pdf.pdf#page=25",
+      "rendering": "E. J. Townsend translation",
+      "original": {
+        "text": "Die zweite Aussage des Parallelenaxioms III ist von den übrigen Axiomen unabhängig;",
+        "lang": "de",
+        "author": "David Hilbert",
+        "source": "Grundlagen der Geometrie, §10, p. 22",
+        "year": 1899,
+        "publicDomain": true,
+        "sourceUrl": "https://archive.org/details/grundlagendergeo00hilb/page/22"
+      }
     }
   ]
 }

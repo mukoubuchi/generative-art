@@ -68,7 +68,8 @@ const AWAITING_SCHEDULE = [
   "a-general-process",
   "supplied-by-another",
   "not-in-the-field",
-  "increased-by-one"
+  "increased-by-one",
+  "second-statement"
 ];
 
 test("every artwork is scheduled, or named as still waiting for a date", async () => {

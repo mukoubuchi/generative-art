@@ -1395,6 +1395,21 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "second-statement",
+      "title": "The Second Statement",
+      "entry": "p5js/artworks/second-statement/index.html",
+      "interactivePath": "second-statement/",
+      "canvas": { "width": 900, "height": 680 },
+      "quoteIds": ["hilbert-second-statement"],
+      "thumbnail": { "frame": 540 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/TheSecondStatement.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }
