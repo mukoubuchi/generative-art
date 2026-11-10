@@ -1410,6 +1410,21 @@
         "durationSeconds": 24,
         "scale": 2
       }
+    },
+    {
+      "id": "if-it-is-hidden",
+      "title": "If It Is Hidden",
+      "entry": "p5js/artworks/if-it-is-hidden/index.html",
+      "interactivePath": "if-it-is-hidden/",
+      "canvas": { "width": 680, "height": 680 },
+      "quoteIds": ["zeami-hidden-flower"],
+      "thumbnail": { "frame": 150 },
+      "render": {
+        "kind": "video",
+        "artifact": "exports/p5js/IfItIsHidden.mp4",
+        "durationSeconds": 24,
+        "scale": 2
+      }
     }
   ]
 }

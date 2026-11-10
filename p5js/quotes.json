@@ -1236,6 +1236,26 @@
         "publicDomain": true,
         "sourceUrl": "https://archive.org/details/grundlagendergeo00hilb/page/22"
       }
+    },
+    {
+      "id": "zeami-hidden-flower",
+      "text": "If it is hidden, it is the flower; if it is not hidden, it cannot be the flower.",
+      "lang": "en",
+      "author": "Zeami",
+      "source": "Fūshikaden, Separate Secret Teachings",
+      "year": null,
+      "publicDomain": true,
+      "sourceUrl": "https://dl.ndl.go.jp/pid/859394/1/70",
+      "rendering": "English rendering",
+      "original": {
+        "text": "秘すれば花なり、秘せずば花なるべからず",
+        "lang": "ja",
+        "author": "世阿弥",
+        "source": "花傳書別紙口傳",
+        "year": null,
+        "publicDomain": true,
+        "sourceUrl": "https://dl.ndl.go.jp/pid/859394/1/70"
+      }
     }
   ]
 }
